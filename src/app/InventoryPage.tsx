@@ -28,7 +28,7 @@ import { useWindowSize } from './hooks/useWindowSize';
 import { useWorkbookLoader } from './hooks/Useworkbookloader';
 import { useRowSearch } from './hooks/useRowSearch';
 import CancelIcon from './assets/icons/icons8-cancel.svg?react';
-import { ThemeContext, useTheme } from './component/Layout';
+import { useTheme } from './component/Layout';
 
 ModuleRegistry.registerModules([
 	ClientSideRowModelModule, // needed for basic rowData rendering

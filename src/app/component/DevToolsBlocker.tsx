@@ -87,10 +87,10 @@ export default function DevToolsBlocker({
 			}
 		};
 
-		// document.addEventListener('keydown', handleKeyDown);
+		document.addEventListener('keydown', handleKeyDown);
 
 		return () => {
-			// document.removeEventListener('keydown', handleKeyDown);
+			document.removeEventListener('keydown', handleKeyDown);
 		};
 	}, []);
 

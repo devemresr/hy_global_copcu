@@ -116,7 +116,6 @@ export function Header({ isOpen, onToggle, mode }: HeaderProps) {
 		return () => {
 			cancelled = true;
 			cancelAnimationFrame(rafId);
-			const anim = lottieThemeRef.current?.animationItem;
 		};
 	}, []);
 
