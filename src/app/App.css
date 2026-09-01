@@ -1,0 +1,66 @@
+@import 'tailwindcss';
+
+@theme {
+	--animate-float1: float1 2s ease-in-out infinite;
+	--animate-hoverFloatUp: hoverFloatUp 0.3s ease-in-out forwards;
+	--color-text: #171717;
+	--color-bg: #ffffff;
+	--color-button-bg: #f0f0f0;
+	--color-button-hover-bg: #e2e2e2;
+	--color-button-focus-bg: #e2e2e2;
+	--color-footer-bg: #f5f5f5;
+	--color-header-bg: #f5f5f5;
+	--color-sidebar-bg: #f5f5f5;
+	--color-modal-bg: white;
+	--color-border: #d4d4d4;
+}
+
+.icon {
+	color: var(--color-text);
+}
+
+.dark {
+	--color-text: #fff;
+	--color-bg: #171717;
+	--color-button-bg: #2e2e2e;
+	--color-button-hover-bg: #141415;
+	--color-button-focus-bg: #141415;
+	--color-footer-bg: #131313;
+	--color-header-bg: #131313;
+	--color-sidebar-bg: #131313;
+	--color-modal-bg: black;
+	--color-border: #2a2a2a;
+}
+@custom-variant dark (&:where(.dark, .dark *));
+
+html {
+	background-color: var(--color-bg);
+}
+
+@keyframes float1 {
+	0% {
+		transform: translate(0px, 0px) scale(1);
+	}
+	25% {
+		transform: translate(2px, -2px) scale(1.05);
+	}
+	50% {
+		transform: translate(-2px, 2px) scale(1);
+	}
+	75% {
+		transform: translate(2px, -2px) scale(1.05);
+	}
+	100% {
+		transform: translate(0px, 0px) scale(1);
+	}
+}
+@keyframes hoverFloatUp {
+	0% {
+		transform: translate(0px, 0px) scale(1);
+		filter: brightness(1);
+	}
+	100% {
+		transform: translate(0px, -4px) scale(1.12);
+		filter: brightness(1.2);
+	}
+}
