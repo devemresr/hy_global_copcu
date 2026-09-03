@@ -1,7 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
 
-export {};
-
 declare global {
 	interface Window {
 		__REACT_DEVTOOLS_GLOBAL_HOOK__?: Record<string, any>;
@@ -47,9 +45,9 @@ export default function DevToolsBlocker({
 	children: ReactNode | undefined;
 }) {
 	useEffect(() => {
-		if (import.meta.env.PROD) {
-			disableReactDevTools();
-		}
+		// if (import.meta.env.PROD) {
+		disableReactDevTools();
+		// }
 	}, []);
 	useEffect(() => {
 		// Block common DevTools shortcuts
@@ -91,6 +89,18 @@ export default function DevToolsBlocker({
 
 		return () => {
 			document.removeEventListener('keydown', handleKeyDown);
+		};
+	}, []);
+
+	useEffect(() => {
+		const handleContextMenu = (e: MouseEvent) => {
+			e.preventDefault();
+		};
+
+		document.addEventListener('contextmenu', handleContextMenu);
+
+		return () => {
+			document.removeEventListener('contextmenu', handleContextMenu);
 		};
 	}, []);
 

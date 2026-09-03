@@ -27,7 +27,6 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
 					<a href='#'>Kaynaklar</a>
 					<a href='#'>Hakkımızda</a>
 					<a href='#'>Koşullar</a>
-					<a href='#'>Çerezler</a>
 				</nav>
 			</aside>
 		);
@@ -57,7 +56,6 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
 					<a href='#'>Kaynaklar</a>
 					<a href='#'>Hakkımızda</a>
 					<a href='#'>Koşullar</a>
-					<a href='#'>Çerezler</a>
 				</nav>
 			</aside>
 		</>

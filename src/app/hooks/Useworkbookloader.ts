@@ -34,7 +34,11 @@ function parseSelectedSheet(wb: XLSX.WorkBook, sheetName: string): ExcelRow[] {
 	return XLSX.utils.sheet_to_json<ExcelRow>(sheet);
 }
 
-export function useWorkbookLoader() {
+export function useWorkbookLoader({
+	emcpIncluded,
+}: {
+	emcpIncluded?: boolean;
+}) {
 	const [parseState, setParseState] = useState<ParseState>({
 		status: 'idle',
 		errorMsg: '',
@@ -72,10 +76,23 @@ export function useWorkbookLoader() {
 	useLayoutEffect(() => {
 		if (!workbook || !selectedSheet) return;
 		const parsedRows = parseSelectedSheet(workbook, selectedSheet);
+
+		const empcFilteredRows = parsedRows.map((row) => {
+			if (emcpIncluded) {
+				return row; // keep EMCP as-is
+			}
+			const { EMCP, ...rest } = row; // destructure it out
+			return rest;
+		});
+
+		const empcFilteredColDefs = columnDefsBySheet[selectedSheet].filter(
+			(colDef) => !(!emcpIncluded && colDef?.field === 'EMCP'),
+		);
+
 		dispatch({
 			type: 'ROWS_PARSED',
-			rows: parsedRows,
-			colDef: columnDefsBySheet[selectedSheet],
+			rows: empcFilteredRows,
+			colDef: empcFilteredColDefs,
 		});
 	}, [workbook, selectedSheet]);
 

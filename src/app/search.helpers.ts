@@ -9,7 +9,7 @@ export interface HighlightSegment {
 export function buildFuse(rows: ExcelRow[], keys: string[]) {
 	return new Fuse(rows, {
 		keys,
-		threshold: 0.3,
+		threshold: 0.1,
 		includeMatches: true,
 		shouldSort: true,
 		minMatchCharLength: 2,

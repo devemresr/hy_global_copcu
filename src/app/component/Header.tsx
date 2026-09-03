@@ -1,10 +1,16 @@
 import { Lottie } from 'lottie-react';
 import toggleSidebarAnimation from '../assets/icons/icons8-menu.json';
 import toggleThemeAnimation from '../assets/icons/DarkLightInteractiveToggle.json';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	type Dispatch,
+	type SetStateAction,
+} from 'react';
 import type { LottieHandle } from 'lottie-react';
 import type { sideBarDisplayMode } from './Sidebar';
-import logger from '../util/logger';
 import { whatsappUrl } from '../url.constant';
 import WhatsappIcon from '../assets/icons/icons8-whatsapp.svg?react';
 import '../App.css';
@@ -12,17 +18,22 @@ interface HeaderProps {
 	isOpen: boolean;
 	onToggle: () => void;
 	mode: sideBarDisplayMode;
+	setTheme: Dispatch<SetStateAction<Theme>>;
 }
 
 import { replaceColor } from 'lottie-colorify';
 import { useTheme } from './Layout';
+import type { Theme } from './Layout';
+import logger from '../util/logger';
 const TARGET_DURATION_THEME_ANIMATION = 0.9;
 const FRAME_RATE = 60;
 
-export function Header({ isOpen, onToggle, mode }: HeaderProps) {
-	const { theme, setTheme } = useTheme();
+export function Header({ isOpen, onToggle, mode, setTheme }: HeaderProps) {
+	const { theme } = useTheme();
 
 	const themedSidebarAnimation = useMemo(() => {
+		logger.debug({ theme }, '[themedSidebarAnimation] recomputing');
+
 		return theme === 'dark'
 			? toggleSidebarAnimation
 			: replaceColor([255, 255, 255], '#000000', toggleSidebarAnimation);
@@ -34,31 +45,64 @@ export function Header({ isOpen, onToggle, mode }: HeaderProps) {
 	const onCompleteRef = useRef<(() => void) | null>(null);
 
 	const handleSideBar = () => {
+		logger.debug({ mode, isOpen }, '[handleSideBar] called');
+
 		if (mode === 'push') {
 			const anim = lottieSideBarRef.current?.animationItem;
 			if (anim) {
 				const nativeDuration = anim.getDuration(false); // seconds
 				const targetDuration = 0.9;
+				const speed = nativeDuration / targetDuration;
+				logger.debug(
+					{ nativeDuration, speed, direction: isOpen ? -1 : 1 },
+					'[handleSideBar] playing',
+				);
 				anim.setSpeed(nativeDuration / targetDuration);
 				anim.setDirection(isOpen ? -1 : 1);
 				anim.play();
+			} else {
+				logger.debug(
+					'[handleSideBar] no animationItem found on lottieSideBarRef',
+				);
 			}
 		}
 		onToggle();
 	};
 
 	const handleTheme = useCallback(() => {
-		if (isAnimatingRef.current) return;
+		logger.debug(
+			{ isAnimating: isAnimatingRef.current },
+			'[handleTheme] called',
+		);
+
+		if (isAnimatingRef.current) {
+			logger.debug(
+				'[handleTheme] bailing early — animation already in progress',
+			);
+			return;
+		}
 
 		const anim = lottieThemeRef.current?.animationItem;
-		if (!anim) return;
+		if (!anim) {
+			logger.debug('[handleTheme] no animationItem found on lottieThemeRef');
+
+			return;
+		}
 
 		isAnimatingRef.current = true;
 
 		const segmentLength = 90;
-		anim.setSpeed(segmentLength / FRAME_RATE / TARGET_DURATION_THEME_ANIMATION);
+		const speed = segmentLength / FRAME_RATE / TARGET_DURATION_THEME_ANIMATION;
+		anim.setSpeed(speed);
+		logger.debug(
+			{ speed, FRAME_RATE, TARGET_DURATION_THEME_ANIMATION },
+			'[handleTheme] setting speed',
+		);
 
 		const onComplete = () => {
+			logger.debug(
+				'[handleTheme] animation complete, resetting isAnimatingRef',
+			);
 			isAnimatingRef.current = false;
 			anim.removeEventListener('complete', onComplete);
 			onCompleteRef.current = null;
@@ -77,15 +121,25 @@ export function Header({ isOpen, onToggle, mode }: HeaderProps) {
 
 	// Cleanup on unmount
 	useEffect(() => {
+		logger.debug('[cleanup effect] mounted');
+
 		return () => {
 			const anim = lottieThemeRef.current?.animationItem;
 			if (anim && onCompleteRef.current) {
+				logger.debug('[cleanup effect] listener removed');
 				anim.removeEventListener('complete', onCompleteRef.current);
+			} else {
+				logger.debug(
+					{ hasAnim: !!anim, hasHandler: !!onCompleteRef.current },
+					'[cleanup effect] nothing to remove',
+				);
 			}
 		};
 	}, []);
 
 	useEffect(() => {
+		logger.debug({ theme }, '[setup effect] running');
+
 		let cancelled = false;
 		let rafId: number;
 
@@ -93,20 +147,28 @@ export function Header({ isOpen, onToggle, mode }: HeaderProps) {
 			if (cancelled) return;
 
 			const anim = lottieThemeRef.current?.animationItem;
-			logger.debug({ hasAnim: !!anim, theme }, 'trysetup'); // safe: no circular object
 
 			if (!anim) {
+				logger.debug('[setup effect] no animationItem yet, retrying');
+
 				rafId = requestAnimationFrame(trySetup);
 				return;
 			}
+			logger.debug(
+				{ totalFrames: anim.totalFrames },
+				'[setup effect] animationItem found',
+			);
 
 			const doSetup = () => {
-				anim.goToAndStop(theme === 'dark' ? 90 : 0, true);
+				const frame = theme === 'dark' ? 90 : 0;
+				logger.debug({ frame }, '[setup effect] goToAndStop');
+				anim.goToAndStop(frame, true);
 			};
 
 			if (anim.totalFrames > 0) {
 				doSetup();
 			} else {
+				logger.debug('[setup effect] totalFrames is 0, waiting for DOMLoaded');
 				anim.addEventListener('DOMLoaded', doSetup);
 			}
 		};
@@ -114,6 +176,7 @@ export function Header({ isOpen, onToggle, mode }: HeaderProps) {
 		trySetup();
 
 		return () => {
+			logger.debug('[setup effect] cleanup, cancelling rAF loop');
 			cancelled = true;
 			cancelAnimationFrame(rafId);
 		};

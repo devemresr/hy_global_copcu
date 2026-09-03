@@ -1,77 +1,51 @@
 import type { ColDef } from 'ag-grid-community';
 import { HighlightCellRenderer } from './InventoryPage';
 
-export const autosizedColumns = ['Ram', 'Brand'];
-export const columnDefsBySheet: Record<string, ColDef[]> = {
-	盖子板: [
-		{
-			field: 'Brand',
-			headerName: 'Brand',
-			sortable: true,
-			filter: true,
-			filterParams: {
-				filterOptions: ['equals', 'greaterThan', 'lessThan'], // limit which comparisons show
-				buttons: ['apply', 'reset', 'cancel'], // add Apply/Reset/Cancel buttons at the bottom
-				closeOnApply: true,
-				defaultOption: 'greaterThan',
-			},
-			cellRenderer: HighlightCellRenderer,
-		},
-		{
-			field: 'Model',
-			headerName: 'Model',
-			sortable: true,
+export const FIELD_NAMES = {
+	EMCP: 'EMCP',
+	MODEL: 'Model',
+	MEMORY_SIZE: 'MemorySize',
+};
+export const AUTO_SIZED_COLUMNS = [FIELD_NAMES.MEMORY_SIZE];
+// Declare here which fields should have a filter section.
+export const FILTERABLE_FIELDS = [FIELD_NAMES.MEMORY_SIZE];
 
-			filter: true,
-			cellRenderer: HighlightCellRenderer,
-		},
+export const columnDefsBySheet: Record<string, ColDef[]> = {
+	Sheet1: [
+		// {
+		// 	field: 'Brand',
+		// 	headerName: 'Brand',
+		// 	sortable: true,
+		// 	filter: true,
+		// 	filterParams: {
+		// 		filterOptions: ['equals', 'greaterThan', 'lessThan'], // limit which comparisons show
+		// 		buttons: ['apply', 'reset', 'cancel'], // add Apply/Reset/Cancel buttons at the bottom
+		// 		closeOnApply: true,
+		// 		defaultOption: 'greaterThan',
+		// 	},
+		// 	cellRenderer: HighlightCellRenderer,
+		// },
 		{
-			field: 'Ram',
-			headerName: 'RAM',
-			sortable: true,
-			filter: true,
-			cellRenderer: HighlightCellRenderer,
-			comparator: ramComparator,
-		},
-	],
-	Sheet3: [
-		{
-			field: 'EMCP',
+			field: FIELD_NAMES.EMCP,
 			headerName: 'EMCP',
 			sortable: true,
 			filter: true,
 			cellRenderer: HighlightCellRenderer,
 		},
 		{
-			field: 'model',
-			headerName: 'model',
-			sortable: true,
-			filter: true,
-			cellRenderer: HighlightCellRenderer,
-		},
-	],
-	内存表: [
-		{
-			field: 'EMMC_version',
-			headerName: 'EMMC_version',
+			field: FIELD_NAMES.MODEL,
+			headerName: 'Model',
 			sortable: true,
 			filter: true,
 			cellRenderer: HighlightCellRenderer,
 		},
 		{
-			field: 'Memory size',
-			headerName: 'Memory size',
+			field: FIELD_NAMES.MEMORY_SIZE,
+			headerName: 'MemorySize',
 			sortable: true,
 			filter: true,
 			cellRenderer: HighlightCellRenderer,
 			comparator: ramComparator,
-		},
-		{
-			field: ' K3uh5h5',
-			headerName: ' K3uh5h5',
-			sortable: true,
-			filter: true,
-			cellRenderer: HighlightCellRenderer,
 		},
 	],
 };
@@ -80,7 +54,9 @@ function ramToGb(value: string): number {
 	const match = value.trim().match(/^([\d.]+)\s*([MGT])B?$/i);
 
 	if (!match) {
-		throw new Error(`Invalid RAM value: ${value}`);
+		if (process.env.VITE_ENV !== 'production')
+			throw new Error(`Invalid RAM value: ${value}`);
+		return NaN;
 	}
 
 	const number = Number(match[1]);

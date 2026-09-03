@@ -1,9 +1,4 @@
-import {
-	useState,
-	useLayoutEffect,
-	type Dispatch,
-	type SetStateAction,
-} from 'react';
+import { useState, useLayoutEffect } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { useWindowSize } from '../hooks/useWindowSize';
@@ -30,13 +25,9 @@ function getInitialTheme(): Theme {
 			: 'light';
 }
 export type Theme = 'light' | 'dark';
+const DEFAULT_THEME = { theme: 'dark' };
 
-type ThemeContextType = {
-	theme: Theme;
-	setTheme: Dispatch<SetStateAction<Theme>>;
-};
-
-export const ThemeContext = createContext<ThemeContextType | undefined>(
+export const ThemeContext = createContext<{ theme: Theme } | undefined>(
 	undefined,
 );
 
@@ -44,16 +35,19 @@ export const useTheme = () => {
 	const context = useContext(ThemeContext);
 
 	if (!context) {
-		throw new Error('useTheme must be used inside ThemeContext.Provider');
+		if (process.env.NODE_ENV !== 'production') {
+			throw new Error('useTheme must be used inside ThemeContext.Provider');
+		}
+		return DEFAULT_THEME;
 	}
 
 	return context;
 };
 
 export function Layout({ children }: { children: React.ReactNode }) {
-	const [isOpen, setIsOpen] = useState(false);
+	const [isOpenSidebar, setSidebar] = useState(false);
 	const { width } = useWindowSize();
-	const mode = width >= PUSH_BREAKPOINT ? 'push' : 'overlay';
+	const sidebarMode = width >= PUSH_BREAKPOINT ? 'push' : 'overlay';
 	const [theme, setTheme] = useState<Theme>(getInitialTheme);
 	useLayoutEffect(() => {
 		document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -62,17 +56,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 	return (
 		<div className='flex min-h-screen'>
-			<ThemeContext.Provider value={{ theme, setTheme }}>
-				<Sidebar isOpen={isOpen} mode={mode} onClose={() => setIsOpen(false)} />
+			<ThemeContext.Provider value={{ theme }}>
+				<Sidebar
+					isOpen={isOpenSidebar}
+					mode={sidebarMode}
+					onClose={() => setSidebar(false)}
+				/>
 
 				<div className='flex flex-col flex-1'>
 					<ErrorBoundary FallbackComponent={SmallFallback}>
 						<Header
-							isOpen={isOpen}
-							onToggle={() => setIsOpen((o) => !o)}
-							mode={mode}
+							isOpen={isOpenSidebar}
+							onToggle={() => setSidebar((o) => !o)}
+							mode={sidebarMode}
+							setTheme={setTheme}
 						/>
 					</ErrorBoundary>
+
 					<main className='flex-1'>
 						<RouteErrorBoundary>{children}</RouteErrorBoundary>
 					</main>

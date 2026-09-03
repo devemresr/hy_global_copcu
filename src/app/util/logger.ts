@@ -1,7 +1,7 @@
 import pino, { type Logger, type LoggerOptions } from 'pino';
 
 const env =
-	typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_ENV : 'development';
+	typeof process !== 'undefined' ? process.env.VITE_ENV : 'development';
 
 const isDev = env === 'development';
 const isTest = env === 'test';

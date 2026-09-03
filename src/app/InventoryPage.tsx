@@ -18,8 +18,9 @@ import {
 	ClientSideRowModelModule,
 } from 'ag-grid-community';
 import {
-	autosizedColumns,
+	AUTO_SIZED_COLUMNS,
 	columnDefsBySheet,
+	FIELD_NAMES,
 	ramComparator,
 } from './columnDef.constant';
 import { useColumnFilter } from './hooks/useColumnFilter';
@@ -29,6 +30,7 @@ import { useWorkbookLoader } from './hooks/Useworkbookloader';
 import { useRowSearch } from './hooks/useRowSearch';
 import CancelIcon from './assets/icons/icons8-cancel.svg?react';
 import { useTheme } from './component/Layout';
+import { useSearchParams } from 'react-router-dom';
 
 ModuleRegistry.registerModules([
 	ClientSideRowModelModule, // needed for basic rowData rendering
@@ -59,14 +61,6 @@ export function HighlightCellRenderer({ value, data, colDef }: any) {
 	);
 }
 
-// Declare here which fields you want a filter panel for.
-// Add/remove entries to control what shows up no other code needs to change.
-export const FILTERABLE_FIELDS = {
-	brand: 'Brand',
-	model: 'model',
-	ram: 'Ram',
-} as const;
-
 function getInitialTheme(): 'light' | 'dark' {
 	const saved = localStorage.getItem('theme');
 	return saved === 'light' || saved === 'dark'
@@ -83,6 +77,9 @@ function InventoryPage() {
 	const gridTheme =
 		theme === 'dark' ? themeQuartz.withPart(colorSchemeDark) : themeQuartz;
 
+	const [searchParams] = useSearchParams();
+	const emcpIncluded = searchParams.has('detayliData');
+
 	const {
 		sheetNames,
 		selectedSheet,
@@ -91,7 +88,7 @@ function InventoryPage() {
 		columnFiltersBySheet,
 		dispatch,
 		handleFileChange,
-	} = useWorkbookLoader();
+	} = useWorkbookLoader({ emcpIncluded });
 
 	const { handleQuery, searchResults } = useRowSearch(rows);
 
@@ -101,22 +98,8 @@ function InventoryPage() {
 	}, []);
 
 	// one hook call per filterable field
-	const brandFilter = useColumnFilter(
-		FILTERABLE_FIELDS.brand,
-		rows,
-		selectedSheet,
-		columnFiltersBySheet,
-		dispatch,
-	);
-	const modelFilter = useColumnFilter(
-		FILTERABLE_FIELDS.model,
-		rows,
-		selectedSheet,
-		columnFiltersBySheet,
-		dispatch,
-	);
-	const ramfilter = useColumnFilter(
-		FILTERABLE_FIELDS.ram,
+	const memorySizeFilter = useColumnFilter(
+		FIELD_NAMES.MEMORY_SIZE,
 		rows,
 		selectedSheet,
 		columnFiltersBySheet,
@@ -124,7 +107,7 @@ function InventoryPage() {
 		ramComparator,
 	);
 
-	const allFilters = [brandFilter, modelFilter, ramfilter];
+	const allFilters = [memorySizeFilter];
 	const activeFilters = allFilters.filter((f) => f.hasColumn);
 
 	const filteredRows = useMemo(() => {
@@ -169,19 +152,18 @@ function InventoryPage() {
 			.map((element) => element.field)
 			.filter(
 				(field): field is string =>
-					field !== undefined && autosizedColumns.includes(field),
+					field !== undefined && AUTO_SIZED_COLUMNS.includes(field),
 			);
 
-		logger.debug({ colsToAutosize }, 'gonna auto size');
 		gridRef.current.api.autoSizeColumns(colsToAutosize, false);
 	}, [selectedSheet, gridRows]);
 
 	return (
 		<div className=' mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 '>
 			{sheetNames.length > 0 && (
-				<div className='flex flex-col md:flex-row lg:items-center gap-3 text-text py-3'>
-					<div className='flex flex-col md:flex-row gap-2'>
-						<div className='bg-button-bg w-60 lg:w-auto rounded-xl text-text p-1'>
+				<div className='flex flex-col md:flex-row md: lg:items-center gap-3 text-text py-3'>
+					<div className='flex flex-col md:flex-row gap-2 w-full'>
+						<div className='bg-button-bg w-80 rounded-xl text-text p-1 mx-auto md:w-100 lg:w-120'>
 							<input
 								type='text'
 								placeholder='Search text'
@@ -191,7 +173,7 @@ function InventoryPage() {
 								disabled={rows.length === 0}
 							/>
 						</div>
-						<div className='flex flex-row gap-2'>
+						{/* <div className='flex flex-row gap-2'>
 							{sheetNames.map((name) => (
 								<button
 									className={`${selectedSheet === name ? 'bg-button-focus-bg' : ''} bg-button-bg rounded-xl px-2 py-1 hover:bg-button-focus-bg`}
@@ -207,7 +189,7 @@ function InventoryPage() {
 									{name}
 								</button>
 							))}
-						</div>
+						</div> */}
 					</div>
 					{/* Mobile filter tablet phones/}
 					{/* Mobile trigger button hidden at sm+ */}
