@@ -5,7 +5,7 @@ import {
 	DEBOUNCE_TIMEOUT,
 	detectDateColumns,
 	parseDateQuery,
-} from '../search.helpers';
+} from '../helpers/inventoryPageHelpers/search.helpers';
 
 export function useRowSearch(rows: ExcelRow[]) {
 	const [query, setQuery] = useState<string>('');
@@ -40,7 +40,7 @@ export function useRowSearch(rows: ExcelRow[]) {
 
 		const results = fuse.search(query);
 		return results;
-	}, [query, fuse, rows, dateColumns]);
+	}, [query, fuse, dateColumns]);
 
 	return { query, handleQuery, dateColumns, searchResults };
 }

@@ -24,9 +24,8 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
 
 				<nav className='flex flex-col px-4 py-2 gap-4 text-text w-64'>
 					<a href='#'>Fiyatlandırma</a>
-					<a href='#'>Kaynaklar</a>
+					<a href='/bilgi'>Kaynaklar</a>
 					<a href='#'>Hakkımızda</a>
-					<a href='#'>Koşullar</a>
 				</nav>
 			</aside>
 		);
@@ -53,9 +52,8 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
 
 				<nav className='flex flex-col px-4 py-2 gap-4 text-text'>
 					<a href='#'>Fiyatlandırma</a>
-					<a href='#'>Kaynaklar</a>
+					<a href='/bilgi'>Kaynaklar</a>
 					<a href='#'>Hakkımızda</a>
-					<a href='#'>Koşullar</a>
 				</nav>
 			</aside>
 		</>

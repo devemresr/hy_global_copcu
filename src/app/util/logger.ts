@@ -1,7 +1,7 @@
 import pino, { type Logger, type LoggerOptions } from 'pino';
 
 const env =
-	typeof process !== 'undefined' ? process.env.VITE_ENV : 'development';
+	typeof process !== 'undefined' ? import.meta.env.VITE_ENV : 'development';
 
 const isDev = env === 'development';
 const isTest = env === 'test';
@@ -27,7 +27,7 @@ function safeStringify(o: unknown): string {
 
 const loggerOptions: LoggerOptions = {
 	level:
-		(typeof process !== 'undefined' && process.env.NEXT_PUBLIC_LOG_LEVEL) ||
+		(typeof process !== 'undefined' && import.meta.env.VITE_LOG_LEVEL) ||
 		(isDev || isTest ? 'debug' : 'info'),
 
 	base: {

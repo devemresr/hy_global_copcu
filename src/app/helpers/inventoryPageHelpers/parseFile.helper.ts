@@ -1,6 +1,6 @@
 // Files larger than this get parsed in a Web Worker instead of the main thread.
 import * as XLSX from 'xlsx';
-import type { OnErrorCallback, WorkerResponse } from './types';
+import type { OnErrorCallback, WorkerResponse } from '../../types';
 
 // Below this, worker spin-up + postMessage overhead isn't worth it.
 export const WORKER_SIZE_THRESHOLD_BYTES = 2 * 1024 * 1024; // 2MB
@@ -115,5 +115,6 @@ export function unmergeSheet(sheet: XLSX.WorkSheet): XLSX.WorkSheet {
 	// merges are now fully filled in as real cell values, so clear the merge metadata
 	sheet['!merges'] = [];
 
-	return sheet;
+	const sheetWithUnmergedValues = sheet;
+	return sheetWithUnmergedValues;
 }

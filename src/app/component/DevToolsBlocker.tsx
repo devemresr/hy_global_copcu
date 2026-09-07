@@ -45,9 +45,9 @@ export default function DevToolsBlocker({
 	children: ReactNode | undefined;
 }) {
 	useEffect(() => {
-		// if (import.meta.env.PROD) {
-		disableReactDevTools();
-		// }
+		if (import.meta.env.PROD) {
+			disableReactDevTools();
+		}
 	}, []);
 	useEffect(() => {
 		// Block common DevTools shortcuts
@@ -85,7 +85,9 @@ export default function DevToolsBlocker({
 			}
 		};
 
-		document.addEventListener('keydown', handleKeyDown);
+		if (import.meta.env.PROD) {
+			document.addEventListener('keydown', handleKeyDown);
+		}
 
 		return () => {
 			document.removeEventListener('keydown', handleKeyDown);
@@ -97,8 +99,9 @@ export default function DevToolsBlocker({
 			e.preventDefault();
 		};
 
-		document.addEventListener('contextmenu', handleContextMenu);
-
+		if (import.meta.env.PROD) {
+			document.addEventListener('contextmenu', handleContextMenu);
+		}
 		return () => {
 			document.removeEventListener('contextmenu', handleContextMenu);
 		};

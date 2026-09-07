@@ -1,6 +1,6 @@
 import type { ExcelRow } from '../types';
 import { useEffect, useMemo } from 'react';
-import type { WorkbookAction } from '../wbState.helper';
+import type { WorkbookAction } from '../helpers/inventoryPageHelpers/wbState.helper';
 
 export type ColumnFilterState = Record<string, Set<string>>;
 

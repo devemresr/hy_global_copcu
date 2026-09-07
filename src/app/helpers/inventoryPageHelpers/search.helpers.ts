@@ -1,5 +1,5 @@
 import Fuse from 'fuse.js';
-import type { ExcelRow } from './types';
+import type { ExcelRow } from '../../types';
 export interface HighlightSegment {
 	text: string;
 	isMatch: boolean;

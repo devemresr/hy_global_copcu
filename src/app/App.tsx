@@ -2,12 +2,14 @@ import InventoryPage from './InventoryPage';
 import { Routes, Route } from 'react-router';
 import { TermsPage } from './Terms';
 import { PaymentCalculator } from './PaymentCalculator';
+import Explanation from './Explanation';
 
 export function App() {
 	return (
 		<Routes>
 			<Route path='/:detayliData?' element={<InventoryPage />} />
 			<Route path='/terms' element={<TermsPage />} />
+			<Route path='/bilgi' element={<Explanation />} />
 			<Route path='/paymentCalculation' element={<PaymentCalculator />} />
 		</Routes>
 	);

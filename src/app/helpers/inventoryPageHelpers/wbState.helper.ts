@@ -1,6 +1,6 @@
 import type { ColDef, ColumnFilterState } from 'ag-grid-community';
 import * as XLSX from 'xlsx';
-import type { ExcelRow } from './types';
+import type { ExcelRow } from '../../types';
 
 interface WorkbookState {
 	workbook: XLSX.WorkBook | null;

@@ -121,7 +121,7 @@ export function ColumnFilterPanel({
 								checked={allSelected}
 								onChange={toggleAll}
 							/>
-							(Select all)
+							(Hepsini Seç)
 						</label>
 					</li>
 					{uniqueValues.map((value, i) => (

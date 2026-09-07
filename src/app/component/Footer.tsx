@@ -21,7 +21,7 @@ export function Footer() {
 								Fiyatlandırma
 							</a>
 							<a
-								href='#'
+								href='/bilgi'
 								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp'
 							>
 								Kaynaklar
@@ -31,22 +31,6 @@ export function Footer() {
 								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp'
 							>
 								Hakkımızda
-							</a>
-						</nav>
-
-						<nav className='flex flex-wrap gap-2 mx-auto'>
-							<h4 className='text-sm text-gray-400 hidden'>Legal</h4>
-							<a
-								href='#'
-								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp'
-							>
-								Koşullar
-							</a>
-							<a
-								href='#'
-								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp'
-							>
-								Çerezler
 							</a>
 						</nav>
 					</div>

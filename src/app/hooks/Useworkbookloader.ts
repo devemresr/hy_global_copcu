@@ -18,9 +18,15 @@ import {
 	parseWithWorker,
 	unmergeSheet,
 	WORKER_SIZE_THRESHOLD_BYTES,
-} from '../parseFile.helper';
-import { columnDefsBySheet } from '../columnDef.constant';
-import { initialWorkbookState, workbookReducer } from '../wbState.helper';
+} from '../helpers/inventoryPageHelpers/parseFile.helper';
+import {
+	columnDefsBySheet,
+	FIELD_NAMES,
+} from '../constants/columnDefinitons.constant';
+import {
+	initialWorkbookState,
+	workbookReducer,
+} from '../helpers/inventoryPageHelpers/wbState.helper';
 
 type ParseState = {
 	status: ParseStatus;
@@ -31,13 +37,14 @@ type ParseState = {
 function parseSelectedSheet(wb: XLSX.WorkBook, sheetName: string): ExcelRow[] {
 	const sheet = wb.Sheets[sheetName];
 	unmergeSheet(sheet);
+
 	return XLSX.utils.sheet_to_json<ExcelRow>(sheet);
 }
 
 export function useWorkbookLoader({
-	emcpIncluded,
+	bellekTipiIncluded,
 }: {
-	emcpIncluded?: boolean;
+	bellekTipiIncluded?: boolean;
 }) {
 	const [parseState, setParseState] = useState<ParseState>({
 		status: 'idle',
@@ -73,28 +80,44 @@ export function useWorkbookLoader({
 		}));
 	};
 
+	function normalizeAndFilterRows(rows: ExcelRow[]): ExcelRow[] {
+		return rows
+			.map((row) => {
+				const gb = parseMemorySize(row?.Depoloma as string);
+				return { ...row, __gb: gb }; // temp field to filter on
+			})
+			.filter((row) => row.__gb !== null && (row?.__gb as number) >= 8)
+			.map(({ __gb, ...row }) => ({
+				...row,
+				Depoloma: formatMemorySize(__gb as number),
+			}));
+	}
+
 	useLayoutEffect(() => {
 		if (!workbook || !selectedSheet) return;
-		const parsedRows = parseSelectedSheet(workbook, selectedSheet);
 
-		const empcFilteredRows = parsedRows.map((row) => {
-			if (emcpIncluded) {
-				return row; // keep EMCP as-is
+		const parsedRows = parseSelectedSheet(workbook, selectedSheet);
+		const cleanedRows = normalizeAndFilterRows(parsedRows);
+
+		const BellekTipiFilteredRows = cleanedRows.map((row) => {
+			if (bellekTipiIncluded) {
+				return row; // keep ic_type as-is
 			}
-			const { EMCP, ...rest } = row; // destructure it out
+			const { ic_type, ...rest } = row; // destructure it out
 			return rest;
 		});
 
 		const empcFilteredColDefs = columnDefsBySheet[selectedSheet].filter(
-			(colDef) => !(!emcpIncluded && colDef?.field === 'EMCP'),
+			(colDef) =>
+				!(!bellekTipiIncluded && colDef?.field === FIELD_NAMES.BellekTipi),
 		);
 
 		dispatch({
 			type: 'ROWS_PARSED',
-			rows: empcFilteredRows,
+			rows: BellekTipiFilteredRows,
 			colDef: empcFilteredColDefs,
 		});
-	}, [workbook, selectedSheet]);
+	}, [workbook, selectedSheet, bellekTipiIncluded, dispatch]);
 
 	function handleFileChange(file: File) {
 		setParseState((prev) => ({
@@ -136,6 +159,30 @@ export function useWorkbookLoader({
 			}));
 			parseInline(file, onLoaded, handleError);
 		}
+	}
+
+	function toGb(num: number, unit: string) {
+		if (unit === 'G') return num;
+		if (unit === 'T') return num * 1024;
+	}
+
+	function parseMemorySize(raw: string) {
+		if (raw === undefined || raw === null) return null;
+		const s = String(raw).trim();
+		if (!s || s === '?') return null;
+
+		// Simple "<number><unit>" format, any casing/spacing: "8 Gb", "16gb", "1T", "256M"
+		const simple = s.match(/^(\d+(?:\.\d+)?)\s*([MGT])B?$/i);
+		if (simple) {
+			return toGb(parseFloat(simple[1]), simple[2].toUpperCase());
+		}
+
+		return null; // unparseable returned for manual
+	}
+
+	function formatMemorySize(gbValue: number) {
+		if (gbValue >= 1024 && gbValue % 1024 === 0) return `${gbValue / 1024} Tb`;
+		return `${gbValue} Gb`;
 	}
 
 	return {

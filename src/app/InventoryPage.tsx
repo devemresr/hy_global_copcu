@@ -2,7 +2,7 @@ import './App.css';
 
 import logger from './util/logger';
 import { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
-import { highlightSegments } from './search.helpers';
+import { highlightSegments } from './helpers/inventoryPageHelpers/search.helpers';
 import { AgGridReact } from 'ag-grid-react';
 import {
 	themeQuartz,
@@ -22,7 +22,7 @@ import {
 	columnDefsBySheet,
 	FIELD_NAMES,
 	ramComparator,
-} from './columnDef.constant';
+} from './constants/columnDefinitons.constant';
 import { useColumnFilter } from './hooks/useColumnFilter';
 import { ColumnFilterPanel } from './component/paymentCalculator/ColumnFilterPanel';
 import { useWindowSize } from './hooks/useWindowSize';
@@ -31,6 +31,7 @@ import { useRowSearch } from './hooks/useRowSearch';
 import CancelIcon from './assets/icons/icons8-cancel.svg?react';
 import { useTheme } from './component/Layout';
 import { useSearchParams } from 'react-router-dom';
+import { SquareArrowOutUpRight } from 'lucide-react';
 
 ModuleRegistry.registerModules([
 	ClientSideRowModelModule, // needed for basic rowData rendering
@@ -52,7 +53,9 @@ export function HighlightCellRenderer({ value, data, colDef }: any) {
 		<>
 			{segments.map((seg, i) =>
 				seg.isMatch ? (
-					<mark key={i}>{seg.text}</mark>
+					<mark className='dark:bg-gray-500 bg-' key={i}>
+						{seg.text}
+					</mark>
 				) : (
 					<span key={i}>{seg.text}</span>
 				),
@@ -78,7 +81,8 @@ function InventoryPage() {
 		theme === 'dark' ? themeQuartz.withPart(colorSchemeDark) : themeQuartz;
 
 	const [searchParams] = useSearchParams();
-	const emcpIncluded = searchParams.has('detayliData');
+	const bellekTipiIncluded = searchParams.has('detayliData');
+	const searchRef = useRef<HTMLInputElement | null>(null);
 
 	const {
 		sheetNames,
@@ -88,7 +92,7 @@ function InventoryPage() {
 		columnFiltersBySheet,
 		dispatch,
 		handleFileChange,
-	} = useWorkbookLoader({ emcpIncluded });
+	} = useWorkbookLoader({ bellekTipiIncluded });
 
 	const { handleQuery, searchResults } = useRowSearch(rows);
 
@@ -99,7 +103,15 @@ function InventoryPage() {
 
 	// one hook call per filterable field
 	const memorySizeFilter = useColumnFilter(
-		FIELD_NAMES.MEMORY_SIZE,
+		FIELD_NAMES.Depoloma,
+		rows,
+		selectedSheet,
+		columnFiltersBySheet,
+		dispatch,
+		ramComparator,
+	);
+	const bellekTipiFilter = useColumnFilter(
+		FIELD_NAMES.BellekTipi,
 		rows,
 		selectedSheet,
 		columnFiltersBySheet,
@@ -107,7 +119,10 @@ function InventoryPage() {
 		ramComparator,
 	);
 
-	const allFilters = [memorySizeFilter];
+	const allFilters = [
+		memorySizeFilter,
+		...(bellekTipiIncluded ? [bellekTipiFilter] : []),
+	];
 	const activeFilters = allFilters.filter((f) => f.hasColumn);
 
 	const filteredRows = useMemo(() => {
@@ -124,6 +139,14 @@ function InventoryPage() {
 		return filteredRows.map((item) => ({ ...item, matches: [] }));
 	}, [searchResults, filteredRows]);
 
+	// usinglayouteffect to ensure DOM is painted
+	useLayoutEffect(() => {
+		// Focus when sheetNames becomes available since input getting rendered is conditioned to it
+		if (sheetNames.length > 0) {
+			searchRef.current?.focus();
+		}
+	}, [sheetNames]);
+
 	useEffect(() => {
 		async function loadAsset() {
 			const response = await fetch(invData);
@@ -137,7 +160,7 @@ function InventoryPage() {
 		}
 
 		loadAsset();
-	}, []);
+	}, [handleFileChange]);
 
 	const { width } = useWindowSize();
 
@@ -156,41 +179,28 @@ function InventoryPage() {
 			);
 
 		gridRef.current.api.autoSizeColumns(colsToAutosize, false);
-	}, [selectedSheet, gridRows]);
+	}, [selectedSheet, gridRows, width]);
 
 	return (
 		<div className=' mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 '>
+			<div className='bg-button-bg p-4 rounded-xl my-4'>
+				<div className='flex items-start gap-3'>
+					<p className='text-text flex-1'>
+						Anankart alımında anakartın modeli depoloma kapasitesini belirler,
+						anakartın modelini nasıl öğrenebileceğinizi öğrenmek için{' '}
+						<a
+							href='/bilgi'
+							className='inline-flex items-center gap-1 underline underline-offset-2 font-medium hover:opacity-80 transition-opacity'
+						>
+							bilgilendirme sayfasını ziyaret edebilirsiniz
+							<SquareArrowOutUpRight className='w-5  h-5 ' />
+						</a>
+					</p>
+				</div>
+			</div>
+
 			{sheetNames.length > 0 && (
 				<div className='flex flex-col md:flex-row md: lg:items-center gap-3 text-text py-3'>
-					<div className='flex flex-col md:flex-row gap-2 w-full'>
-						<div className='bg-button-bg w-80 rounded-xl text-text p-1 mx-auto md:w-100 lg:w-120'>
-							<input
-								type='text'
-								placeholder='Search text'
-								onChange={handleQuery}
-								// className='focus:button-focus-bg'
-								className='outline-none focus:bg-button-focus-bg  rounded-xl py-1 px-2 w-full'
-								disabled={rows.length === 0}
-							/>
-						</div>
-						{/* <div className='flex flex-row gap-2'>
-							{sheetNames.map((name) => (
-								<button
-									className={`${selectedSheet === name ? 'bg-button-focus-bg' : ''} bg-button-bg rounded-xl px-2 py-1 hover:bg-button-focus-bg`}
-									key={name}
-									value={name}
-									onClick={() => {
-										dispatch({
-											type: 'SHEET_SELECTED',
-											sheetName: name,
-										});
-									}}
-								>
-									{name}
-								</button>
-							))}
-						</div> */}
-					</div>
 					{/* Mobile filter tablet phones/}
 					{/* Mobile trigger button hidden at sm+ */}
 					{activeFilters.length > 0 && (
@@ -239,10 +249,11 @@ function InventoryPage() {
 					)}
 				</div>
 			)}
-			<div className='flex flex-col lg:flex-row gap-4'>
+
+			<div className='grid gap-4 grid-cols-1 [grid-template-areas:"filters"_"search"_"grid"] lg:grid-cols-[1fr_4fr] lg:[grid-template-areas:"search_search"_"filters_grid"]'>
 				{activeFilters.length > 0 && (
-					<div className='lg:flex-1 hidden sm:flex sm:flex-col overflow-y-auto [&::-webkit-scrollbar]:w-0 text-text  lg:h-[70vh]  lg:max-h-[70vh] max-h-[40vh] gap-2'>
-						<span className='p-1  top-0 text-text '>Filtreler</span>
+					<div className='hidden sm:flex sm:flex-col overflow-y-auto [&::-webkit-scrollbar]:w-0 text-text lg:h-[70vh] lg:max-h-[70vh] max-h-[40vh] gap-2 [grid-area:filters]'>
+						<span className='p-1 top-0 text-text'>Filtreler</span>
 						{activeFilters.map((f) => (
 							<ColumnFilterPanel
 								label={f.field}
@@ -254,12 +265,23 @@ function InventoryPage() {
 						))}
 					</div>
 				)}
-				<div className='w-full lg:flex-4 lg:min-w-0 h-[70vh] '>
+				<div className='bg-button-bg  rounded-xl text-text p-1 mx-auto w-100 md:w-full lg:w-120 [grid-area:search]'>
+					<input
+						type='text'
+						placeholder='Bir model kodu arayın...'
+						onChange={handleQuery}
+						ref={searchRef}
+						className='outline-none focus:bg-button-focus-bg rounded-xl py-1 px-2 w-full'
+						disabled={rows.length === 0}
+					/>
+				</div>
+
+				<div className='w-full min-w-0 h-[70vh] [grid-area:grid]'>
 					<AgGridReact
 						theme={gridTheme}
 						rowData={gridRows}
 						columnDefs={colDef}
-						defaultColDef={{ sortable: true, resizable: true, flex: 1 }} // flex lets other cols fill space
+						defaultColDef={{ sortable: true, resizable: true, flex: 1 }}
 						ref={gridRef}
 					/>
 				</div>

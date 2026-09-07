@@ -117,7 +117,7 @@ export function Header({ isOpen, onToggle, mode, setTheme }: HeaderProps) {
 		}
 
 		setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-	}, [theme]);
+	}, [theme, setTheme]);
 
 	// Cleanup on unmount
 	useEffect(() => {
@@ -180,7 +180,7 @@ export function Header({ isOpen, onToggle, mode, setTheme }: HeaderProps) {
 			cancelled = true;
 			cancelAnimationFrame(rafId);
 		};
-	}, []);
+	}, [theme]);
 
 	return (
 		<header>

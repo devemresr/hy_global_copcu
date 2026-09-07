@@ -1,14 +1,17 @@
 import type { ColDef } from 'ag-grid-community';
-import { HighlightCellRenderer } from './InventoryPage';
+import { HighlightCellRenderer } from '../InventoryPage';
 
 export const FIELD_NAMES = {
-	EMCP: 'EMCP',
+	BellekTipi: 'BellekTipi',
 	MODEL: 'Model',
-	MEMORY_SIZE: 'MemorySize',
+	Depoloma: 'Depoloma',
 };
-export const AUTO_SIZED_COLUMNS = [FIELD_NAMES.MEMORY_SIZE];
+export const AUTO_SIZED_COLUMNS = [
+	FIELD_NAMES.Depoloma,
+	FIELD_NAMES.BellekTipi,
+];
 // Declare here which fields should have a filter section.
-export const FILTERABLE_FIELDS = [FIELD_NAMES.MEMORY_SIZE];
+export const FILTERABLE_FIELDS = [FIELD_NAMES.Depoloma];
 
 export const columnDefsBySheet: Record<string, ColDef[]> = {
 	Sheet1: [
@@ -18,20 +21,13 @@ export const columnDefsBySheet: Record<string, ColDef[]> = {
 		// 	sortable: true,
 		// 	filter: true,
 		// 	filterParams: {
-		// 		filterOptions: ['equals', 'greaterThan', 'lessThan'], // limit which comparisons show
+		// filterOptions: ['equals', 'greaterThan', 'lessThan'], // limit which comparisons show
 		// 		buttons: ['apply', 'reset', 'cancel'], // add Apply/Reset/Cancel buttons at the bottom
 		// 		closeOnApply: true,
 		// 		defaultOption: 'greaterThan',
 		// 	},
 		// 	cellRenderer: HighlightCellRenderer,
 		// },
-		{
-			field: FIELD_NAMES.EMCP,
-			headerName: 'EMCP',
-			sortable: true,
-			filter: true,
-			cellRenderer: HighlightCellRenderer,
-		},
 		{
 			field: FIELD_NAMES.MODEL,
 			headerName: 'Model',
@@ -40,12 +36,19 @@ export const columnDefsBySheet: Record<string, ColDef[]> = {
 			cellRenderer: HighlightCellRenderer,
 		},
 		{
-			field: FIELD_NAMES.MEMORY_SIZE,
-			headerName: 'MemorySize',
+			field: FIELD_NAMES.Depoloma,
+			headerName: 'Depoloma',
 			sortable: true,
 			filter: true,
 			cellRenderer: HighlightCellRenderer,
 			comparator: ramComparator,
+		},
+		{
+			field: FIELD_NAMES.BellekTipi,
+			headerName: 'Depoloma Türü',
+			sortable: true,
+			filter: true,
+			cellRenderer: HighlightCellRenderer,
 		},
 	],
 };
