@@ -40,7 +40,7 @@ export function useRowSearch(rows: ExcelRow[]) {
 
 		const results = fuse.search(query);
 		return results;
-	}, [query, fuse, dateColumns]);
+	}, [query, fuse, rows, dateColumns]);
 
 	return { query, handleQuery, dateColumns, searchResults };
 }

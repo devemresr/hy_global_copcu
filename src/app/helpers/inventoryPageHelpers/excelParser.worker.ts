@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import type { WorkerResponse } from './types';
+import type { WorkerResponse } from '../../types';
 
 self.onmessage = (event: MessageEvent<{ arrayBuffer: ArrayBuffer }>) => {
 	try {

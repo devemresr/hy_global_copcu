@@ -160,7 +160,7 @@ function InventoryPage() {
 		}
 
 		loadAsset();
-	}, [handleFileChange]);
+	}, []);
 
 	const { width } = useWindowSize();
 
@@ -179,7 +179,7 @@ function InventoryPage() {
 			);
 
 		gridRef.current.api.autoSizeColumns(colsToAutosize, false);
-	}, [selectedSheet, gridRows, width]);
+	}, [selectedSheet, gridRows]);
 
 	return (
 		<div className=' mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 '>
