@@ -7,6 +7,7 @@ import photo6 from './64GB.jpeg';
 import photo7 from './64gb (2).jpeg';
 import photo8 from './128gb.jpeg';
 import photo9 from './256gb.jpeg';
+import logo from '../logo.png';
 
 export const SAMPLE_PHOTOS = [
 	{
@@ -47,3 +48,8 @@ export const SAMPLE_PHOTOS = [
 		label: 'H9HQ16AECMMDAR',
 	},
 ];
+
+export const LOGO = {
+	url: logo,
+	alt: logo,
+};

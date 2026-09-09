@@ -2,14 +2,15 @@ import WhatsappIcon from '../assets/icons/icons8-whatsapp.svg?react';
 import EmailIcon from '../assets/icons/emailIcon.svg?react';
 import { mailUrl, whatsappUrl } from '../url.constant';
 import '../App.css';
+import { LOGO } from '../assets/photos/photos';
 
 export function Footer() {
 	return (
 		<footer className='mt-16 md:mt-30'>
 			<div className='bg-footer-bg px-5 py-6 sm:px-8 sm:py-10 md:px-12 md:py-12 flex flex-col gap-2  lg:px-10 border-t-2 border-border'>
 				<div className='flex flex-col md:flex-row  md:justify-between gap-2'>
-					<div className='self-start w-fit mx-auto md:mx-0 md:self-auto  bg-red-400 px-2 py-2'>
-						logo
+					<div className='self-start w-fit mx-auto md:mx-0 md:self-autopx-2 py-2'>
+						<img className='w-25 h-25' src={LOGO.url} alt={LOGO.alt}></img>
 					</div>
 
 					<div className='flex flex-col md:flex-row gap-2 items-center'>
@@ -50,7 +51,7 @@ export function Footer() {
 				</div>
 				<div className=' pt-5 text-center'>
 					<p className='text-sm text-gray-500'>
-						© 2026 lorem. Tüm hakları saklıdır.
+						© 2026 Global Çöpçü. Tüm hakları saklıdır.
 					</p>
 				</div>
 			</div>

@@ -16,7 +16,9 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
           ${isOpen ? 'w-64' : 'w-0'}`}
 			>
 				<div className='flex justify-between p-4 items-center'>
-					<div className='self-start bg-red-400 px-2 py-2 m'>logo</div>
+					<a className='text-heading-text font-bold block' href='/'>
+						GLOBAL ÇÖPÇÜ
+					</a>
 					<button className='text-text h-8 w-8 ' onClick={onClose}>
 						<CancelIcon className='w-full h-full' />
 					</button>
@@ -44,8 +46,10 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
 			>
 				<div className='flex justify-between p-4 items-center'>
-					<div className='self-start bg-red-400 px-2 py-2 m'>logo</div>
-					<button className='text-text h-8 w-8 ' onClick={onClose}>
+					<a className='text-heading-text font-bold block' href='/'>
+						GLOBAL ÇÖPÇÜ
+					</a>
+					<button className='text-text h-8 w-8' onClick={onClose}>
 						<CancelIcon className='w-full h-full' />
 					</button>
 				</div>
