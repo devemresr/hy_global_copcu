@@ -6,7 +6,9 @@ import {
 	detectDateColumns,
 	parseDateQuery,
 } from '../helpers/inventoryPageHelpers/search.helpers';
+import { FIELD_NAMES } from '../constants/columnDefinitons.constant';
 
+export const SEARCHABLE_FIELDS = [FIELD_NAMES.MODEL];
 export function useRowSearch(rows: ExcelRow[]) {
 	const [query, setQuery] = useState<string>('');
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -28,7 +30,14 @@ export function useRowSearch(rows: ExcelRow[]) {
 	const fuse = useMemo(() => {
 		if (rows.length === 0) return null;
 		const allKeys = Object.keys(rows[0]);
-		const textKeys = allKeys.filter((key) => !dateColumns.includes(key));
+
+		// Returns which columns hold actual Date objects, so we know where to run date comparisons.
+		const searchableFields = allKeys.filter((key) =>
+			SEARCHABLE_FIELDS.includes(key),
+		);
+		const textKeys = searchableFields.filter(
+			(key) => !dateColumns.includes(key),
+		);
 		return buildFuse(rows, textKeys);
 	}, [rows, dateColumns]);
 

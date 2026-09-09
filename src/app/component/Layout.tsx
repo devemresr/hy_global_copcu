@@ -13,7 +13,9 @@ import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 function SmallFallback({ error }: FallbackProps) {
 	const message = error instanceof Error ? error.message : String(error);
 
-	return <div className='p-2 text-xs text-text'>Failed to load. {message}</div>;
+	return (
+		<div className='p-2 text-xs text-text'>Bir hata oluştu. {message}</div>
+	);
 }
 
 function getInitialTheme(): Theme {
@@ -63,7 +65,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 					onClose={() => setSidebar(false)}
 				/>
 
-				<div className='flex flex-col flex-1'>
+				<div className='flex flex-col flex-1 min-w-0'>
 					<ErrorBoundary FallbackComponent={SmallFallback}>
 						<Header
 							isOpen={isOpenSidebar}
@@ -73,7 +75,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 						/>
 					</ErrorBoundary>
 
-					<main className='flex-1'>
+					<main className='flex-1 min-w-0'>
 						<RouteErrorBoundary>{children}</RouteErrorBoundary>
 					</main>
 					<ErrorBoundary FallbackComponent={SmallFallback}>

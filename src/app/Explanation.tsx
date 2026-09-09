@@ -2,20 +2,23 @@ import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 import { SAMPLE_PHOTOS } from './assets/photos/photos';
 import { pageContent } from './constants/explanationContent.constant';
+import { Skeleton } from './component/Skelaton';
 
 export default function Explanation({ photos = SAMPLE_PHOTOS }) {
 	const [index, setIndex] = useState(0);
+	const [loadedThumbs, setLoadedThumbs] = useState<Set<string>>(new Set());
 	const [loaded, setLoaded] = useState(false);
 	const photoCount = photos.length;
 	const current = photos[index];
 
 	const goTo = useCallback(
-		(next: number) => {
+		async (next: number) => {
 			const resultIndex = ((next % photoCount) + photoCount) % photoCount;
+			if (index === resultIndex) return;
 			setLoaded(false);
 			setIndex(resultIndex);
 		},
-		[photoCount],
+		[photoCount, index],
 	);
 
 	const prev = useCallback(() => goTo(index - 1), [goTo, index]);
@@ -30,13 +33,15 @@ export default function Explanation({ photos = SAMPLE_PHOTOS }) {
 		return () => window.removeEventListener('keydown', onKey);
 	}, [prev, next]);
 
-	if (!photoCount) {
-		return (
-			<div className='flex items-center justify-center h-64 bg-neutral-900 text-neutral-500 text-sm font-mono'>
-				No photos to show
-			</div>
-		);
-	}
+	const markThumbLoaded = async (url: string) => {
+		setLoadedThumbs((prev) => {
+			if (prev.has(url)) return prev;
+			const next = new Set(prev);
+			next.add(url);
+			return next;
+		});
+	};
+
 	const { hero, infoSection, steps, whyImportant, closing } = pageContent;
 
 	return (
@@ -60,11 +65,7 @@ export default function Explanation({ photos = SAMPLE_PHOTOS }) {
 
 					{/* stage */}
 					<div className='w-full max-h-120 md:max-h-[80vh] flex items-center justify-center relative overflow-hidden my-4'>
-						{!loaded && (
-							<div className='absolute inset-0 flex items-center justify-center'>
-								<div className='w-5 h-5 border-2 border-neutral-700 border-t-amber-500 rounded-full animate-spin' />
-							</div>
-						)}
+						{!loaded && <Skeleton className='absolute inset-0 rounded-sm ' />}
 						<img
 							key={current.url}
 							src={current.url}
@@ -109,31 +110,37 @@ export default function Explanation({ photos = SAMPLE_PHOTOS }) {
 
 					{/* caption */}
 					<div className='px-4 py-3 border-t border-neutral-800'>
-						<div className='font-mono text-sm text-neutral-100 tracking-wide'>
+						<div className='font-mono text-sm text-text tracking-wide'>
 							{current.label}
 						</div>
 					</div>
 
 					{/* filmstrip */}
 					{photoCount > 1 && (
-						<div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 min-w-0'>
+						// <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 min-w-0'>
+						<div className='overflow-x-auto min-w-0 flex gap-1'>
 							{photos.map((p, i: number) => (
 								<button
 									key={p.url}
 									onClick={() => goTo(i)}
 									aria-label={`View ${p.label}`}
 									aria-current={i === index}
-									className={`shrink-0 w-8 h-8 md:w-14 md:h-14 rounded-sm overflow-hidden border transition-colors ${
+									className={`shrink-0 w-8 h-8 md:w-14 md:h-14 rounded-sm overflow-hidden border relative transition-colors ${
 										i === index
 											? 'border-amber-500'
 											: 'border-neutral-800 hover:border-neutral-600'
 									}`}
 								>
+									{!loadedThumbs.has(p.url) && (
+										<Skeleton className='absolute inset-0' />
+									)}
 									<img
 										src={p.url}
 										alt={p.label}
-										key={p.url}
-										className=' max-w-full max-h-full min-w-0 min-h-0 w-full h-full object-cover'
+										onLoad={() => markThumbLoaded(p.url)}
+										className={`max-w-full max-h-full min-w-0 min-h-0 w-full h-full object-cover transition-opacity duration-150 ${
+											loadedThumbs.has(p.url) ? 'opacity-100' : 'opacity-0'
+										}`}
 									/>
 								</button>
 							))}

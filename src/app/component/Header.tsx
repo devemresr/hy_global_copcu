@@ -180,7 +180,7 @@ export function Header({ isOpen, onToggle, mode, setTheme }: HeaderProps) {
 			cancelled = true;
 			cancelAnimationFrame(rafId);
 		};
-	}, [theme]);
+	}, []);
 
 	return (
 		<header>

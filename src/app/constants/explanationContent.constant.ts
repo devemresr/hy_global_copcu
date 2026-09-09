@@ -25,10 +25,10 @@ export const pageContent = {
 			},
 			{
 				title: 'Kodu arayın',
-				text: 'Bu kodu sitemizdeki arama alanına eksiksiz şekilde girin.',
+				text: 'Bu kodu sitemizdeki arama alanına girin.',
 			},
 			{
-				title: 'Bilgiyi öğrenin',
+				title: 'Detayları öğrenin',
 				text: 'Arama sonucunda, ilgili belleğin tipini ve kapasitesini görüntüleyebilirsiniz.',
 			},
 			{

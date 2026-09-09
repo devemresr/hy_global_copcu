@@ -32,6 +32,7 @@ import CancelIcon from './assets/icons/icons8-cancel.svg?react';
 import { useTheme } from './component/Layout';
 import { useSearchParams } from 'react-router-dom';
 import { SquareArrowOutUpRight } from 'lucide-react';
+import SearchIcon from './assets/icons/icons8-search.svg?react';
 
 ModuleRegistry.registerModules([
 	ClientSideRowModelModule, // needed for basic rowData rendering
@@ -265,25 +266,29 @@ function InventoryPage() {
 						))}
 					</div>
 				)}
-				<div className='bg-button-bg  rounded-xl text-text p-1 mx-auto w-100 md:w-full lg:w-120 [grid-area:search]'>
-					<input
-						type='text'
-						placeholder='Bir model kodu arayın...'
-						onChange={handleQuery}
-						ref={searchRef}
-						className='outline-none focus:bg-button-focus-bg rounded-xl py-1 px-2 w-full'
-						disabled={rows.length === 0}
-					/>
+				<div className='bg-button-bg rounded-xl text-text p-1 mx-auto w-full lg:w-120 [grid-area:search]'>
+					<div className='flex items-center gap-1'>
+						<SearchIcon className='w-5 h-5'></SearchIcon>
+						<input
+							type='text'
+							placeholder='Bir model kodu arayın...'
+							onChange={handleQuery}
+							ref={searchRef}
+							className='outline-none focus:bg-button-focus-bg rounded-xl py-1 px-2 w-full flex-1'
+						/>
+					</div>
 				</div>
 
 				<div className='w-full min-w-0 h-[70vh] [grid-area:grid]'>
-					<AgGridReact
-						theme={gridTheme}
-						rowData={gridRows}
-						columnDefs={colDef}
-						defaultColDef={{ sortable: true, resizable: true, flex: 1 }}
-						ref={gridRef}
-					/>
+					<div className='w-full min-w-0 h-[70vh] [grid-area:grid]'>
+						<AgGridReact
+							theme={gridTheme}
+							rowData={gridRows}
+							columnDefs={colDef}
+							defaultColDef={{ sortable: true, resizable: true, flex: 1 }}
+							ref={gridRef}
+						/>
+					</div>
 				</div>
 			</div>
 		</div>
