@@ -98,6 +98,8 @@ export function useWorkbookLoader({
 
 		const parsedRows = parseSelectedSheet(workbook, selectedSheet);
 		const cleanedRows = normalizeAndFilterRows(parsedRows);
+		const a = cleanedRows[0];
+		logger.debug({ a });
 
 		const empcFilteredColDefs = columnDefsBySheet[selectedSheet]?.filter(
 			(colDef) =>
