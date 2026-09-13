@@ -16,20 +16,20 @@ export function Footer() {
 					<div className='flex flex-col md:flex-row gap-2 items-center'>
 						<nav className='flex flex-wrap gap-2 mx-auto '>
 							<a
-								href='#'
-								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp'
+								href='/fiyatlandirma'
+								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp dark:animate-hoverFloatUpDark'
 							>
 								Fiyatlandırma
 							</a>
 							<a
 								href='/bilgi'
-								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp'
+								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp dark:animate-hoverFloatUpDark'
 							>
 								Kaynaklar
 							</a>
 							<a
 								href='#'
-								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp'
+								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp dark:animate-hoverFloatUpDark'
 							>
 								Hakkımızda
 							</a>

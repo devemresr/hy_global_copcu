@@ -5,10 +5,12 @@ export const FIELD_NAMES = {
 	BellekTipi: 'BellekTipi',
 	MODEL: 'Model',
 	Depoloma: 'Depoloma',
+	FIYAT: 'Fiyat',
 };
 export const AUTO_SIZED_COLUMNS = [
 	FIELD_NAMES.Depoloma,
 	FIELD_NAMES.BellekTipi,
+	FIELD_NAMES.FIYAT,
 ];
 // Declare here which fields should have a filter section.
 export const FILTERABLE_FIELDS = [FIELD_NAMES.Depoloma];
@@ -40,7 +42,7 @@ export const columnDefsBySheet: Record<string, ColDef[]> = {
 			headerName: 'Depoloma',
 			sortable: true,
 			filter: true,
-			cellRenderer: HighlightCellRenderer,
+
 			comparator: ramComparator,
 		},
 		{
@@ -48,7 +50,12 @@ export const columnDefsBySheet: Record<string, ColDef[]> = {
 			headerName: 'Depoloma Türü',
 			sortable: true,
 			filter: true,
-			cellRenderer: HighlightCellRenderer,
+		},
+		{
+			field: FIELD_NAMES.FIYAT,
+			headerName: 'Fiyat',
+			sortable: true,
+			filter: true,
 		},
 	],
 };

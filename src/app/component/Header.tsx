@@ -76,9 +76,7 @@ export function Header({ isOpen, onToggle, mode, setTheme }: HeaderProps) {
 		);
 
 		if (isAnimatingRef.current) {
-			logger.debug(
-				'[handleTheme] bailing early — animation already in progress',
-			);
+			logger.debug('[handleTheme] bailing early animation already in progress');
 			return;
 		}
 

@@ -81,6 +81,18 @@ export function useWorkbookLoader({
 	};
 
 	function normalizeAndFilterRows(rows: ExcelRow[]): ExcelRow[] {
+		// const test = [];
+		// rows
+		// 	.map((row) => {
+		// 		const gb = parseMemorySize(row?.Depoloma as string);
+		// 		return { ...row, __gb: gb }; // temp field to filter on
+		// 	})
+		// 	.map((i) => {
+		// 		if (i.__gb !== null && (i?.__gb as number) < 8) {
+		// 			test.push(i);
+		// 		}
+		// 	});
+		// logger.debug({ test });
 		return rows
 			.map((row) => {
 				const gb = parseMemorySize(row?.Depoloma as string);
@@ -99,22 +111,14 @@ export function useWorkbookLoader({
 		const parsedRows = parseSelectedSheet(workbook, selectedSheet);
 		const cleanedRows = normalizeAndFilterRows(parsedRows);
 
-		const BellekTipiFilteredRows = cleanedRows.map((row) => {
-			if (bellekTipiIncluded) {
-				return row; // keep ic_type as-is
-			}
-			const { ic_type, ...rest } = row; // destructure it out
-			return rest;
-		});
-
-		const empcFilteredColDefs = columnDefsBySheet[selectedSheet].filter(
+		const empcFilteredColDefs = columnDefsBySheet[selectedSheet]?.filter(
 			(colDef) =>
 				!(!bellekTipiIncluded && colDef?.field === FIELD_NAMES.BellekTipi),
 		);
 
 		dispatch({
 			type: 'ROWS_PARSED',
-			rows: BellekTipiFilteredRows,
+			rows: cleanedRows,
 			colDef: empcFilteredColDefs,
 		});
 	}, [workbook, selectedSheet, bellekTipiIncluded, dispatch]);
@@ -172,7 +176,7 @@ export function useWorkbookLoader({
 		if (!s || s === '?') return null;
 
 		// Simple "<number><unit>" format, any casing/spacing: "8 Gb", "16gb", "1T", "256M"
-		const simple = s.match(/^(\d+(?:\.\d+)?)\s*([MGT])B?$/i);
+		const simple = s.match(/(\d+(?:\.\d+)?)\s*([MGT])B?/i);
 		if (simple) {
 			return toGb(parseFloat(simple[1]), simple[2].toUpperCase());
 		}

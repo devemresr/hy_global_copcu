@@ -4,7 +4,7 @@ import { SAMPLE_PHOTOS } from './assets/photos/photos';
 import { pageContent } from './constants/explanationContent.constant';
 import { Skeleton } from './component/Skelaton';
 
-export default function Explanation({ photos = SAMPLE_PHOTOS }) {
+export function Explanation({ photos = SAMPLE_PHOTOS }) {
 	const [index, setIndex] = useState(0);
 	const [loadedThumbs, setLoadedThumbs] = useState<Set<string>>(new Set());
 	const [loaded, setLoaded] = useState(false);
