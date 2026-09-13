@@ -81,18 +81,6 @@ export function useWorkbookLoader({
 	};
 
 	function normalizeAndFilterRows(rows: ExcelRow[]): ExcelRow[] {
-		// const test = [];
-		// rows
-		// 	.map((row) => {
-		// 		const gb = parseMemorySize(row?.Depoloma as string);
-		// 		return { ...row, __gb: gb }; // temp field to filter on
-		// 	})
-		// 	.map((i) => {
-		// 		if (i.__gb !== null && (i?.__gb as number) < 8) {
-		// 			test.push(i);
-		// 		}
-		// 	});
-		// logger.debug({ test });
 		return rows
 			.map((row) => {
 				const gb = parseMemorySize(row?.Depoloma as string);
