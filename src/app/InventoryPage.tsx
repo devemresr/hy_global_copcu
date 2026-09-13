@@ -76,9 +76,9 @@ function getInitialTheme(): 'light' | 'dark' {
 function InventoryPage() {
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const gridRef = useRef<AgGridReact>(null);
-	const searchIconRef = useRef<HTMLButtonElement>(null);
-	const [coords, setCoords] = useState({ top: 0, left: 0 });
-	const [isSearchIconHovered, setIsSearchIconHovered] = useState(false);
+	// const searchIconRef = useRef<HTMLButtonElement>(null);
+	// const [coords, setCoords] = useState({ top: 0, left: 0 });
+	// const [isSearchIconHovered, setIsSearchIconHovered] = useState(false);
 
 	const { theme } = useTheme();
 	const gridTheme =
@@ -131,6 +131,8 @@ function InventoryPage() {
 
 	const allFilters = [
 		memorySizeFilter,
+		// ...(bellekTipiIncluded ? [bellekTipiFilter] : []),
+		bellekTipiFilter,
 		// ...(bellekTipiIncluded ? [bellekTipiFilter] : []),
 		bellekTipiFilter,
 	];
@@ -191,16 +193,16 @@ function InventoryPage() {
 		gridRef.current.api.autoSizeColumns(colsToAutosize, false);
 	}, [selectedSheet, gridRows]);
 
-	const handleMouseEnter = () => {
-		const rect = searchIconRef.current?.getBoundingClientRect();
-		if (rect) {
-			setCoords({
-				top: rect.bottom + window.scrollY + 8,
-				left: rect.left + rect.width / 2 + window.scrollX,
-			});
-		}
-		setIsSearchIconHovered(true);
-	};
+	// const handleMouseEnter = () => {
+	// 	const rect = searchIconRef.current?.getBoundingClientRect();
+	// 	if (rect) {
+	// 		setCoords({
+	// 			top: rect.bottom + window.scrollY + 8,
+	// 			left: rect.left + rect.width / 2 + window.scrollX,
+	// 		});
+	// 	}
+	// 	setIsSearchIconHovered(true);
+	// };
 
 	return (
 		<div className=' mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 '>
