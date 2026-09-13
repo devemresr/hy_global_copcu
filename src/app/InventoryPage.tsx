@@ -28,6 +28,7 @@ import { ColumnFilterPanel } from './component/paymentCalculator/ColumnFilterPan
 import { useWindowSize } from './hooks/useWindowSize';
 import { useWorkbookLoader } from './hooks/Useworkbookloader';
 import { useRowSearch } from './hooks/useRowSearch';
+
 import CancelIcon from './assets/icons/icons8-cancel.svg?react';
 import { useTheme } from './component/Layout';
 import { SquareArrowOutUpRight } from 'lucide-react';
@@ -211,10 +212,10 @@ function InventoryPage() {
 						anakartın modelini nasıl öğrenebileceğinizi öğrenmek için{' '}
 						<a
 							href='/bilgi'
-							className='inline-flex items-center gap-1 underline underline-offset-2 font-medium hover:opacity-80 transition-opacity'
+							className='underline underline-offset-2 font-medium hover:opacity-80 transition-opacity'
 						>
 							bilgilendirme sayfasını ziyaret edebilirsiniz
-							<SquareArrowOutUpRight className='w-5  h-5 ' />
+							<SquareArrowOutUpRight className='w-5  h-5 inline-block ml-1 -mt-0.5' />
 						</a>
 					</p>
 				</div>

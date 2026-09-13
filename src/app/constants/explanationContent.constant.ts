@@ -33,7 +33,8 @@ export const pageContent = {
 			},
 			{
 				title: 'Değerlendirme yapın',
-				text: 'Elde ettiğiniz bellek tipi ve kapasite bilgisine göre hurda alım fiyatlandırmasını değerlendirebilirsiniz.',
+				text: 'Elde ettiğiniz bellek tipi ve kapasite bilgisine göre hurda alım',
+				link: 'fiyatlandırmasını değerlendirebilirsiniz.',
 			},
 		],
 	},
