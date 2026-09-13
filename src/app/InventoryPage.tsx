@@ -133,8 +133,6 @@ function InventoryPage() {
 		memorySizeFilter,
 		// ...(bellekTipiIncluded ? [bellekTipiFilter] : []),
 		bellekTipiFilter,
-		// ...(bellekTipiIncluded ? [bellekTipiFilter] : []),
-		bellekTipiFilter,
 	];
 	const activeFilters = allFilters.filter((f) => f.hasColumn);
 

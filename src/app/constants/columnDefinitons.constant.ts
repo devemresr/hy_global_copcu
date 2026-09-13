@@ -8,8 +8,8 @@ export const FIELD_NAMES = {
 	FIYAT: 'Fiyat',
 };
 export const AUTO_SIZED_COLUMNS = [
-	FIELD_NAMES.Depoloma,
-	FIELD_NAMES.BellekTipi,
+	// FIELD_NAMES.Depoloma,
+	// FIELD_NAMES.BellekTipi,
 	FIELD_NAMES.FIYAT,
 ];
 // Declare here which fields should have a filter section.
@@ -17,45 +17,41 @@ export const FILTERABLE_FIELDS = [FIELD_NAMES.Depoloma];
 
 export const columnDefsBySheet: Record<string, ColDef[]> = {
 	Sheet1: [
-		// {
-		// 	field: 'Brand',
-		// 	headerName: 'Brand',
-		// 	sortable: true,
-		// 	filter: true,
-		// 	filterParams: {
-		// filterOptions: ['equals', 'greaterThan', 'lessThan'], // limit which comparisons show
-		// 		buttons: ['apply', 'reset', 'cancel'], // add Apply/Reset/Cancel buttons at the bottom
-		// 		closeOnApply: true,
-		// 		defaultOption: 'greaterThan',
-		// 	},
-		// 	cellRenderer: HighlightCellRenderer,
-		// },
 		{
 			field: FIELD_NAMES.MODEL,
 			headerName: 'Model',
 			sortable: true,
-			filter: true,
 			cellRenderer: HighlightCellRenderer,
+			minWidth: 100,
 		},
 		{
 			field: FIELD_NAMES.Depoloma,
 			headerName: 'Depoloma',
 			sortable: true,
-			filter: true,
-
 			comparator: ramComparator,
+			minWidth: 90,
 		},
 		{
 			field: FIELD_NAMES.BellekTipi,
-			headerName: 'Depoloma Türü',
+			headerName: 'Bellek Türü',
 			sortable: true,
-			filter: true,
+			minWidth: 90,
 		},
 		{
 			field: FIELD_NAMES.FIYAT,
 			headerName: 'Fiyat',
 			sortable: true,
-			filter: true,
+			comparator: (valueA: string | null, valueB: string | null) => {
+				const parse = (v: string | null): number => {
+					if (v === null || v === undefined) return -Infinity; // nulls sort first; use Infinity to sort last
+					const match = v.match(/[\d.]+/);
+					return match ? parseFloat(match[0]) : -Infinity;
+				};
+
+				const a = parse(valueA);
+				const b = parse(valueB);
+				return a - b;
+			},
 		},
 	],
 };
