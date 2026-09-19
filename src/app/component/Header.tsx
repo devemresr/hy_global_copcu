@@ -1,73 +1,45 @@
 import { Lottie } from 'lottie-react';
-import toggleSidebarAnimation from '../assets/icons/icons8-menu.json';
 import toggleThemeAnimation from '../assets/icons/DarkLightInteractiveToggle.json';
 import {
 	useCallback,
 	useEffect,
-	useMemo,
 	useRef,
 	type Dispatch,
+	type RefObject,
 	type SetStateAction,
 } from 'react';
 import type { LottieHandle } from 'lottie-react';
-import type { sideBarDisplayMode } from './Sidebar';
 import { whatsappUrl } from '../url.constant';
 import WhatsappIcon from '../assets/icons/icons8-whatsapp.svg?react';
 import '../App.css';
 interface HeaderProps {
 	isOpen: boolean;
 	onToggle: () => void;
-	mode: sideBarDisplayMode;
 	setTheme: Dispatch<SetStateAction<Theme>>;
+	// owned by Layout so the sidebar's own cancel button can drive the same
+	// animation instance as this header's toggle button
+	sidebarAnimationRef: RefObject<LottieHandle | null>;
+	sidebarAnimationSrc: object;
 }
 
-import { replaceColor } from 'lottie-colorify';
 import { useTheme } from './Layout';
 import type { Theme } from './Layout';
 import logger from '../util/logger';
 const TARGET_DURATION_THEME_ANIMATION = 0.9;
 const FRAME_RATE = 60;
 
-export function Header({ isOpen, onToggle, mode, setTheme }: HeaderProps) {
+export function Header({
+	isOpen,
+	onToggle,
+	setTheme,
+	sidebarAnimationRef,
+	sidebarAnimationSrc,
+}: HeaderProps) {
 	const { theme } = useTheme();
 
-	const themedSidebarAnimation = useMemo(() => {
-		logger.debug({ theme }, '[themedSidebarAnimation] recomputing');
-
-		return theme === 'dark'
-			? toggleSidebarAnimation
-			: replaceColor([255, 255, 255], '#000000', toggleSidebarAnimation);
-	}, [theme]);
-
 	const lottieThemeRef = useRef<LottieHandle>(null);
-	const lottieSideBarRef = useRef<LottieHandle>(null);
 	const isAnimatingRef = useRef(false);
 	const onCompleteRef = useRef<(() => void) | null>(null);
-
-	const handleSideBar = () => {
-		logger.debug({ mode, isOpen }, '[handleSideBar] called');
-
-		if (mode === 'push') {
-			const anim = lottieSideBarRef.current?.animationItem;
-			if (anim) {
-				const nativeDuration = anim.getDuration(false); // seconds
-				const targetDuration = 0.9;
-				const speed = nativeDuration / targetDuration;
-				logger.debug(
-					{ nativeDuration, speed, direction: isOpen ? -1 : 1 },
-					'[handleSideBar] playing',
-				);
-				anim.setSpeed(nativeDuration / targetDuration);
-				anim.setDirection(isOpen ? -1 : 1);
-				anim.play();
-			} else {
-				logger.debug(
-					'[handleSideBar] no animationItem found on lottieSideBarRef',
-				);
-			}
-		}
-		onToggle();
-	};
 
 	const handleTheme = useCallback(() => {
 		logger.debug(
@@ -184,15 +156,15 @@ export function Header({ isOpen, onToggle, mode, setTheme }: HeaderProps) {
 		<header>
 			<div className='h-15 top-0 px-3 lg:h-20 lg:px-10 md:px-5 bg-header-bg flex items-center justify-between w-full border-b-2 border-border'>
 				<button
-					onClick={handleSideBar}
+					onClick={onToggle}
 					className='sm:w-7 sm:h-7 h-5 w-5 lg:h-10 lg:w-10 '
 					aria-label='Toggle menu'
 				>
 					<Lottie
-						src={themedSidebarAnimation}
+						src={sidebarAnimationSrc}
 						loop={false}
 						autoplay={false}
-						lottieRef={lottieSideBarRef}
+						lottieRef={sidebarAnimationRef}
 						className={`w-full h-full bg-header-bg ${
 							isOpen ? 'rotate-0' : 'rotate-180'
 						}`}

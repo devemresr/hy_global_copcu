@@ -1,5 +1,5 @@
 import InventoryPage from './InventoryPage';
-import { Routes, Route } from 'react-router';
+import { Routes, Route, Navigate } from 'react-router';
 import { TermsPage } from './Terms';
 import { PaymentCalculator } from './PaymentCalculator';
 import { Explanation } from './Explanation';
@@ -18,6 +18,7 @@ export function App() {
 				{/* <Route path='/admin' element={<AdminPage />} /> */}
 				<Route path='/' element={<InventoryPage />} />
 				<Route path='/fiyatlandirma' element={<Pricing />}></Route>
+				<Route path='*' element={<Navigate to='/' replace />} />
 			</Routes>
 			<Analytics />
 		</>

@@ -62,6 +62,15 @@ html {
 @keyframes hoverFloatUp {
 	0% {
 		transform: translate(0px, 0px) scale(1);
+	}
+	100% {
+		transform: translate(0px, -4px) scale(1.12);
+	}
+}
+
+@keyframes hoverFloatUpDark {
+	0% {
+		transform: translate(0px, 0px) scale(1);
 		filter: brightness(1);
 	}
 	100% {
@@ -70,11 +79,16 @@ html {
 	}
 }
 
-@keyframes hoverFloatUpDark {
-	0% {
-		transform: translate(0px, 0px) scale(1);
-	}
-	100% {
-		transform: translate(0px, -4px) scale(1.12);
-	}
+/* AG Grid has no built-in "scroll within a cell" option - cell content either
+   clips (overflow hidden, the default) or wraps and grows the row (wrapText +
+   autoHeight). This overrides the theme's default clipping so overflowing
+   cell content scrolls horizontally *inside its own cell* on drag/touch,
+   instead of being cut off or forcing the whole grid to scroll sideways. */
+.ag-cell {
+	overflow-x: auto;
+	white-space: nowrap;
+	scrollbar-width: none; /* Firefox */
+}
+.ag-cell::-webkit-scrollbar {
+	display: none; /* Chrome/Safari - scroll still works, just no visible bar */
 }
