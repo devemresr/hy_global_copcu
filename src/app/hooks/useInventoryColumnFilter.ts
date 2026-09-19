@@ -1,12 +1,9 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ExcelRow } from '../types';
-import { useEffect, useMemo } from 'react';
-import type { WorkbookAction } from '../helpers/inventoryPageHelpers/wbState.helper';
-
-export type ColumnFilterState = Record<string, Set<string>>;
 
 const DEFAULT_EMPTY_VALUE_LABEL = 'Belirtilmemiş';
 
-export interface UseColumnFilterOptions {
+export interface UseInventoryColumnFilterOptions {
 	// Display label standing in for blank/missing values in the dropdown
 	// (also what rows with no value get filtered as). Defaults to a generic
 	// "unspecified" label; pass a field-specific one for clarity.
@@ -54,19 +51,21 @@ function getUniqueValues(
 	return values;
 }
 
-export function useColumnFilter(
+/**
+ * Single-dataset column filter: same matching/dropdown semantics as
+ * useColumnFilter (hooks/useColumnFilter.ts), but backed by local component state
+ */
+export function useInventoryColumnFilter(
 	field: string,
 	rows: ExcelRow[],
-	selectedSheet: string,
-	columnFiltersBySheet: Record<string, ColumnFilterState>,
-	dispatch: React.Dispatch<WorkbookAction>,
 	sortFunc: (a: string, b: string) => number = (a, b) => a.localeCompare(b),
-	options?: UseColumnFilterOptions,
+	options?: UseInventoryColumnFilterOptions,
 ) {
 	const emptyValueLabel = options?.emptyValueLabel ?? DEFAULT_EMPTY_VALUE_LABEL;
 	const excludedValuesList = options?.excludedValues;
 	const excludedValues = useMemo(
-		() => new Set((excludedValuesList ?? []).map((v) => v.trim().toLowerCase())),
+		() =>
+			new Set((excludedValuesList ?? []).map((v) => v.trim().toLowerCase())),
 		[excludedValuesList],
 	);
 
@@ -90,31 +89,19 @@ export function useColumnFilter(
 		[rows, field, hasColumn, sortFunc, emptyValueLabel, excludedValues],
 	);
 
+	const [selectedValues, setSelectedValues] = useState<Set<string>>(new Set());
+	// mirrors the reducer's FILTER_INITIALIZED: seed the selection once the
+	// column's values are known, but never clobber a selection the user made.
+	const initializedRef = useRef(false);
+
 	useEffect(() => {
-		if (!selectedSheet || !hasColumn) return;
-		dispatch({
-			type: 'FILTER_INITIALIZED',
-			sheetName: selectedSheet,
-			field,
-			values: new Set(uniqueValues.map((v) => v.toLowerCase())),
-		});
-	}, [selectedSheet, hasColumn, uniqueValues, field, dispatch]);
-
-	const selectedValues =
-		columnFiltersBySheet[selectedSheet]?.[field] ??
-		new Set(uniqueValues.map((v) => v.toLowerCase()));
-
-	const setSelectedValues = (values: Set<string>) => {
-		dispatch({
-			type: 'FILTER_CHANGED',
-			sheetName: selectedSheet,
-			field,
-			values,
-		});
-	};
+		if (!hasColumn || initializedRef.current) return;
+		setSelectedValues(new Set(uniqueValues.map((v) => v.toLowerCase())));
+		initializedRef.current = true;
+	}, [hasColumn, uniqueValues]);
 
 	const matches = (row: ExcelRow): boolean => {
-		if (!hasColumn) return true; // this field isn't in the sheet, don't filter on it
+		if (!hasColumn) return true; // this field isn't in the data, don't filter on it
 		const trimmed = trimmedOrNull(row[field]);
 		if (trimmed !== null && excludedValues.has(trimmed.toLowerCase())) {
 			return false; // junk/test value, hard-excluded regardless of selection

@@ -1,4 +1,4 @@
-import type { ColDef, ColumnFilterState } from 'ag-grid-community';
+import type { ColumnFilterState } from 'ag-grid-community';
 import * as XLSX from 'xlsx';
 import type { ExcelRow } from '../../types';
 
@@ -7,7 +7,6 @@ interface WorkbookState {
 	sheetNames: string[];
 	selectedSheet: string;
 	rows: ExcelRow[];
-	colDef: ColDef[] | undefined;
 	// per-sheet, per-field selected values
 	columnFiltersBySheet: Record<string, ColumnFilterState>;
 }
@@ -21,7 +20,6 @@ export type WorkbookAction =
 	| {
 			type: 'ROWS_PARSED';
 			rows: ExcelRow[];
-			colDef: ColDef[] | undefined;
 	  }
 	| {
 			type: 'FILTER_INITIALIZED';
@@ -41,7 +39,6 @@ export const initialWorkbookState: WorkbookState = {
 	sheetNames: [],
 	selectedSheet: '',
 	rows: [],
-	colDef: undefined,
 	columnFiltersBySheet: {},
 };
 
@@ -65,7 +62,6 @@ export function workbookReducer(
 			return {
 				...state,
 				rows: action.rows,
-				colDef: action.colDef,
 			};
 		case 'FILTER_INITIALIZED': {
 			const existing =

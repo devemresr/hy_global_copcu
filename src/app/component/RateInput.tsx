@@ -19,11 +19,6 @@ export function InterestRateInput({ value, onChange }: Props) {
 		value === '' ? '' : String(value),
 	);
 
-	// keep display in sync if value changes from outside (e.g. reset button elsewhere)
-	useEffect(() => {
-		setDisplay(value === '' ? '' : String(value));
-	}, [value]);
-
 	const handleInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		if (['-', '+', 'e', 'E'].includes(e.key)) {
 			e.preventDefault();

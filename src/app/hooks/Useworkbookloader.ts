@@ -20,13 +20,11 @@ import {
 	WORKER_SIZE_THRESHOLD_BYTES,
 } from '../helpers/inventoryPageHelpers/parseFile.helper';
 import {
-	columnDefsBySheet,
-	FIELD_NAMES,
-} from '../constants/columnDefinitons.constant';
-import {
 	initialWorkbookState,
 	workbookReducer,
 } from '../helpers/inventoryPageHelpers/wbState.helper';
+import { normalizeAndFilterRows } from '../helpers/inventoryPageHelpers/rowNormalize.helper';
+import { exampleDataCleaningComparingFunc } from '../helpers/inventoryPageHelpers/tempDataValidation.debug';
 
 type ParseState = {
 	status: ParseStatus;
@@ -41,11 +39,17 @@ function parseSelectedSheet(wb: XLSX.WorkBook, sheetName: string): ExcelRow[] {
 	return XLSX.utils.sheet_to_json<ExcelRow>(sheet);
 }
 
-export function useWorkbookLoader({
-	bellekTipiIncluded,
-}: {
-	bellekTipiIncluded?: boolean;
-}) {
+/**
+ * Generic Excel-workbook loading hook: reads an uploaded File into an
+ * XLSX.WorkBook (inline on the main thread, or off-thread via a Web Worker
+ * once it's past WORKER_SIZE_THRESHOLD_BYTES), then parses and normalizes
+ * the selected sheet into rows.
+ *
+ * Page-agnostic on purpose: it doesn't know about ag-grid column defs or any
+ * particular dataset's display rules, so any page can plug it in and decide
+ * for itself how to turn `rows` into UI.
+ */
+export function useWorkbookLoader() {
 	const [parseState, setParseState] = useState<ParseState>({
 		status: 'idle',
 		errorMsg: '',
@@ -54,14 +58,8 @@ export function useWorkbookLoader({
 	const [wbState, dispatch] = useReducer(workbookReducer, initialWorkbookState);
 	const workerRef = useRef<Worker | null>(null);
 
-	const {
-		workbook,
-		sheetNames,
-		selectedSheet,
-		rows,
-		colDef,
-		columnFiltersBySheet,
-	} = wbState;
+	const { workbook, sheetNames, selectedSheet, rows, columnFiltersBySheet } =
+		wbState;
 
 	// terminate possibly pending workers on unmount
 	useEffect(() => {
@@ -80,44 +78,16 @@ export function useWorkbookLoader({
 		}));
 	};
 
-	function normalizeAndFilterRows(rows: ExcelRow[]): ExcelRow[] {
-		return rows
-			.map((row) => {
-				const gb = parseMemorySize(row?.Depoloma as string);
-				return { ...row, __gb: gb }; // temp field to filter on
-			})
-			.filter((row) => row.__gb !== null && (row?.__gb as number) >= 8)
-			.map(({ __gb, ...row }) => ({
-				...row,
-				Depoloma: formatMemorySize(__gb as number),
-			}));
-	}
-
 	useLayoutEffect(() => {
 		if (!workbook || !selectedSheet) return;
 
 		const parsedRows = parseSelectedSheet(workbook, selectedSheet);
-		const cleanedRows = normalizeAndFilterRows(parsedRows);
+		const normalizedRows = normalizeAndFilterRows(parsedRows);
 
-		const BellekTipiFilteredRows = cleanedRows.map((row) => {
-			if (bellekTipiIncluded) {
-				return row; // keep ic_type as-is
-			}
-			const { ic_type, ...rest } = row; // destructure it out
-			return rest;
-		});
+		exampleDataCleaningComparingFunc(normalizedRows);
 
-		const empcFilteredColDefs = columnDefsBySheet[selectedSheet].filter(
-			(colDef) =>
-				!(!bellekTipiIncluded && colDef?.field === FIELD_NAMES.BellekTipi),
-		);
-
-		dispatch({
-			type: 'ROWS_PARSED',
-			rows: BellekTipiFilteredRows,
-			colDef: empcFilteredColDefs,
-		});
-	}, [workbook, selectedSheet, bellekTipiIncluded, dispatch]);
+		dispatch({ type: 'ROWS_PARSED', rows: normalizedRows });
+	}, [workbook, selectedSheet]);
 
 	function handleFileChange(file: File) {
 		setParseState((prev) => ({
@@ -161,36 +131,11 @@ export function useWorkbookLoader({
 		}
 	}
 
-	function toGb(num: number, unit: string) {
-		if (unit === 'G') return num;
-		if (unit === 'T') return num * 1024;
-	}
-
-	function parseMemorySize(raw: string) {
-		if (raw === undefined || raw === null) return null;
-		const s = String(raw).trim();
-		if (!s || s === '?') return null;
-
-		// Simple "<number><unit>" format, any casing/spacing: "8 Gb", "16gb", "1T", "256M"
-		const simple = s.match(/^(\d+(?:\.\d+)?)\s*([MGT])B?$/i);
-		if (simple) {
-			return toGb(parseFloat(simple[1]), simple[2].toUpperCase());
-		}
-
-		return null; // unparseable returned for manual
-	}
-
-	function formatMemorySize(gbValue: number) {
-		if (gbValue >= 1024 && gbValue % 1024 === 0) return `${gbValue / 1024} Tb`;
-		return `${gbValue} Gb`;
-	}
-
 	return {
 		workbook,
 		sheetNames,
 		selectedSheet,
 		rows,
-		colDef,
 		columnFiltersBySheet,
 		dispatch,
 		parseState,

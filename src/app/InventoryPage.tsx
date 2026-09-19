@@ -9,7 +9,6 @@ import {
 	colorSchemeDark,
 	ColumnAutoSizeModule,
 } from 'ag-grid-community';
-import invData from './assets/invData.xlsx';
 
 import {
 	ModuleRegistry,
@@ -19,18 +18,17 @@ import {
 } from 'ag-grid-community';
 import {
 	AUTO_SIZED_COLUMNS,
-	columnDefsBySheet,
+	BELLEK_TIPI_EXCLUDED_VALUES,
 	FIELD_NAMES,
 	ramComparator,
 } from './constants/columnDefinitons.constant';
-import { useColumnFilter } from './hooks/useColumnFilter';
+import { useInventoryColumnFilter } from './hooks/useInventoryColumnFilter';
 import { ColumnFilterPanel } from './component/paymentCalculator/ColumnFilterPanel';
 import { useWindowSize } from './hooks/useWindowSize';
-import { useWorkbookLoader } from './hooks/Useworkbookloader';
+import { useInventoryRows } from './hooks/useInventoryRows';
 import { useRowSearch } from './hooks/useRowSearch';
 import CancelIcon from './assets/icons/icons8-cancel.svg?react';
 import { useTheme } from './component/Layout';
-import { useSearchParams } from 'react-router-dom';
 import { SquareArrowOutUpRight } from 'lucide-react';
 import SearchIcon from './assets/icons/icons8-search.svg?react';
 
@@ -81,19 +79,12 @@ function InventoryPage() {
 	const gridTheme =
 		theme === 'dark' ? themeQuartz.withPart(colorSchemeDark) : themeQuartz;
 
-	const [searchParams] = useSearchParams();
-	const bellekTipiIncluded = searchParams.has('detayliData');
+	// const bellekTipiIncluded = searchParams.has('detayliData');
+	const bellekTipiIncluded = true;
 	const searchRef = useRef<HTMLInputElement | null>(null);
 
-	const {
-		sheetNames,
-		selectedSheet,
-		rows,
-		colDef,
-		columnFiltersBySheet,
-		dispatch,
-		handleFileChange,
-	} = useWorkbookLoader({ bellekTipiIncluded });
+	const { rows, colDef } = useInventoryRows(bellekTipiIncluded);
+	const isReady = rows.length > 0;
 
 	const { handleQuery, searchResults } = useRowSearch(rows);
 
@@ -103,21 +94,19 @@ function InventoryPage() {
 	}, []);
 
 	// one hook call per filterable field
-	const memorySizeFilter = useColumnFilter(
+	const memorySizeFilter = useInventoryColumnFilter(
 		FIELD_NAMES.Depoloma,
 		rows,
-		selectedSheet,
-		columnFiltersBySheet,
-		dispatch,
 		ramComparator,
 	);
-	const bellekTipiFilter = useColumnFilter(
+	const bellekTipiFilter = useInventoryColumnFilter(
 		FIELD_NAMES.BellekTipi,
 		rows,
-		selectedSheet,
-		columnFiltersBySheet,
-		dispatch,
 		ramComparator,
+		{
+			emptyValueLabel: 'Bellek Tipi Belirtilmemiş',
+			excludedValues: BELLEK_TIPI_EXCLUDED_VALUES,
+		},
 	);
 
 	const allFilters = [
@@ -142,26 +131,11 @@ function InventoryPage() {
 
 	// usinglayouteffect to ensure DOM is painted
 	useLayoutEffect(() => {
-		// Focus when sheetNames becomes available since input getting rendered is conditioned to it
-		if (sheetNames.length > 0) {
+		// Focus once the data (and therefore the search input) is rendered
+		if (isReady) {
 			searchRef.current?.focus();
 		}
-	}, [sheetNames]);
-
-	useEffect(() => {
-		async function loadAsset() {
-			const response = await fetch(invData);
-			const blob = await response.blob();
-
-			const file = new File([blob], 'invData.xlsx', {
-				type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-			});
-
-			handleFileChange(file);
-		}
-
-		loadAsset();
-	}, []);
+	}, [isReady]);
 
 	const { width } = useWindowSize();
 
@@ -172,7 +146,7 @@ function InventoryPage() {
 		if (isTablet) return; // skip autosizing on larger screens
 		if (typeof window === 'undefined') return; // no need to autosize if the width is at lg
 
-		const colsToAutosize = columnDefsBySheet[selectedSheet]
+		const colsToAutosize = (colDef ?? [])
 			.map((element) => element.field)
 			.filter(
 				(field): field is string =>
@@ -180,7 +154,7 @@ function InventoryPage() {
 			);
 
 		gridRef.current.api.autoSizeColumns(colsToAutosize, false);
-	}, [selectedSheet, gridRows]);
+	}, [colDef, gridRows, width]);
 
 	return (
 		<div className=' mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 '>
@@ -200,7 +174,7 @@ function InventoryPage() {
 				</div>
 			</div>
 
-			{sheetNames.length > 0 && (
+			{isReady && (
 				<div className='flex flex-col md:flex-row md: lg:items-center gap-3 text-text py-3'>
 					{/* Mobile filter tablet phones/}
 					{/* Mobile trigger button hidden at sm+ */}
