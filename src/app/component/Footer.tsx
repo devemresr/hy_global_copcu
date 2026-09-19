@@ -27,7 +27,7 @@ export function Footer() {
 								Kaynaklar
 							</a>
 							<a
-								href='#'
+								href='/hakkimizda'
 								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp dark:animate-hoverFloatUpDark'
 							>
 								Hakkımızda

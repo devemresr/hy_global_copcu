@@ -1,4 +1,4 @@
-type TextSegment = {
+export type TextSegment = {
 	text: string;
 	bold?: boolean;
 	italic?: boolean;
@@ -114,6 +114,32 @@ export const termsAndConditions: TermsSection[] = [
 			},
 			{ text: 'ilgili yargı bölgesinin yasalarına', bold: false, italic: true },
 			{ text: ' tabidir ve bu doğrultuda yorumlanır.', bold: false },
+		],
+	},
+	{
+		title: '9. Veri Kazıma ve Otomatik Erişim Yasağı',
+		body: [
+			{
+				text: 'Bu sitedeki içeriğin veya verilerin ',
+				bold: false,
+			},
+			{
+				text: 'kazınması (scraping), taranması, otomatik olarak toplanması, bot, örümcek (crawler) veya benzeri otomatik araçlarla çıkarılması',
+				bold: true,
+			},
+			{
+				text: ' önceden yazılı iznimiz olmaksızın kesinlikle yasaktır. ',
+				bold: false,
+			},
+			{
+				text: 'Bu yasağı ihlal eden erişimler, ',
+				bold: false,
+			},
+			{ text: 'önceden bildirimde bulunmaksızın engellenebilir', bold: true },
+			{
+				text: ' ve hukuki işleme konu olabilir.',
+				bold: false,
+			},
 		],
 	},
 ];

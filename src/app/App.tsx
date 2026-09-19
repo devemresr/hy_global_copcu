@@ -1,6 +1,7 @@
 import InventoryPage from './InventoryPage';
 import { Routes, Route, Navigate } from 'react-router';
 import { TermsPage } from './Terms';
+import { AboutPage } from './About';
 import { PaymentCalculator } from './PaymentCalculator';
 import { Explanation } from './Explanation';
 import { Pricing } from './Pricing';
@@ -12,6 +13,7 @@ export function App() {
 		<>
 			<Routes>
 				<Route path='/terms' element={<TermsPage />} />
+					<Route path='/hakkimizda' element={<AboutPage />} />
 				<Route path='/bilgi' element={<Explanation />} />
 				<Route path='/paymentCalculation' element={<PaymentCalculator />} />
 				{/* not ready for public access yet */}
