@@ -10,7 +10,7 @@ import { FIELD_NAMES } from '../constants/columnDefinitons.constant';
 export const SEARCHABLE_FIELDS = [FIELD_NAMES.MODEL];
 const SHOW_EXTENDED_SEARCH_THRESHOLD = 3;
 const RECENT_SEARCHES_KEY = 'recentInventorySearches';
-const MAX_RECENT_SEARCHES = 8;
+const MAX_RECENT_SEARCHES = 10;
 
 export type RecentSearchEntry = { term: string; wasMiss: boolean };
 
@@ -23,7 +23,11 @@ function loadRecentSearches(): RecentSearchEntry[] {
 		return parsed
 			.map((entry): RecentSearchEntry | null => {
 				if (typeof entry === 'string') return { term: entry, wasMiss: false };
-				if (entry && typeof entry === 'object' && typeof entry.term === 'string') {
+				if (
+					entry &&
+					typeof entry === 'object' &&
+					typeof entry.term === 'string'
+				) {
 					return { term: entry.term, wasMiss: Boolean(entry.wasMiss) };
 				}
 				return null;
@@ -46,9 +50,8 @@ export function useRowSearch(rows: ExcelRow[]) {
 	const [query, setQuery] = useState<string>('');
 	const [isLoose, setIsLoose] = useState(false);
 	const [noResultCount, setNoResultCount] = useState(0);
-	const [recentSearches, setRecentSearches] = useState<RecentSearchEntry[]>(
-		loadRecentSearches,
-	);
+	const [recentSearches, setRecentSearches] =
+		useState<RecentSearchEntry[]>(loadRecentSearches);
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const countedQueriesRef = useRef<Set<string>>(new Set());
 

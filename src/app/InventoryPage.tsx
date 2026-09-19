@@ -1,15 +1,10 @@
 import './App.css';
 
-import logger from './util/logger';
 import { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { highlightSegments } from './helpers/inventoryPageHelpers/search.helpers';
 import { AgGridReact } from 'ag-grid-react';
-import {
-	themeQuartz,
-	colorSchemeDark,
-	ColumnAutoSizeModule,
-} from 'ag-grid-community';
+import { themeQuartz, colorSchemeDark } from 'ag-grid-community';
 
 import {
 	ModuleRegistry,
@@ -18,7 +13,6 @@ import {
 	ClientSideRowModelModule,
 } from 'ag-grid-community';
 import {
-	AUTO_SIZED_COLUMNS,
 	BELLEK_TIPI_EXCLUDED_VALUES,
 	FIELD_NAMES,
 	ramComparator,
@@ -39,7 +33,6 @@ ModuleRegistry.registerModules([
 	ClientSideRowModelModule, // needed for basic rowData rendering
 	TextFilterModule, // for Brand/Model text filters
 	NumberFilterModule, // for numbering filtering
-	ColumnAutoSizeModule,
 ]);
 export function HighlightCellRenderer({ value, data, colDef }: any) {
 	const key = colDef.field;
@@ -178,23 +171,6 @@ function InventoryPage() {
 	}, [isReady]);
 
 	const { width } = useWindowSize();
-
-	useEffect(() => {
-		if (!gridRef.current?.api || gridRows.length === 0) return;
-		const isTablet = width >= 768;
-		logger.debug({ width, isTablet });
-		if (isTablet) return; // skip autosizing on larger screens
-		if (typeof window === 'undefined') return; // no need to autosize if the width is at lg
-
-		const colsToAutosize = (colDef ?? [])
-			.map((element) => element.field)
-			.filter(
-				(field): field is string =>
-					field !== undefined && AUTO_SIZED_COLUMNS.includes(field),
-			);
-
-		gridRef.current.api.autoSizeColumns(colsToAutosize, false);
-	}, [colDef, gridRows, width]);
 
 	// terminate any pending "auto-hide the hint" timeout on unmount
 	useEffect(() => {
@@ -488,13 +464,18 @@ function InventoryPage() {
 							theme={gridTheme}
 							rowData={gridRows}
 							columnDefs={colDef}
-							// no flex: it stretched every column to divide up the container
-							// width evenly regardless of content, flattening/squeezing cell
-							// content at every screen size. Columns now just take their own
-							// width, and overflowing content scrolls within the cell (see
-							// the .ag-cell rule in App.css) instead of the grid stretching
-							// or clipping it.
-							defaultColDef={{ sortable: true, resizable: true }}
+							// Below tablet width, columns stay at their own explicit width
+							// (see columnDefsBySheet) so mobile gets a compact, predictable
+							// layout - overflowing content scrolls within its own cell (see
+							// the .ag-cell rule in App.css) instead of every column being
+							// force-stretched to fill the container regardless of content.
+							// From tablet width up there's room to spare, so flex:1 lets
+							// columns stretch to fill it instead of leaving it empty.
+							defaultColDef={{
+								sortable: true,
+								resizable: true,
+								flex: width >= 768 ? 1 : undefined,
+							}}
 							alwaysMultiSort={width < 768}
 							ref={gridRef}
 						/>

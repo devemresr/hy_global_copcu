@@ -7,11 +7,6 @@ export const FIELD_NAMES = {
 	Depoloma: 'Depoloma',
 	FIYAT: 'Fiyat',
 };
-export const AUTO_SIZED_COLUMNS = [
-	// FIELD_NAMES.Depoloma,
-	// FIELD_NAMES.BellekTipi,
-	FIELD_NAMES.FIYAT,
-];
 // Declare here which fields should have a filter section.
 export const FILTERABLE_FIELDS = [FIELD_NAMES.Depoloma];
 
@@ -26,12 +21,21 @@ export const BELLEK_TIPI_EXCLUDED_VALUES = [
 	'UMCP',
 ];
 
+// Without an explicit `width`, AG Grid defaults every column to 200px and
+// only treats `minWidth` as a floor for manual resizing - it does NOT shrink
+// the initial render down to it. That meant these columns were actually
+// rendering at 200px each (800px total) regardless of minWidth, which is why
+// mobile needed the whole grid to scroll sideways instead of just the
+// occasional overflowing cell. Setting `width` explicitly is what actually
+// makes columns compact; `minWidth` stays as the floor for when a user
+// manually drags a column narrower.
 export const columnDefsBySheet: ColDef[] = [
 	{
 		field: FIELD_NAMES.MODEL,
 		headerName: 'Model',
 		sortable: true,
 		cellRenderer: HighlightCellRenderer,
+		width: 130,
 		minWidth: 100,
 	},
 	{
@@ -39,18 +43,22 @@ export const columnDefsBySheet: ColDef[] = [
 		headerName: 'Depoloma',
 		sortable: true,
 		comparator: ramComparator,
+		width: 95,
 		minWidth: 90,
 	},
 	{
 		field: FIELD_NAMES.BellekTipi,
 		headerName: 'Bellek Türü',
 		sortable: true,
+		width: 95,
 		minWidth: 90,
 	},
 	{
 		field: FIELD_NAMES.FIYAT,
 		headerName: 'Fiyat',
 		sortable: true,
+		width: 95,
+		minWidth: 90,
 		comparator: (valueA: string | null, valueB: string | null) => {
 			const parse = (v: string | null): number => {
 				if (v === null || v === undefined) return -Infinity; // nulls sort first; use Infinity to sort last

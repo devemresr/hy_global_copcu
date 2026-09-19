@@ -1,6 +1,5 @@
 import WhatsappIcon from '../assets/icons/icons8-whatsapp.svg?react';
-import EmailIcon from '../assets/icons/emailIcon.svg?react';
-import { mailUrl, whatsappUrl } from '../url.constant';
+import { whatsappUrl } from '../url.constant';
 import '../App.css';
 import { LOGO } from '../assets/photos/photos';
 
@@ -38,11 +37,6 @@ export function Footer() {
 
 					<div className='flex justify-center'>
 						<nav className='flex items-center gap-2 md:gap-2 '>
-							<div className='hover:animate-hoverFloatUp'>
-								<a href={mailUrl}>
-									<EmailIcon className='icon w-10 h-10 lg:h-12 lg:w-12 shrink-0 self-end' />
-								</a>
-							</div>
 							<a href={whatsappUrl} className='hover:animate-hoverFloatUp'>
 								<WhatsappIcon className='w-10 h-10 lg:h-12 lg:w-12 shrink-0' />
 							</a>
