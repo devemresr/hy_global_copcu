@@ -6,13 +6,15 @@ export interface HighlightSegment {
 }
 
 // Configure Fuse with match info enabled
-export function buildFuse(rows: ExcelRow[], keys: string[]) {
+export function buildFuse(rows: ExcelRow[], keys: string[], distance = 100) {
 	return new Fuse(rows, {
 		keys,
 		threshold: 0.1,
+		distance, // now parameterized
 		includeMatches: true,
 		shouldSort: true,
 		minMatchCharLength: 2,
+		ignoreLocation: false, // must be false/unset for distance to matter
 	});
 }
 

@@ -1,6 +1,5 @@
 import {
 	useCallback,
-	useEffect,
 	useState,
 	type Dispatch,
 	type SetStateAction,

@@ -27,6 +27,7 @@ import { ColumnFilterPanel } from './component/paymentCalculator/ColumnFilterPan
 import { useWindowSize } from './hooks/useWindowSize';
 import { useInventoryRows } from './hooks/useInventoryRows';
 import { useRowSearch } from './hooks/useRowSearch';
+
 import CancelIcon from './assets/icons/icons8-cancel.svg?react';
 import { useTheme } from './component/Layout';
 import { SquareArrowOutUpRight } from 'lucide-react';
@@ -75,6 +76,10 @@ function getInitialTheme(): 'light' | 'dark' {
 function InventoryPage() {
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const gridRef = useRef<AgGridReact>(null);
+	// const searchIconRef = useRef<HTMLButtonElement>(null);
+	// const [coords, setCoords] = useState({ top: 0, left: 0 });
+	// const [isSearchIconHovered, setIsSearchIconHovered] = useState(false);
+
 	const { theme } = useTheme();
 	const gridTheme =
 		theme === 'dark' ? themeQuartz.withPart(colorSchemeDark) : themeQuartz;
@@ -86,7 +91,13 @@ function InventoryPage() {
 	const { rows, colDef } = useInventoryRows(bellekTipiIncluded);
 	const isReady = rows.length > 0;
 
-	const { handleQuery, searchResults } = useRowSearch(rows);
+	const {
+		handleQuery,
+		searchResults,
+		showExtendedToggle,
+		isLoose,
+		toggleExtendedSearch,
+	} = useRowSearch(rows);
 
 	useLayoutEffect(() => {
 		const theme = getInitialTheme();
@@ -111,7 +122,8 @@ function InventoryPage() {
 
 	const allFilters = [
 		memorySizeFilter,
-		...(bellekTipiIncluded ? [bellekTipiFilter] : []),
+		// ...(bellekTipiIncluded ? [bellekTipiFilter] : []),
+		bellekTipiFilter,
 	];
 	const activeFilters = allFilters.filter((f) => f.hasColumn);
 
@@ -156,6 +168,17 @@ function InventoryPage() {
 		gridRef.current.api.autoSizeColumns(colsToAutosize, false);
 	}, [colDef, gridRows, width]);
 
+	// const handleMouseEnter = () => {
+	// 	const rect = searchIconRef.current?.getBoundingClientRect();
+	// 	if (rect) {
+	// 		setCoords({
+	// 			top: rect.bottom + window.scrollY + 8,
+	// 			left: rect.left + rect.width / 2 + window.scrollX,
+	// 		});
+	// 	}
+	// 	setIsSearchIconHovered(true);
+	// };
+
 	return (
 		<div className=' mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 '>
 			<div className='bg-button-bg p-4 rounded-xl my-4'>
@@ -165,10 +188,10 @@ function InventoryPage() {
 						anakartın modelini nasıl öğrenebileceğinizi öğrenmek için{' '}
 						<a
 							href='/bilgi'
-							className='inline-flex items-center gap-1 underline underline-offset-2 font-medium hover:opacity-80 transition-opacity'
+							className='underline underline-offset-2 font-medium hover:opacity-80 transition-opacity'
 						>
 							bilgilendirme sayfasını ziyaret edebilirsiniz
-							<SquareArrowOutUpRight className='w-5  h-5 ' />
+							<SquareArrowOutUpRight className='w-5  h-5 inline-block ml-1 -mt-0.5' />
 						</a>
 					</p>
 				</div>
@@ -242,6 +265,29 @@ function InventoryPage() {
 				)}
 				<div className='bg-button-bg rounded-xl text-text p-1 mx-auto w-full lg:w-120 [grid-area:search]'>
 					<div className='flex items-center gap-1'>
+						{/* {isLoose ? (
+							<button
+								ref={searchIconRef}
+								onMouseEnter={handleMouseEnter}
+								onMouseLeave={() => setIsSearchIconHovered(false)}
+							>
+								{isLoose &&
+									createPortal(
+										<div
+											style={{ top: coords.top, left: coords.left }}
+											className={`fixed -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-600 px-2 py-1 text-xs text-white shadow-lg z-9999}
+								`}
+										>
+											test
+											<div className='absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-600' />
+										</div>,
+										document.body,
+									)}
+								<ExtendedSearchIcon className='w-5 h-5'></ExtendedSearchIcon>
+							</button>
+						) : (
+							<SearchIcon className='w-5 h-5'></SearchIcon>
+						)} */}
 						<SearchIcon className='w-5 h-5'></SearchIcon>
 						<input
 							type='text'
@@ -251,6 +297,16 @@ function InventoryPage() {
 							className='outline-none focus:bg-button-focus-bg rounded-xl py-1 px-2 w-full flex-1'
 						/>
 					</div>
+
+					{showExtendedToggle && !isLoose && (
+						<button
+							type='button'
+							onClick={toggleExtendedSearch}
+							className='mt-2 w-full rounded-xl bg-button-focus-bg text-text py-1.5 text-sm font-medium'
+						>
+							Sonuç bulunamadı, geniş arama dene
+						</button>
+					)}
 				</div>
 
 				<div className='w-full min-w-0 h-[70vh] [grid-area:grid]'>

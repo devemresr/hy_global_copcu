@@ -6,7 +6,6 @@ import {
 	columnDefsBySheet,
 	FIELD_NAMES,
 } from '../constants/columnDefinitons.constant';
-import logger from '../util/logger';
 
 /**
  * Rows/columns for the static inventory dataset baked into the bundle

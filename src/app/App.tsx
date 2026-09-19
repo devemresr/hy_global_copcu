@@ -2,17 +2,24 @@ import InventoryPage from './InventoryPage';
 import { Routes, Route } from 'react-router';
 import { TermsPage } from './Terms';
 import { PaymentCalculator } from './PaymentCalculator';
-import Explanation from './Explanation';
-import AdminPage from './Admin';
+import { Explanation } from './Explanation';
+import { Pricing } from './Pricing';
+import { Analytics } from '@vercel/analytics/react';
+// import AdminPage from './Admin'; // not ready for public access yet
 
 export function App() {
 	return (
-		<Routes>
-			<Route path='/terms' element={<TermsPage />} />
-			<Route path='/bilgi' element={<Explanation />} />
-			<Route path='/paymentCalculation' element={<PaymentCalculator />} />
-			<Route path='/admin' element={<AdminPage />} />
-			<Route path='/:detayliData?' element={<InventoryPage />} />
-		</Routes>
+		<>
+			<Routes>
+				<Route path='/terms' element={<TermsPage />} />
+				<Route path='/bilgi' element={<Explanation />} />
+				<Route path='/paymentCalculation' element={<PaymentCalculator />} />
+				{/* not ready for public access yet */}
+				{/* <Route path='/admin' element={<AdminPage />} /> */}
+				<Route path='/' element={<InventoryPage />} />
+				<Route path='/fiyatlandirma' element={<Pricing />}></Route>
+			</Routes>
+			<Analytics />
+		</>
 	);
 }

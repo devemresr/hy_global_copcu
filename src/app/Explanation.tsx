@@ -1,10 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
+import {
+	ChevronLeft,
+	ChevronRight,
+	SquareArrowOutUpRight,
+	ZoomIn,
+} from 'lucide-react';
 import { SAMPLE_PHOTOS } from './assets/photos/photos';
 import { pageContent } from './constants/explanationContent.constant';
 import { Skeleton } from './component/Skelaton';
 
-export default function Explanation({ photos = SAMPLE_PHOTOS }) {
+export function Explanation({ photos = SAMPLE_PHOTOS }) {
 	const [index, setIndex] = useState(0);
 	const [loadedThumbs, setLoadedThumbs] = useState<Set<string>>(new Set());
 	const [loaded, setLoaded] = useState(false);
@@ -167,7 +172,18 @@ export default function Explanation({ photos = SAMPLE_PHOTOS }) {
 								</span>
 								<div>
 									<p className='font-medium text-heading-text'>{item.title}</p>
-									<p className='text-text text-sm'>{item.text}</p>
+									<p className='text-text text-sm'>
+										{item.text}{' '}
+										{item?.link && (
+											<a
+												href='/fiyatlandirma'
+												className='underline underline-offset-2 font-medium hover:opacity-80 transition-opacity text-text text-sm'
+											>
+												{item.link}
+												<SquareArrowOutUpRight className='inline-block w-4 h-4 ml-1 -mt-0.5' />
+											</a>
+										)}
+									</p>
 								</div>
 							</li>
 						))}
