@@ -3,9 +3,11 @@ import type { ExcelRow } from '../types';
 import { inventoryData } from '../assets/inventoryDATA';
 import { buildDisplaySafeFinalData } from '../helpers/inventoryPageHelpers/tempDataValidation.debug';
 import {
+	BELLEK_TIPI_EXCLUDED_VALUES,
 	columnDefsBySheet,
 	FIELD_NAMES,
 } from '../constants/columnDefinitons.constant';
+import logger from '../util/logger';
 
 /**
  * Rows/columns for the static inventory dataset baked into the bundle
@@ -16,9 +18,24 @@ import {
  */
 export function useInventoryRows(bellekTipiIncluded: boolean) {
 	const rows = useMemo(() => {
-		const cleanedRows = buildDisplaySafeFinalData(inventoryData, [
-			{ prefix: 'PA', overrides: { Fiyat: '150 TL' } },
-		]) as ExcelRow[];
+		// Junk BellekTipi values are dropped here, at the shared row source, so
+		// they're gone for every consumer
+		const cleanedRows = buildDisplaySafeFinalData(inventoryData, {
+			overrides: [{ prefix: 'PA', overrides: { Fiyat: '150 TL' } }],
+			filters: [
+				{
+					field: 'BellekTipi',
+					op: 'notIn',
+					value: BELLEK_TIPI_EXCLUDED_VALUES,
+				},
+			],
+		}) as ExcelRow[];
+
+		logger.debug({
+			cleanedRowsLen: cleanedRows.length,
+			cleanedRowsMissingBellekTipi: cleanedRows.filter((i) => i?.BellekTipi)
+				.length,
+		});
 
 		if (bellekTipiIncluded) return cleanedRows;
 		return cleanedRows.map(({ ic_type, ...rest }) => rest) as ExcelRow[];

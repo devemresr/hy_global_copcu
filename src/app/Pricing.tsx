@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Skeleton } from './component/Skelaton';
 import WhatsappIcon from './assets/icons/icons8-whatsapp.svg?react';
-import { whatsappUrl } from './url.constant';
+import { displayPhoneNumber, whatsappUrl } from './url.constant';
 import { pricing } from './assets/photos/photos';
 
 function HeroCarousel() {
@@ -90,9 +90,12 @@ export function Pricing() {
 						<MapPin size={20} className='text-white shrink-0' />
 						<span>İstanbul Ümraniye, elden teslim alınır</span>
 					</div>
-					<a className='flex items-center gap-2 text-white' href={whatsappUrl}>
+					<a
+						className='flex items-center gap-2 text-white hover:animate-hoverFloatUp dark:animate-hoverFloatUpDark'
+						href={whatsappUrl}
+					>
 						<WhatsappIcon className='shrink-0 w-5 h-5' />
-						<span>0545 517 05 63</span>
+						<span>{displayPhoneNumber}</span>
 					</a>
 				</div>
 

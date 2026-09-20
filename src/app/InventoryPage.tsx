@@ -13,7 +13,6 @@ import {
 	ClientSideRowModelModule,
 } from 'ag-grid-community';
 import {
-	BELLEK_TIPI_EXCLUDED_VALUES,
 	FIELD_NAMES,
 	ramComparator,
 } from './constants/columnDefinitons.constant';
@@ -131,14 +130,16 @@ function InventoryPage() {
 		rows,
 		ramComparator,
 	);
+	// Junk BellekTipi values (BGA153/NAND/NVME/SSD/UMCP) are excluded up in
+	// useInventoryRows now, at the shared row source - not here. Excluding
+	// them only in this filter's matches() left them absent from the default
+	// view but still reachable through search, which reads straight from the
+	// unfiltered `rows` this filter also receives.
 	const bellekTipiFilter = useInventoryColumnFilter(
 		FIELD_NAMES.BellekTipi,
 		rows,
 		ramComparator,
-		{
-			emptyValueLabel: 'Bellek Tipi Belirtilmemiş',
-			excludedValues: BELLEK_TIPI_EXCLUDED_VALUES,
-		},
+		{ emptyValueLabel: 'Bellek Tipi Belirtilmemiş' },
 	);
 
 	const allFilters = [
