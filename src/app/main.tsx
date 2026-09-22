@@ -4,7 +4,7 @@ import { App } from './App.tsx';
 import DevToolsBlocker from './component/DevToolsBlocker.tsx';
 import { Layout } from './component/Layout.tsx';
 import { BrowserRouter } from 'react-router-dom';
-
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 
 function RootFallback({ error }: FallbackProps) {
@@ -20,16 +20,26 @@ function RootFallback({ error }: FallbackProps) {
 	);
 }
 
+const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			staleTime: 60 * 1000, // 1 minute
+		},
+	},
+});
+
 createRoot(document.getElementById('root')!).render(
 	<StrictMode>
 		<DevToolsBlocker>
-			<ErrorBoundary FallbackComponent={RootFallback}>
-				<BrowserRouter>
-					<Layout>
-						<App></App>
-					</Layout>
-				</BrowserRouter>
-			</ErrorBoundary>
+			<QueryClientProvider client={queryClient}>
+				<ErrorBoundary FallbackComponent={RootFallback}>
+					<BrowserRouter>
+						<Layout>
+							<App></App>
+						</Layout>
+					</BrowserRouter>
+				</ErrorBoundary>
+			</QueryClientProvider>
 		</DevToolsBlocker>
 	</StrictMode>,
 );

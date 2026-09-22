@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Secrets - never commit real credentials
+.env
+.env.*
+!.env.example
+
+# Backend now lives in its own git repo
+/server
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

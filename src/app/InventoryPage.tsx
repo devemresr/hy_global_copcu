@@ -27,6 +27,7 @@ import { useTheme } from './component/Layout';
 import { SquareArrowOutUpRight } from 'lucide-react';
 import SearchIcon from './assets/icons/icons8-search.svg?react';
 import ExtendedSearchIcon from './assets/icons/icons8-extendedSearch.svg?react';
+// import { useGetItems } from './hooks/api/endpoints/useItems'; // disabled: inventory comes from an uploaded static file, not a live call
 
 ModuleRegistry.registerModules([
 	ClientSideRowModelModule, // needed for basic rowData rendering
@@ -105,7 +106,8 @@ function InventoryPage() {
 	const bellekTipiIncluded = true;
 	const searchRef = useRef<HTMLInputElement | null>(null);
 
-	const { rows, colDef } = useInventoryRows(bellekTipiIncluded);
+	// const { data } = useGetItems(); // disabled: inventory comes from an uploaded static file, not a live call
+	const { rows, colDef } = useInventoryRows(bellekTipiIncluded, undefined);
 	const isReady = rows.length > 0;
 
 	const {

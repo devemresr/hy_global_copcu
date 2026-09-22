@@ -1,45 +1,22 @@
 import { useMemo } from 'react';
 import type { ExcelRow } from '../types';
-import { inventoryData } from '../assets/inventoryDATA';
-import { buildDisplaySafeFinalData } from '../helpers/inventoryPageHelpers/tempDataValidation.debug';
+import type { ItemDto } from './api/endpoints/useItems';
 import {
-	BELLEK_TIPI_EXCLUDED_VALUES,
 	columnDefsBySheet,
 	FIELD_NAMES,
 } from '../constants/columnDefinitons.constant';
-import logger from '../util/logger';
+import { buildInventoryRecords } from '../helpers/inventoryPageHelpers/buildInventoryRecords.helper';
 
-/**
- * Rows/columns for the static inventory dataset baked into the bundle
- * (assets/inventoryDATA.ts). No file upload or parsing involved — the data
- * is already loaded at build time; this just applies the BellekTipi
- * display/pricing rules and, when BellekTipi is excluded, drops it from
- * both the rows and the grid's column defs.
- */
-export function useInventoryRows(bellekTipiIncluded: boolean) {
+// Falls back to the bundled static dataset when no API-backed items are provided (the public page).
+export function useInventoryRows(
+	bellekTipiIncluded: boolean,
+	items: ItemDto[] | undefined,
+) {
 	const rows = useMemo(() => {
-		// Junk BellekTipi values are dropped here, at the shared row source, so
-		// they're gone for every consumer
-		const cleanedRows = buildDisplaySafeFinalData(inventoryData, {
-			overrides: [{ prefix: 'PA', overrides: { Fiyat: '150 TL' } }],
-			filters: [
-				{
-					field: 'BellekTipi',
-					op: 'notIn',
-					value: BELLEK_TIPI_EXCLUDED_VALUES,
-				},
-			],
-		}) as ExcelRow[];
-
-		logger.debug({
-			cleanedRowsLen: cleanedRows.length,
-			cleanedRowsMissingBellekTipi: cleanedRows.filter((i) => i?.BellekTipi)
-				.length,
-		});
-
-		if (bellekTipiIncluded) return cleanedRows;
-		return cleanedRows.map(({ ic_type, ...rest }) => rest) as ExcelRow[];
-	}, [bellekTipiIncluded]);
+		const records = items ?? buildInventoryRecords();
+		if (bellekTipiIncluded) return records as ExcelRow[];
+		return records.map(({ BellekTipi, ...rest }) => rest) as ExcelRow[];
+	}, [items, bellekTipiIncluded]);
 
 	const colDef = useMemo(
 		() =>

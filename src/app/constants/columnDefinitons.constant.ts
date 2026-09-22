@@ -1,5 +1,8 @@
 import type { ColDef } from 'ag-grid-community';
 import { HighlightCellRenderer } from '../InventoryPage';
+import { BELLEK_TIPI_EXCLUDED_VALUES } from './bellekTipi.constant';
+
+export { BELLEK_TIPI_EXCLUDED_VALUES };
 
 export const FIELD_NAMES = {
 	BellekTipi: 'BellekTipi',
@@ -9,17 +12,6 @@ export const FIELD_NAMES = {
 };
 // Declare here which fields should have a filter section.
 export const FILTERABLE_FIELDS = [FIELD_NAMES.Depoloma];
-
-// Raw BellekTipi values treated as junk/test data: excluded from the grid
-// and the filter dropdown entirely (case-insensitive), regardless of the
-// current filter selection. Add more as bad values turn up in the data.
-export const BELLEK_TIPI_EXCLUDED_VALUES = [
-	'BGA153',
-	'NAND',
-	'NVME',
-	'SSD',
-	'UMCP',
-];
 
 // Without an explicit `width`, AG Grid defaults every column to 200px and
 // only treats `minWidth` as a floor for manual resizing - it does NOT shrink

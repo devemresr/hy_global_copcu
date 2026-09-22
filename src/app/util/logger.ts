@@ -1,7 +1,12 @@
 import pino, { type Logger, type LoggerOptions } from 'pino';
 
-const env =
-	typeof process !== 'undefined' ? import.meta.env.VITE_ENV : 'development';
+// import.meta.env only exists under Vite, and its type only exists under a
+// tsconfig that includes vite/client - neither holds when this module is
+// imported transitively by the DB seed script, which type-checks under
+// tsconfig.server.json and runs under plain Node/tsx.
+type ViteEnv = { VITE_ENV?: string; VITE_LOG_LEVEL?: string };
+const viteEnv = (import.meta as unknown as { env?: ViteEnv }).env;
+const env = viteEnv?.VITE_ENV ?? 'development';
 
 const isDev = env === 'development';
 const isTest = env === 'test';
@@ -26,9 +31,7 @@ function safeStringify(o: unknown): string {
 }
 
 const loggerOptions: LoggerOptions = {
-	level:
-		(typeof process !== 'undefined' && import.meta.env.VITE_LOG_LEVEL) ||
-		(isDev || isTest ? 'debug' : 'info'),
+	level: viteEnv?.VITE_LOG_LEVEL || (isDev || isTest ? 'debug' : 'info'),
 
 	base: {
 		app: 'global-copcu',
@@ -46,8 +49,11 @@ const loggerOptions: LoggerOptions = {
 	},
 
 	serializers: {
-		err: pino.stdSerializers.err,
-		error: pino.stdSerializers.err,
+		// pino's browser build serializer isn't null-safe (unlike the Node one) -
+		// react-query result objects always carry an `error` key that's `null`
+		// until something actually fails so skip serializing it in that case to avoid a crash.
+		err: (err) => (err ? pino.stdSerializers.err(err) : err),
+		error: (err) => (err ? pino.stdSerializers.err(err) : err),
 	},
 
 	redact: {

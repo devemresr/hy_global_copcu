@@ -5,8 +5,9 @@ import { AboutPage } from './About';
 import { PaymentCalculator } from './PaymentCalculator';
 import { Explanation } from './Explanation';
 import { Pricing } from './Pricing';
-import { Analytics } from '@vercel/analytics/react';
-// import AdminPage from './Admin'; // not ready for public access yet
+import { UmamiAnalytics } from './component/UmamiAnalytics';
+import AdminPage from './Admin';
+import { LoginPage } from './Login';
 
 export function App() {
 	return (
@@ -16,13 +17,13 @@ export function App() {
 					<Route path='/hakkimizda' element={<AboutPage />} />
 				<Route path='/bilgi' element={<Explanation />} />
 				<Route path='/paymentCalculation' element={<PaymentCalculator />} />
-				{/* not ready for public access yet */}
-				{/* <Route path='/admin' element={<AdminPage />} /> */}
+				<Route path='/login' element={<LoginPage />} />
+				<Route path='/admin' element={<AdminPage />} />
 				<Route path='/' element={<InventoryPage />} />
 				<Route path='/fiyatlandirma' element={<Pricing />}></Route>
 				<Route path='*' element={<Navigate to='/' replace />} />
 			</Routes>
-			<Analytics />
+			<UmamiAnalytics />
 		</>
 	);
 }
