@@ -58,8 +58,7 @@ export function useWorkbookLoader() {
 	const [wbState, dispatch] = useReducer(workbookReducer, initialWorkbookState);
 	const workerRef = useRef<Worker | null>(null);
 
-	const { workbook, sheetNames, selectedSheet, rows, columnFiltersBySheet } =
-		wbState;
+	const { workbook, sheetNames, selectedSheet, rows } = wbState;
 
 	// terminate possibly pending workers on unmount
 	useEffect(() => {
@@ -136,7 +135,6 @@ export function useWorkbookLoader() {
 		sheetNames,
 		selectedSheet,
 		rows,
-		columnFiltersBySheet,
 		dispatch,
 		parseState,
 		handleFileChange,

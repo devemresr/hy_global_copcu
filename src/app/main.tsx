@@ -6,6 +6,8 @@ import { Layout } from './component/Layout.tsx';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
+import { Toaster } from 'sonner';
+import type { CSSProperties } from 'react';
 
 function RootFallback({ error }: FallbackProps) {
 	const message = error instanceof Error ? error.message : String(error);
@@ -32,6 +34,45 @@ createRoot(document.getElementById('root')!).render(
 	<StrictMode>
 		<DevToolsBlocker>
 			<QueryClientProvider client={queryClient}>
+				{/*
+				 * Sonner's own light/dark palette is skipped in favor of the app's
+				 * existing --color-* custom properties (App.css) via sonner's
+				 * documented CSS-variable theming hook - so a toast reads as "this
+				 * app's modal" rather than "a toast library's default", and
+				 * light/dark already resolves for free since those variables
+				 * already flip on the .dark class Layout.tsx toggles.
+				 */}
+				<Toaster
+					position='bottom-right'
+					style={
+						{
+							'--normal-bg': 'var(--color-modal-bg)',
+							'--normal-text': 'var(--color-text)',
+							'--normal-border': 'var(--color-border)',
+						} as CSSProperties
+					}
+					toastOptions={{
+						classNames: {
+							toast: 'rounded-xl! border! font-sans!',
+							title: 'text-sm!',
+							// richColors was tried and dropped: it replaces the whole
+							// toast background with sonner's own baked-in red/amber
+							// palette rather than respecting --error-bg/--success-bg
+							// overrides, which looks nothing like this app's neutral
+							// surfaces. Tinting just the text instead matches how the
+							// app already flags state elsewhere - text-red-500 for
+							// errors (Login.tsx, BulkEditPanel), text-amber-* for a
+							// warning callout (Explanation.tsx) - on the same neutral
+							// bg/border every other toast and modal already uses.
+							error: 'text-red-500!',
+							warning: 'text-amber-500!',
+							actionButton:
+								'rounded-xl! bg-button-focus-bg! text-text! hover:bg-button-hover-bg!',
+							closeButton:
+								'rounded-xl! bg-button-bg! text-text! border-border!',
+						},
+					}}
+				/>
 				<ErrorBoundary FallbackComponent={RootFallback}>
 					<BrowserRouter>
 						<Layout>

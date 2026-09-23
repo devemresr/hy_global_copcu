@@ -1,4 +1,9 @@
 import * as XLSX from 'xlsx';
+import type {
+	Currency as SchemaCurrency,
+	StorageUnit,
+	EditableInventoryItemInput,
+} from './schemas/item.schema';
 // A single parsed row from the Excel sheet. Keys are the exact column headers
 // (e.g. "Description", "Code", "Created Date"). Values can be strings, numbers,
 // dates (when cellDates: true resolves a real date), or booleans/blank cells.
@@ -28,50 +33,35 @@ export type WorkerResponse =
 export type OnParsedCallback = (rows: ExcelRow[]) => void;
 export type OnErrorCallback = (message: string) => void;
 
-// Currencies a Fiyat value can be priced in; only TRY is used today.
-export type Currency = 'TRY' | 'USD';
+// Currencies a Fiyat value can be priced in; only TRY is used today. Derived
+// from schemas/item.schema.ts's currencySchema, the one place the valid
+// currency codes are listed.
+export type Currency = SchemaCurrency;
 
 // One inventory item as it lives in the catalog/DB: every field sourced from
-// inventoryData.ts, plus the Fiyat/Currency split.
+// inventoryData.ts, plus the fiyat/paraBirimi split. Keys are Turkish
+// (camelCase) to match the DB's own field names.
 export type InventoryItemRecord = {
-	manufacturer?: string | null;
+	uretici?: string | null;
 	ram?: string | null;
-	match_type?: string | null;
-	BellekTipi?: string | null;
-	queried_as?: string | null;
-	Model: string;
-	Depoloma?: string | null;
-	Fiyat: number | null;
-	Currency: Currency;
+	eslesmeTuru?: string | null;
+	bellekTipi?: string | null;
+	sorgulananDeger?: string | null;
+	model: string;
+	depolama?: number | null;
+	depolamaBirimi: StorageUnit;
+	fiyat: number | null;
+	paraBirimi: Currency;
 };
 
-export type EditableField =
-	| 'Model'
-	| 'BellekTipi'
-	| 'Depoloma'
-	| 'ram'
-	| 'Fiyat'
-	| 'Currency';
-
-// The subset of InventoryItemRecord an admin can change through ItemEditModal.
-export type EditableInventoryItem = Pick<InventoryItemRecord, EditableField>;
+// The fields an admin can change through ItemEditModal/FieldEditModal/
+// BulkEditPanel, and what a valid value looks like for each - derived from
+// schemas/item.schema.ts, the one place that field list is declared.
+export type EditableInventoryItem = EditableInventoryItemInput;
+export type EditableField = keyof EditableInventoryItem;
 
 export type FieldChange = {
 	field: EditableField;
 	previousValue: string | number | null;
 	newValue: string | number | null;
-};
-
-// One item's field changes; a bulk action carries several of these under one LogEvent.
-export type ItemChange = {
-	itemKey: string; // Model at the time of the edit
-	fields: FieldChange[];
-};
-
-export type LogEvent = {
-	id: string;
-	timestamp: string; // ISO 8601
-	adminUsername: string;
-	action: 'item_update';
-	items: ItemChange[];
 };

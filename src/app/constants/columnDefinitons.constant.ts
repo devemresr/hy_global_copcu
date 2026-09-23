@@ -1,14 +1,11 @@
 import type { ColDef } from 'ag-grid-community';
-import { HighlightCellRenderer } from '../InventoryPage';
-import { BELLEK_TIPI_EXCLUDED_VALUES } from './bellekTipi.constant';
-
-export { BELLEK_TIPI_EXCLUDED_VALUES };
+import { HighlightCellRenderer } from '../component/HighlightCellRenderer';
 
 export const FIELD_NAMES = {
-	BellekTipi: 'BellekTipi',
-	MODEL: 'Model',
-	Depoloma: 'Depoloma',
-	FIYAT: 'Fiyat',
+	BellekTipi: 'bellekTipi',
+	MODEL: 'model',
+	Depoloma: 'depolama',
+	FIYAT: 'fiyat',
 };
 // Declare here which fields should have a filter section.
 export const FILTERABLE_FIELDS = [FIELD_NAMES.Depoloma];
@@ -34,7 +31,8 @@ export const columnDefsBySheet: ColDef[] = [
 		field: FIELD_NAMES.Depoloma,
 		headerName: 'Depoloma',
 		sortable: true,
-		comparator: ramComparator,
+		valueFormatter: depolamaValueFormatter,
+		comparator: depolamaComparator,
 		width: 95,
 		minWidth: 90,
 	},
@@ -64,6 +62,47 @@ export const columnDefsBySheet: ColDef[] = [
 		},
 	},
 ];
+
+// DB-backed rows store depolama as a plain magnitude plus a separate
+// depolamaBirimi unit ('GB'/'TB'); the bundled static dataset (the public
+// page's fallback when there's no live item - see
+// buildInventoryRecords.helper.ts) still has depolama as one un-split
+// "128GB"-style string. Both shapes flow through this same column, so
+// display/sort branch on which one a given row actually has.
+function depolamaToGb(value: unknown, unit: unknown): number {
+	if (typeof value === 'number') {
+		return Number.isNaN(value) ? NaN : unit === 'TB' ? value * 1024 : value;
+	}
+	try {
+		return ramToGb(String(value ?? ''));
+	} catch {
+		return NaN;
+	}
+}
+
+export function depolamaValueFormatter(params: any): string {
+	const { value, data } = params;
+	if (typeof value === 'number') {
+		return data?.depolamaBirimi ? `${value} ${data.depolamaBirimi}` : String(value);
+	}
+	return value ?? '';
+}
+
+export function depolamaComparator(
+	valueA: unknown,
+	valueB: unknown,
+	nodeA: any,
+	nodeB: any,
+) {
+	const a = depolamaToGb(valueA, nodeA?.data?.depolamaBirimi);
+	const b = depolamaToGb(valueB, nodeB?.data?.depolamaBirimi);
+
+	if (isNaN(a) && isNaN(b)) return 0;
+	if (isNaN(a)) return 1;
+	if (isNaN(b)) return -1;
+
+	return a - b;
+}
 
 function ramToGb(value: string): number {
 	const match = value.trim().match(/^([\d.]+)\s*([MGT])B?$/i);

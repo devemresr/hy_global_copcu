@@ -1,5 +1,8 @@
+import { useMutation } from '@tanstack/react-query';
 import useApiQuery from '../core/useApiQuery';
 import useApiMutation from '../core/useApiMutation';
+import { apiFetch } from '../core/api-client';
+import type { ApiError } from '../core/api-client';
 import { ITEM_ROUTES } from '../../../constants/routes.constant';
 import type { EditableInventoryItem, InventoryItemRecord } from '../../../types';
 
@@ -12,7 +15,7 @@ type ItemsResponse = {
 	items: ItemDto[];
 };
 
-type ItemResponse = {
+export type ItemResponse = {
 	item: ItemDto;
 };
 
@@ -40,9 +43,32 @@ export function useUpdateItem(id: string) {
 	});
 }
 
-export function useDeleteItem(id: string) {
-	return useApiMutation<{ success: boolean }, void>({
-		url: ITEM_ROUTES.UPDATE(id),
-		method: 'DELETE',
+// Unlike useUpdateItem, the target id is passed at call time (via `mutate`)
+// rather than baked into the hook call - for callers that don't have one
+// single "currently editing" id to bind up front, e.g. a per-cell field edit
+// that can target any row in the grid without re-rendering first.
+export function useUpdateAnyItem() {
+	return useMutation<
+		ItemResponse,
+		ApiError,
+		{ id: string; fields: Partial<EditableInventoryItem> }
+	>({
+		mutationFn: ({ id, fields }) =>
+			apiFetch<ItemResponse>(ITEM_ROUTES.UPDATE(id), {
+				method: 'PATCH',
+				body: fields,
+			}),
+	});
+}
+
+// Same "id passed at call time" shape as useUpdateAnyItem, for the same
+// reason: a row's delete button lives in the grid without ever "opening"
+// that row first, so there's no single bound id to build the hook around.
+export function useDeleteAnyItem() {
+	return useMutation<{ success: boolean }, ApiError, string>({
+		mutationFn: (id) =>
+			apiFetch<{ success: boolean }>(ITEM_ROUTES.UPDATE(id), {
+				method: 'DELETE',
+			}),
 	});
 }

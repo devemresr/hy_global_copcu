@@ -1,16 +1,24 @@
 import { useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useLogin } from './hooks/api/endpoints/useAuth';
+import { loginSchema } from './schemas/auth.schema';
 
 export function LoginPage() {
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
+	const [formError, setFormError] = useState<string | null>(null);
 	const navigate = useNavigate();
 	const { mutate, isPending, error } = useLogin();
 
 	function handleSubmit(e: ChangeEvent) {
 		e.preventDefault();
-		mutate({ email, password }, { onSuccess: () => navigate('/admin') });
+		const result = loginSchema.safeParse({ email, password });
+		if (!result.success) {
+			setFormError(result.error.issues[0].message);
+			return;
+		}
+		setFormError(null);
+		mutate(result.data, { onSuccess: () => navigate('/admin') });
 	}
 
 	return (
@@ -45,7 +53,11 @@ export function LoginPage() {
 					/>
 				</label>
 
-				{error && <p className='text-sm text-red-500'>{error.message}</p>}
+				{(formError || error) && (
+					<p className='text-sm text-red-500'>
+						{formError ?? error?.message}
+					</p>
+				)}
 
 				<button
 					type='submit'

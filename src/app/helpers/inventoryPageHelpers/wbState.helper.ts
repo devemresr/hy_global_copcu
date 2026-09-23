@@ -1,4 +1,3 @@
-import type { ColumnFilterState } from 'ag-grid-community';
 import * as XLSX from 'xlsx';
 import type { ExcelRow } from '../../types';
 
@@ -7,8 +6,6 @@ interface WorkbookState {
 	sheetNames: string[];
 	selectedSheet: string;
 	rows: ExcelRow[];
-	// per-sheet, per-field selected values
-	columnFiltersBySheet: Record<string, ColumnFilterState>;
 }
 
 export type WorkbookAction =
@@ -20,18 +17,6 @@ export type WorkbookAction =
 	| {
 			type: 'ROWS_PARSED';
 			rows: ExcelRow[];
-	  }
-	| {
-			type: 'FILTER_INITIALIZED';
-			sheetName: string;
-			field: string;
-			values: Set<string>;
-	  }
-	| {
-			type: 'FILTER_CHANGED';
-			sheetName: string;
-			field: string;
-			values: Set<string>;
 	  };
 
 export const initialWorkbookState: WorkbookState = {
@@ -39,7 +24,6 @@ export const initialWorkbookState: WorkbookState = {
 	sheetNames: [],
 	selectedSheet: '',
 	rows: [],
-	columnFiltersBySheet: {},
 };
 
 export function workbookReducer(
@@ -62,33 +46,6 @@ export function workbookReducer(
 			return {
 				...state,
 				rows: action.rows,
-			};
-		case 'FILTER_INITIALIZED': {
-			const existing =
-				state.columnFiltersBySheet[action.sheetName]?.[action.field];
-			if (existing) return state; // don't clobber a user's existing selection
-			return {
-				...state,
-				columnFiltersBySheet: {
-					...state.columnFiltersBySheet,
-					[action.sheetName]: {
-						...state.columnFiltersBySheet[action.sheetName],
-						[action.field]: action.values,
-					},
-				},
-			};
-		}
-
-		case 'FILTER_CHANGED':
-			return {
-				...state,
-				columnFiltersBySheet: {
-					...state.columnFiltersBySheet,
-					[action.sheetName]: {
-						...state.columnFiltersBySheet[action.sheetName],
-						[action.field]: action.values,
-					},
-				},
 			};
 
 		default:

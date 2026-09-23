@@ -2,13 +2,9 @@
 
 import useApiMutation from '../core/useApiMutation';
 import { AUTH_ROUTES } from '../../../constants/routes.constant';
+import type { LoginInput } from '../../../schemas/auth.schema';
 
-// todo fix: tpyes are not correct
-
-export type AuthRequest = {
-	password: string;
-	email: string;
-};
+export type AuthRequest = LoginInput;
 export type UserRegistrationRequest = AuthRequest & {
 	name: string;
 	surname: string;

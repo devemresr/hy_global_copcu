@@ -3,6 +3,8 @@
 // reference data (tempDataValidation.debug.ts). Kept in one place so both
 // sides always agree on what counts as "the same" storage size.
 
+import type { StorageUnit } from '../../schemas/item.schema';
+
 /**
  * Pulls the leading numeric portion out of a free-form string or number,
  * e.g. "256GB NAND" -> 256, "500 TL" -> 500, "8" -> 8. Purely numeric, no
@@ -42,6 +44,30 @@ export function parseMemorySize(raw: string) {
 	const num = extractLeadingNumber(simple[1]);
 	if (num === null) return null;
 	return toGb(num, simple[2].toUpperCase());
+}
+
+/**
+ * Splits a free-form size string like "128GB" or "1 TB" into its magnitude
+ * and the unit it was actually expressed in - unlike parseMemorySize, which
+ * always normalizes to a GB number and throws the original unit away. Used
+ * once, by the DB seed script, to migrate the bundled dataset's single
+ * depolama string into the Item model's separate depolama/depolamaBirimi
+ * fields. Only recognizes G/T (the two units depolamaBirimi's schema
+ * allows) - an M-unit source string simply won't match, same as an
+ * otherwise-unparseable one.
+ */
+export function parseStorageSize(
+	raw: string,
+): { value: number; unit: StorageUnit } | null {
+	const s = String(raw ?? '').trim();
+	if (!s || s === '?') return null;
+
+	const match = s.match(/(\d+(?:\.\d+)?)\s*([GT])B?/i);
+	if (!match) return null;
+
+	const value = extractLeadingNumber(match[1]);
+	if (value === null) return null;
+	return { value, unit: match[2].toUpperCase() === 'T' ? 'TB' : 'GB' };
 }
 
 // Accepts null/undefined because parseMemorySize can return either (unparseable

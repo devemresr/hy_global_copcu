@@ -13,6 +13,12 @@ export interface UseInventoryColumnFilterOptions {
 	// grid, regardless of the current filter selection. For junk/test data
 	// like a stray "dsa" value, not real domain values.
 	excludedValues?: string[];
+	// How to read this field's display value off a row, in place of the
+	// default `String(row[field]).trim()`. Needed when the field isn't a
+	// single string on every row shape - e.g. a DB-backed item's depolama is
+	// a plain number with its unit in a sibling depolamaBirimi field, while
+	// the bundled static dataset's depolama is already one "128GB" string.
+	getValue?: (row: ExcelRow) => string | null;
 }
 
 // Trims a string field down to its real value, or null for anything blank/missing.
@@ -27,16 +33,16 @@ function trimmedOrNull(value: unknown): string | null {
 // a single emptyValueLabel entry (appended last) instead of being dropped.
 function getUniqueValues(
 	rows: ExcelRow[],
-	field: string,
 	sortFunc: (a: string, b: string) => number,
 	emptyValueLabel: string,
 	excludedValues: Set<string>,
+	getValue: (row: ExcelRow) => string | null,
 ) {
 	const seen = new Map<string, string>();
 	let hasEmpty = false;
 
 	for (const r of rows) {
-		const trimmed = trimmedOrNull(r[field]);
+		const trimmed = getValue(r);
 		if (trimmed === null) {
 			hasEmpty = true;
 			continue;
@@ -51,10 +57,7 @@ function getUniqueValues(
 	return values;
 }
 
-/**
- * Single-dataset column filter: same matching/dropdown semantics as
- * useColumnFilter (hooks/useColumnFilter.ts), but backed by local component state
- */
+// Single-dataset column filter backed by local component state.
 export function useInventoryColumnFilter(
 	field: string,
 	rows: ExcelRow[],
@@ -68,6 +71,11 @@ export function useInventoryColumnFilter(
 			new Set((excludedValuesList ?? []).map((v) => v.trim().toLowerCase())),
 		[excludedValuesList],
 	);
+	const optionsGetValue = options?.getValue;
+	const getValue = useMemo(
+		() => optionsGetValue ?? ((row: ExcelRow) => trimmedOrNull(row[field])),
+		[optionsGetValue, field],
+	);
 
 	const hasColumn = useMemo(
 		() =>
@@ -80,13 +88,13 @@ export function useInventoryColumnFilter(
 			hasColumn
 				? getUniqueValues(
 						rows,
-						field,
 						sortFunc,
 						emptyValueLabel,
 						excludedValues,
+						getValue,
 					)
 				: [],
-		[rows, field, hasColumn, sortFunc, emptyValueLabel, excludedValues],
+		[rows, hasColumn, sortFunc, emptyValueLabel, excludedValues, getValue],
 	);
 
 	const [selectedValues, setSelectedValues] = useState<Set<string>>(new Set());
@@ -102,7 +110,7 @@ export function useInventoryColumnFilter(
 
 	const matches = (row: ExcelRow): boolean => {
 		if (!hasColumn) return true; // this field isn't in the data, don't filter on it
-		const trimmed = trimmedOrNull(row[field]);
+		const trimmed = getValue(row);
 		if (trimmed !== null && excludedValues.has(trimmed.toLowerCase())) {
 			return false; // junk/test value, hard-excluded regardless of selection
 		}

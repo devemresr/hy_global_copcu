@@ -9,13 +9,13 @@ import { buildDisplaySafeFinalData } from './tempDataValidation.debug';
 // - useInventoryRows reads those straight from the API response instead of
 // routing them back through here.
 //
-// Fiyat is left as the raw "150 TL"-style string here (not split into a
-// number + Currency, unlike InventoryItemRecord/ItemDto) because
+// fiyat is left as the raw "150 TL"-style string here (not split into a
+// number + paraBirimi, unlike InventoryItemRecord/ItemDto) because
 // inventoryData has no separate currency field to split it from yet -
 // that split lands once the backend is actually hosted.
 export function buildInventoryRecords() {
 	const cleanedRows = buildDisplaySafeFinalData(inventoryData, {
-		overrides: [{ prefix: 'PA', overrides: { Fiyat: '150 TL' } }],
+		// overrides: [{ prefix: 'PA', overrides: { Fiyat: '150 TL' } }],
 		filters: [
 			{
 				field: 'BellekTipi',
@@ -29,14 +29,14 @@ export function buildInventoryRecords() {
 	return cleanedRows.map((row) => {
 		const fiyat = row.Fiyat;
 		return {
-			manufacturer: (row.manufacturer as string) ?? null,
+			uretici: (row.manufacturer as string) ?? null,
 			ram: (row.ram as string) ?? null,
-			match_type: (row.match_type as string) ?? null,
-			BellekTipi: (row.BellekTipi as string) ?? null,
-			queried_as: (row.queried_as as string) ?? null,
-			Model: String(row.Model ?? ''),
-			Depoloma: (row.Depoloma as string) ?? null,
-			Fiyat: fiyat ?? null,
+			eslesmeTuru: (row.match_type as string) ?? null,
+			bellekTipi: (row.BellekTipi as string) ?? null,
+			sorgulananDeger: (row.queried_as as string) ?? null,
+			model: String(row.Model ?? ''),
+			depolama: (row.Depoloma as string) ?? null,
+			fiyat: fiyat ?? null,
 		};
 	});
 }

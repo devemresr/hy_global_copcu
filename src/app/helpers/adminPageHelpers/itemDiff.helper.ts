@@ -1,23 +1,13 @@
-import type {
-	EditableField,
-	EditableInventoryItem,
-	FieldChange,
-} from '../../types';
-
-const EDITABLE_FIELDS: EditableField[] = [
-	'Model',
-	'BellekTipi',
-	'Depoloma',
-	'ram',
-	'Fiyat',
-	'Currency',
-];
+import type { EditableInventoryItem, FieldChange } from '../../types';
+import { EDITABLE_FIELD_KEYS } from '../../constants/fieldRegistry.constant';
 
 export function diffEditableItem(
 	previous: EditableInventoryItem,
 	next: EditableInventoryItem,
 ): FieldChange[] {
-	return EDITABLE_FIELDS.filter((field) => previous[field] !== next[field]).map(
+	return EDITABLE_FIELD_KEYS.filter(
+		(field) => previous[field] !== next[field],
+	).map(
 		(field) => ({
 			field,
 			previousValue: previous[field] ?? null,
