@@ -21,6 +21,9 @@ export type LogEventDto = {
 	entityKey: string;
 	fields: LogEventFieldChange[];
 	createdAt: string;
+	// Shared by every row a single bulk edit touched (see the server's
+	// bulkUpdateItems/LogEvent model), null for anything else.
+	batchId: string | null;
 };
 
 type LogEventsResponse = {

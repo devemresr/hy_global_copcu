@@ -33,9 +33,12 @@ export function useCreateItem() {
 	});
 }
 
-// Bound to one id per call, same as the server route (PATCH /items/:id) -
-// callers re-derive it each render from whichever item is currently being
-// edited/deleted, same as any other hook argument.
+// Item mutations come in two shapes: bound to one id per call, when there's a
+// single "currently editing" item to re-derive it from each render
+// (useUpdateItem, matching the server's PATCH /items/:id) - or with the id
+// passed at mutate()-call time instead, for a per-cell/per-row grid action
+// that never "opens" a row first and so has no such id to bind up front
+// (useUpdateAnyItem, useDeleteAnyItem below).
 export function useUpdateItem(id: string) {
 	return useApiMutation<ItemResponse, Partial<EditableInventoryItem>>({
 		url: ITEM_ROUTES.UPDATE(id),
@@ -43,10 +46,6 @@ export function useUpdateItem(id: string) {
 	});
 }
 
-// Unlike useUpdateItem, the target id is passed at call time (via `mutate`)
-// rather than baked into the hook call - for callers that don't have one
-// single "currently editing" id to bind up front, e.g. a per-cell field edit
-// that can target any row in the grid without re-rendering first.
 export function useUpdateAnyItem() {
 	return useMutation<
 		ItemResponse,
@@ -61,14 +60,34 @@ export function useUpdateAnyItem() {
 	});
 }
 
-// Same "id passed at call time" shape as useUpdateAnyItem, for the same
-// reason: a row's delete button lives in the grid without ever "opening"
-// that row first, so there's no single bound id to build the hook around.
 export function useDeleteAnyItem() {
 	return useMutation<{ success: boolean }, ApiError, string>({
 		mutationFn: (id) =>
 			apiFetch<{ success: boolean }>(ITEM_ROUTES.UPDATE(id), {
 				method: 'DELETE',
+			}),
+	});
+}
+
+export type BulkUpdateItemsResponse = {
+	success: boolean;
+	matchedCount: number;
+	modifiedCount: number;
+};
+
+// One request setting the same fields on every id, instead of BulkEditPanel's
+// old N-requests-via-Promise.allSettled approach - the server does it as a
+// single updateMany.
+export function useBulkUpdateItems() {
+	return useMutation<
+		BulkUpdateItemsResponse,
+		ApiError,
+		{ ids: string[]; fields: Partial<EditableInventoryItem> }
+	>({
+		mutationFn: ({ ids, fields }) =>
+			apiFetch<BulkUpdateItemsResponse>(ITEM_ROUTES.BULK_UPDATE, {
+				method: 'PATCH',
+				body: { ids, fields },
 			}),
 	});
 }

@@ -3,7 +3,9 @@ import type { EditableInventoryItem } from '../../types';
 import { editableInventoryItemSchema } from '../../schemas/item.schema';
 import { CURRENCY_OPTIONS } from '../../constants/currency.constant';
 import { STORAGE_UNIT_OPTIONS } from '../../constants/storageUnit.constant';
+import { fieldMeta } from '../../constants/fieldRegistry.constant';
 import { useModalHotkeys } from '../../hooks/useModalHotkeys';
+import { NumberInputWithSteppers } from '../NumberInputWithSteppers';
 import CancelIcon from '../../assets/icons/icons8-cancel.svg?react';
 
 type ItemEditModalProps = {
@@ -18,6 +20,9 @@ type ItemEditModalProps = {
 	isSaving?: boolean;
 	enterEnabled: boolean;
 	escapeEnabled: boolean;
+	// Only changes the title/submit copy - editing and creating validate and
+	// submit through the exact same path below.
+	mode?: 'edit' | 'create';
 };
 
 export function ItemEditModal({
@@ -27,38 +32,37 @@ export function ItemEditModal({
 	isSaving = false,
 	enterEnabled,
 	escapeEnabled,
+	mode = 'edit',
 }: ItemEditModalProps) {
 	const [model, setModel] = useState(item.model);
 	const [bellekTipi, setBellekTipi] = useState(item.bellekTipi ?? '');
-	const [depolamaInput, setDepolamaInput] = useState(String(item.depolama ?? ''));
+	const [depolama, setDepolama] = useState<number | ''>(item.depolama ?? '');
 	const [depolamaBirimi, setDepolamaBirimi] = useState(item.depolamaBirimi);
 	const [ram, setRam] = useState(item.ram ?? '');
-	const [fiyatInput, setFiyatInput] = useState(String(item.fiyat ?? ''));
+	const [fiyat, setFiyat] = useState<number | ''>(item.fiyat ?? '');
 	const [paraBirimi, setParaBirimi] = useState(item.paraBirimi);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
 		setModel(item.model);
 		setBellekTipi(item.bellekTipi ?? '');
-		setDepolamaInput(String(item.depolama ?? ''));
+		setDepolama(item.depolama ?? '');
 		setDepolamaBirimi(item.depolamaBirimi);
 		setRam(item.ram ?? '');
-		setFiyatInput(String(item.fiyat ?? ''));
+		setFiyat(item.fiyat ?? '');
 		setParaBirimi(item.paraBirimi);
 		setError(null);
 	}, [item]);
 
 	function handleSave() {
 		if (isSaving) return;
-		const trimmedFiyat = fiyatInput.trim();
-		const trimmedDepolama = depolamaInput.trim();
 		const result = editableInventoryItemSchema.safeParse({
 			model: model.trim(),
 			bellekTipi: bellekTipi.trim() || null,
-			depolama: trimmedDepolama === '' ? null : Number(trimmedDepolama),
+			depolama: depolama === '' ? null : depolama,
 			depolamaBirimi,
 			ram: ram.trim() || null,
-			fiyat: trimmedFiyat === '' ? null : Number(trimmedFiyat),
+			fiyat: fiyat === '' ? null : fiyat,
 			paraBirimi,
 		});
 
@@ -83,7 +87,9 @@ export function ItemEditModal({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className='flex items-center justify-between mb-4'>
-					<span className='text-sm font-semibold'>Ürünü Düzenle</span>
+					<span className='text-sm font-semibold'>
+						{mode === 'create' ? 'Yeni Ürün Ekle' : 'Ürünü Düzenle'}
+					</span>
 					<button
 						type='button'
 						className='h-7 w-7 shrink-0'
@@ -104,17 +110,14 @@ export function ItemEditModal({
 					<div className='flex gap-2'>
 						<label className='flex-1 flex flex-col gap-1'>
 							<span className='opacity-70'>Depoloma</span>
-							<input
-								type='number'
-								min={0}
-								step='0.01'
-								inputMode='decimal'
-								value={depolamaInput}
-								onChange={(e) => {
-									setDepolamaInput(e.target.value);
+							<NumberInputWithSteppers
+								id='depolama-input'
+								value={depolama}
+								steppers={fieldMeta('depolama').stepperValues}
+								onChange={(update) => {
+									setDepolama(update);
 									setError(null);
 								}}
-								className='rounded-xl bg-button-bg px-2 py-1.5 outline-none focus:bg-button-focus-bg'
 							/>
 						</label>
 
@@ -141,17 +144,14 @@ export function ItemEditModal({
 					<div className='flex gap-2'>
 						<label className='flex-1 flex flex-col gap-1'>
 							<span className='opacity-70'>Fiyat</span>
-							<input
-								type='number'
-								min={0}
-								step='0.01'
-								inputMode='decimal'
-								value={fiyatInput}
-								onChange={(e) => {
-									setFiyatInput(e.target.value);
+							<NumberInputWithSteppers
+								id='fiyat-input'
+								value={fiyat}
+								steppers={fieldMeta('fiyat').stepperValues}
+								onChange={(update) => {
+									setFiyat(update);
 									setError(null);
 								}}
-								className='rounded-xl bg-button-bg px-2 py-1.5 outline-none focus:bg-button-focus-bg'
 							/>
 						</label>
 
@@ -190,7 +190,11 @@ export function ItemEditModal({
 						disabled={isSaving}
 						className='rounded-xl bg-button-focus-bg px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg disabled:opacity-40'
 					>
-						{isSaving ? 'Kaydediliyor...' : 'Kaydet'}
+						{isSaving
+							? 'Kaydediliyor...'
+							: mode === 'create'
+								? 'Ekle'
+								: 'Kaydet'}
 					</button>
 				</div>
 			</div>

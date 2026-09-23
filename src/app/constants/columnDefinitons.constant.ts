@@ -47,6 +47,7 @@ export const columnDefsBySheet: ColDef[] = [
 		field: FIELD_NAMES.FIYAT,
 		headerName: 'Fiyat',
 		sortable: true,
+		valueFormatter: fiyatValueFormatter,
 		width: 95,
 		minWidth: 90,
 		comparator: (valueA: string | null, valueB: string | null) => {
@@ -86,6 +87,12 @@ export function depolamaValueFormatter(params: any): string {
 		return data?.depolamaBirimi ? `${value} ${data.depolamaBirimi}` : String(value);
 	}
 	return value ?? '';
+}
+
+export function fiyatValueFormatter(params: any): string {
+	const { value, data } = params;
+	if (value === null || value === undefined || value === '') return '';
+	return data?.paraBirimi ? `${value} ${data.paraBirimi}` : String(value);
 }
 
 export function depolamaComparator(

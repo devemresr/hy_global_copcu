@@ -1,11 +1,16 @@
-import { useState } from 'react';
+import { useState, type SetStateAction } from 'react';
 import type { EditableField, EditableInventoryItem } from '../../types';
 import type { ItemDto } from '../../hooks/api/endpoints/useItems';
 import { editableInventoryItemSchema } from '../../schemas/item.schema';
-import { fieldMeta, PAIRED_ENUM_FIELD } from '../../constants/fieldRegistry.constant';
+import {
+	fieldMeta,
+	PAIRED_ENUM_FIELD,
+} from '../../constants/fieldRegistry.constant';
 import { useModalHotkeys } from '../../hooks/useModalHotkeys';
+import { NumberInputWithSteppers } from '../NumberInputWithSteppers';
 import CancelIcon from '../../assets/icons/icons8-cancel.svg?react';
 import { ConfirmDialog } from './ConfirmDialog';
+import { DisplayValue } from './DisplayValue';
 
 type FieldEditModalProps = {
 	row: ItemDto;
@@ -35,9 +40,8 @@ export function FieldEditModal({
 	const currentValue = row[field] ?? null;
 	const meta = fieldMeta(field);
 
-	// depolama/fiyat are meaningless without their unit/currency, so editing
-	// either here also edits its paired field in the same modal - see
-	// PAIRED_ENUM_FIELD's own comment.
+	// See PAIRED_ENUM_FIELD's own comment for why depolama/fiyat also edit a
+	// second field here.
 	const pairedField = PAIRED_ENUM_FIELD[field];
 	const pairedMeta = pairedField ? fieldMeta(pairedField) : undefined;
 	const currentPairedValue = pairedField ? row[pairedField] : undefined;
@@ -48,6 +52,22 @@ export function FieldEditModal({
 	);
 	const [awaitingApproval, setAwaitingApproval] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	// NumberInputWithSteppers works in number|'' - `value` itself stays a
+	// string since this same state also backs the plain text/select inputs
+	// below for a string/enum-kind field.
+	const numericValue: number | '' = value.trim() === '' ? '' : Number(value);
+	function handleNumericChange(update: SetStateAction<number | ''>) {
+		setValue((prev) => {
+			const prevNumeric: number | '' = prev.trim() === '' ? '' : Number(prev);
+			const next =
+				typeof update === 'function'
+					? (update as (p: number | '') => number | '')(prevNumeric)
+					: update;
+			return next === '' ? '' : String(next);
+		});
+		setError(null);
+	}
 
 	// Raw text input coerced into the shape editableInventoryItemSchema
 	// expects for this field, before validation - a number-kind field (fiyat,
@@ -66,9 +86,8 @@ export function FieldEditModal({
 	// against their own schema slices - returns null and sets `error` on the
 	// first failure, otherwise the changes to send.
 	function validate(): Partial<EditableInventoryItem> | null {
-		const result = editableInventoryItemSchema.shape[field].safeParse(
-			candidateValue(),
-		);
+		const result =
+			editableInventoryItemSchema.shape[field].safeParse(candidateValue());
 		if (!result.success) {
 			setError(result.error.issues[0].message);
 			return null;
@@ -109,10 +128,17 @@ export function FieldEditModal({
 	// nothing has changed since - re-parsing here is just to get typed data
 	// back out, not a check that can actually fail.
 	function confirmedChanges(): Partial<EditableInventoryItem> {
-		return validate()!;
+		return validate() ?? {};
 	}
 
-	useModalHotkeys(handleSaveClick, onClose, { enterEnabled, escapeEnabled });
+	// Disabled while awaitingApproval: this component doesn't unmount when it
+	// swaps to rendering <ConfirmDialog> below (a hook can't skip running just
+	// because the JSX it returns changed), so without this, Enter/Escape would
+	// hit both this listener and ConfirmDialog's own at once.
+	useModalHotkeys(handleSaveClick, onClose, {
+		enterEnabled: enterEnabled && !awaitingApproval,
+		escapeEnabled: escapeEnabled && !awaitingApproval,
+	});
 
 	if (awaitingApproval) {
 		return (
@@ -122,14 +148,14 @@ export function FieldEditModal({
 					<>
 						<b>{label}</b> alanı{' '}
 						<b>
-							{String(currentValue ?? '—')}
+							<DisplayValue value={currentValue as string | number | null} />
 							{pairedField && currentPairedValue
 								? ` ${currentPairedValue}`
 								: ''}
 						</b>{' '}
 						değerinden{' '}
 						<b>
-							{value.trim() || '—'}
+							<DisplayValue value={value.trim() || null} />
 							{pairedField ? ` ${pairedValue}` : ''}
 						</b>{' '}
 						değerine değiştirilecek.
@@ -181,11 +207,16 @@ export function FieldEditModal({
 									</option>
 								))}
 							</select>
+						) : meta.kind === 'number' ? (
+							<NumberInputWithSteppers
+								id={`field-edit-${field}`}
+								value={numericValue}
+								steppers={meta.stepperValues}
+								onChange={handleNumericChange}
+							/>
 						) : (
 							<input
-								type={meta.kind === 'number' ? 'number' : 'text'}
-								step={meta.kind === 'number' ? '0.01' : undefined}
-								min={meta.kind === 'number' ? 0 : undefined}
+								type='text'
 								value={value}
 								onChange={(e) => {
 									setValue(e.target.value);

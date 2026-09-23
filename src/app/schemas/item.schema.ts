@@ -13,13 +13,13 @@ export type StorageUnit = z.infer<typeof storageUnitSchema>;
 // FIELD_REGISTRY's editable-field list (fieldRegistry.constant.ts), and every
 // edit form's validation (ItemEditModal, FieldEditModal, BulkEditPanel) all
 // derive from this instead of re-declaring the field list or re-checking
-// "is this a valid price" by hand in each place.
+// "is this a valid price" by hand in each place. depolama/fiyat each split
+// into a plain magnitude plus a required unit (depolamaBirimi/paraBirimi)
+// rather than one combined string like "128GB", so a filter or sort never
+// has to re-parse a unit out of text.
 export const editableInventoryItemSchema = z.object({
 	model: z.string().trim().min(1, 'Model boş olamaz'),
 	bellekTipi: z.string().trim().min(1).nullable().optional(),
-	// depolama/depolamaBirimi split the same way fiyat/paraBirimi do: a plain
-	// magnitude plus a required unit, instead of a single "128GB" string a
-	// filter or sort would have to re-parse.
 	depolama: z
 		.number({ invalid_type_error: 'Geçerli bir depolama girin' })
 		.positive('Geçerli bir depolama girin')

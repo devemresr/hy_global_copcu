@@ -6,11 +6,28 @@ import {
 	type SetStateAction,
 } from 'react';
 
+export type Stepper = { amount: number; label: string };
+
+// Exactly two - a third stepper button has nowhere to go in this layout.
+export type Steppers = [Stepper, Stepper];
+
+const DEFAULT_STEPPERS: Steppers = [
+	{ amount: 100, label: '+100' },
+	{ amount: 1000, label: '+1k' },
+];
+
 type Props = {
 	value: number | '';
 	onChange: Dispatch<SetStateAction<number | ''>>;
+	id?: string;
+	steppers?: Steppers;
 };
-export function NumberInputWithSteppers({ value, onChange }: Props) {
+export function NumberInputWithSteppers({
+	value,
+	onChange,
+	id = 'numInput',
+	steppers = DEFAULT_STEPPERS,
+}: Props) {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const handleInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		if (['-', '+', 'e', 'E'].includes(e.key)) {
@@ -90,27 +107,21 @@ export function NumberInputWithSteppers({ value, onChange }: Props) {
 				onPaste={handlePaste}
 				inputMode='numeric'
 				ref={inputRef}
-				id='numInput'
+				id={id}
 			/>
 			<div className='flex items-center gap-1'>
-				<button
-					type='button'
-					onClick={() => onChange((v) => Number(v) + 100)}
-					className='text-xs px-2 py-1 rounded-lg text-gray-500
+				{steppers.map((stepper) => (
+					<button
+						key={stepper.label}
+						type='button'
+						onClick={() => onChange((v) => Number(v) + stepper.amount)}
+						className='text-xs px-2 py-1 rounded-lg text-gray-500
             hover:bg-gray-300 dark:hover:bg-gray-300 hover:text-black
             transition-colors duration-150 select-none'
-				>
-					+100
-				</button>
-				<button
-					type='button'
-					onClick={() => onChange((v) => Number(v) + 1000)}
-					className='text-xs px-2 py-1 rounded-lg  text-gray-500
-            hover:bg-gray-300 dark:hover:bg-gray-300 hover:text-black
-            transition-colors duration-150 select-none'
-				>
-					+1k
-				</button>
+					>
+						{stepper.label}
+					</button>
+				))}
 			</div>
 		</div>
 	);

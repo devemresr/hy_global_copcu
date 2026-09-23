@@ -101,11 +101,30 @@ export function useInventoryColumnFilter(
 	// mirrors the reducer's FILTER_INITIALIZED: seed the selection once the
 	// column's values are known, but never clobber a selection the user made.
 	const initializedRef = useRef(false);
+	// Which normalized values this column has ever shown, so a later refetch
+	// (e.g. after a bulk edit) can tell a genuinely new value apart from one
+	// the admin already chose to check/uncheck.
+	const seenValuesRef = useRef<Set<string>>(new Set());
 
 	useEffect(() => {
-		if (!hasColumn || initializedRef.current) return;
-		setSelectedValues(new Set(uniqueValues.map((v) => v.toLowerCase())));
-		initializedRef.current = true;
+		if (!hasColumn) return;
+		const currentKeys = uniqueValues.map((v) => v.toLowerCase());
+
+		if (!initializedRef.current) {
+			setSelectedValues(new Set(currentKeys));
+			seenValuesRef.current = new Set(currentKeys);
+			initializedRef.current = true;
+			return;
+		}
+
+		// A value that didn't exist on a previous pass (new bellekTipi/depolama
+		// from a bulk edit, say) defaults to checked instead of hiding behind an
+		// unchecked box - values seen before keep whatever the admin set.
+		const newKeys = currentKeys.filter((k) => !seenValuesRef.current.has(k));
+		if (newKeys.length > 0) {
+			setSelectedValues((prev) => new Set([...prev, ...newKeys]));
+		}
+		seenValuesRef.current = new Set(currentKeys);
 	}, [hasColumn, uniqueValues]);
 
 	const matches = (row: ExcelRow): boolean => {

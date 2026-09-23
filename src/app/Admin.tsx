@@ -1,13 +1,13 @@
-import { useMemo, useState, type ChangeEvent } from 'react';
+import { useMemo, useState } from 'react';
+// import {  type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { ColDef } from 'ag-grid-community';
-import { useWorkbookLoader } from './hooks/Useworkbookloader';
+// import { useWorkbookLoader } from './hooks/Useworkbookloader';
 import { useInventoryRows } from './hooks/useInventoryRows';
 import { useAdminEditSettings } from './hooks/useAdminEditSettings';
 import { diffEditableItem } from './helpers/adminPageHelpers/itemDiff.helper';
-import { apiFetch } from './hooks/api/core/api-client';
-import { ITEM_ROUTES } from './constants/routes.constant';
+import type { ApiError } from './hooks/api/core/api-client';
 import { ItemEditModal } from './component/admin/ItemEditModal';
 import { FieldEditModal } from './component/admin/FieldEditModal';
 import { ConfirmDialog } from './component/admin/ConfirmDialog';
@@ -17,16 +17,41 @@ import { LogEventsSection } from './component/admin/LogEventsSection';
 import { InventoryBrowser } from './component/InventoryBrowser';
 import {
 	useGetItems,
+	useCreateItem,
 	useUpdateItem,
 	useUpdateAnyItem,
 	useDeleteAnyItem,
+	useBulkUpdateItems,
 } from './hooks/api/endpoints/useItems';
 import type { ItemDto } from './hooks/api/endpoints/useItems';
+import { isFieldNullable } from './constants/fieldRegistry.constant';
+import { CURRENCY_OPTIONS } from './constants/currency.constant';
+import { STORAGE_UNIT_OPTIONS } from './constants/storageUnit.constant';
 import type { EditableField, EditableInventoryItem } from './types';
 
+// A stable reference, so ItemEditModal's item-changed effect (which resets
+// its form state) doesn't fire on every AdminPage re-render while the create
+// modal is open and wipe out whatever the admin has typed so far.
+const EMPTY_ITEM: EditableInventoryItem = {
+	model: '',
+	bellekTipi: null,
+	depolama: null,
+	depolamaBirimi: STORAGE_UNIT_OPTIONS[0].value,
+	ram: null,
+	fiyat: null,
+	paraBirimi: CURRENCY_OPTIONS[0].value,
+};
+
 function toEditable(record: ItemDto): EditableInventoryItem {
-	const { model, bellekTipi, depolama, depolamaBirimi, ram, fiyat, paraBirimi } =
-		record;
+	const {
+		model,
+		bellekTipi,
+		depolama,
+		depolamaBirimi,
+		ram,
+		fiyat,
+		paraBirimi,
+	} = record;
 	return {
 		model,
 		bellekTipi,
@@ -70,19 +95,20 @@ function RowActionsCell({ data, onEdit, onDelete }: any) {
  * flow itself still doesn't persist anything (no bulk-create endpoint yet).
  */
 function AdminPage() {
-	const [fileName, setFileName] = useState('');
-	const {
-		sheetNames,
-		selectedSheet,
-		rows: previewRows,
-		parseState,
-		handleFileChange,
-	} = useWorkbookLoader();
+	// const [fileName, setFileName] = useState('');
+	// const {
+	// 	sheetNames,
+	// 	selectedSheet,
+	// 	rows: previewRows,
+	// 	parseState,
+	// 	handleFileChange,
+	// } = useWorkbookLoader();
 
-	const { data, status } = useGetItems();
+	const { data, status: _status } = useGetItems();
 	const items = data?.items ?? [];
 
 	const [editingId, setEditingId] = useState<string | null>(null);
+	const [isCreatingItem, setIsCreatingItem] = useState(false);
 	const queryClient = useQueryClient();
 
 	const editingRecord = items.find((item) => item._id === editingId) ?? null;
@@ -91,6 +117,7 @@ function AdminPage() {
 	// Re-created each render with whatever id is currently being edited - see
 	// useUpdateItem's comment for why that's fine.
 	const updateItemMutation = useUpdateItem(editingId ?? '');
+	const createItemMutation = useCreateItem();
 
 	// Per-cell edit/delete (see AdminFieldCell) can target any row in the grid
 	// without first "opening" it the way the whole-row modal above does, so it
@@ -107,6 +134,7 @@ function AdminPage() {
 	} = useAdminEditSettings();
 	const updateAnyItemMutation = useUpdateAnyItem();
 	const deleteAnyItemMutation = useDeleteAnyItem();
+	const bulkUpdateItemsMutation = useBulkUpdateItems();
 	const [fieldEditTarget, setFieldEditTarget] = useState<{
 		row: ItemDto;
 		field: EditableField;
@@ -150,39 +178,32 @@ function AdminPage() {
 		);
 	}
 
-	// Bulk edits fire one PATCH per matched row directly, bypassing the
-	// mutate()-bound-to-one-id hooks above, which only ever track one in-flight
-	// request at a time.
+	// One PATCH /items/bulk request setting `field` on every matched row's id,
+	// instead of firing one PATCH per row - the server does it as a single
+	// updateMany (see items.controller.ts's bulkUpdateItems).
 	async function commitBulkFieldChange(
 		matched: ItemDto[],
 		field: EditableField,
 		newValue: string | number | null,
 	) {
-		const results = await Promise.allSettled(
-			matched.map((row) =>
-				apiFetch(ITEM_ROUTES.UPDATE(row._id), {
-					method: 'PATCH',
-					body: { [field]: newValue },
-				}),
-			),
-		);
-
-		const succeededCount = results.filter((r) => r.status === 'fulfilled').length;
-		const failureCount = results.length - succeededCount;
-
-		if (succeededCount > 0) {
+		try {
+			const result = await bulkUpdateItemsMutation.mutateAsync({
+				ids: matched.map((row) => row._id),
+				fields: { [field]: newValue } as Partial<EditableInventoryItem>,
+			});
 			invalidateAfterMutation();
-		}
 
-		if (failureCount === 0) {
-			toast.success(`${succeededCount} öğe güncellendi`);
-		} else if (succeededCount > 0) {
-			toast.warning(
-				`${succeededCount} öğe güncellendi, ${failureCount} öğe güncellenemedi`,
-			);
-		} else {
+			const missingCount = matched.length - result.matchedCount;
+			if (missingCount > 0) {
+				toast.warning(
+					`${result.matchedCount} öğe güncellendi, ${missingCount} öğe artık mevcut değil`,
+				);
+			} else {
+				toast.success(`${result.matchedCount} öğe güncellendi`);
+			}
+		} catch (error) {
 			toast.error('Toplu güncelleme başarısız', {
-				description: `${failureCount} öğe güncellenemedi.`,
+				description: (error as ApiError).message,
 			});
 		}
 	}
@@ -232,7 +253,12 @@ function AdminPage() {
 				cellRendererParams: {
 					displayRenderer: col.cellRenderer,
 					onEdit: handleEditField,
-					onDelete: handleDeleteField,
+					// A required field (e.g. model) has no valid "cleared" state, so
+					// it gets no delete button at all instead of one that always
+					// fails validation.
+					onDelete: isFieldNullable(col.field as EditableField)
+						? handleDeleteField
+						: undefined,
 					disabled: updateAnyItemMutation.isPending,
 				},
 			})),
@@ -278,16 +304,29 @@ function AdminPage() {
 		});
 	}
 
-	function onFileInputChange(e: ChangeEvent<HTMLInputElement>) {
-		const file = e.target.files?.[0];
-		if (!file) return;
-		setFileName(file.name);
-		handleFileChange(file);
+	function handleCreateItem(newItem: EditableInventoryItem) {
+		createItemMutation.mutate(newItem, {
+			onSuccess: () => {
+				invalidateAfterMutation();
+				setIsCreatingItem(false);
+				toast.success('Ürün eklendi');
+			},
+			onError: (error) => {
+				toast.error('Ekleme başarısız', { description: error.message });
+			},
+		});
 	}
+
+	// function onFileInputChange(e: ChangeEvent<HTMLInputElement>) {
+	// 	const file = e.target.files?.[0];
+	// 	if (!file) return;
+	// 	setFileName(file.name);
+	// 	handleFileChange(file);
+	// }
 
 	return (
 		<div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-text'>
-			<h1 className='text-xl font-semibold mb-4'>Admin: Excel Import</h1>
+			{/* <h1 className='text-xl font-semibold mb-4'>Admin: Excel Import</h1>
 			<input type='file' accept='.xlsx,.xls' onChange={onFileInputChange} />
 			<div className='mt-4 text-sm flex flex-col gap-1'>
 				<p>Status: {parseState.status}</p>
@@ -306,7 +345,15 @@ function AdminPage() {
 			)}
 			{status === 'error' && (
 				<p className='text-sm text-red-500'>Ürünler yüklenemedi</p>
-			)}
+			)} */}
+
+			<button
+				type='button'
+				onClick={() => setIsCreatingItem(true)}
+				className='mb-3 rounded-xl bg-button-focus-bg px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
+			>
+				+ Yeni Ürün Ekle
+			</button>
 
 			<BulkEditPanel
 				items={items}
@@ -360,6 +407,18 @@ function AdminPage() {
 					onClose={() => setEditingId(null)}
 					onSave={handleSaveItem}
 					isSaving={updateItemMutation.isPending}
+					enterEnabled={enterToConfirm}
+					escapeEnabled={escapeToCancel}
+				/>
+			)}
+
+			{isCreatingItem && (
+				<ItemEditModal
+					mode='create'
+					item={EMPTY_ITEM}
+					onClose={() => setIsCreatingItem(false)}
+					onSave={handleCreateItem}
+					isSaving={createItemMutation.isPending}
 					enterEnabled={enterToConfirm}
 					escapeEnabled={escapeToCancel}
 				/>
