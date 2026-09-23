@@ -40,7 +40,13 @@ createRoot(document.getElementById('root')!).render(
 				 * documented CSS-variable theming hook - so a toast reads as "this
 				 * app's modal" rather than "a toast library's default", and
 				 * light/dark already resolves for free since those variables
-				 * already flip on the .dark class Layout.tsx toggles.
+				 * already flip on the .dark class Layout.tsx toggles. richColors
+				 * was tried too and dropped: it replaces the whole toast background
+				 * with sonner's own baked-in red/amber palette rather than
+				 * respecting these overrides. error/warning below tint just the
+				 * text instead, matching how the app already flags state elsewhere
+				 * (text-red-500 for errors, text-amber-* for a warning callout) on
+				 * the same neutral surface every other toast and modal already uses.
 				 */}
 				<Toaster
 					position='bottom-right'
@@ -55,15 +61,6 @@ createRoot(document.getElementById('root')!).render(
 						classNames: {
 							toast: 'rounded-xl! border! font-sans!',
 							title: 'text-sm!',
-							// richColors was tried and dropped: it replaces the whole
-							// toast background with sonner's own baked-in red/amber
-							// palette rather than respecting --error-bg/--success-bg
-							// overrides, which looks nothing like this app's neutral
-							// surfaces. Tinting just the text instead matches how the
-							// app already flags state elsewhere - text-red-500 for
-							// errors (Login.tsx, BulkEditPanel), text-amber-* for a
-							// warning callout (Explanation.tsx) - on the same neutral
-							// bg/border every other toast and modal already uses.
 							error: 'text-red-500!',
 							warning: 'text-amber-500!',
 							actionButton:

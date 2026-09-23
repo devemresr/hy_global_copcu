@@ -4,6 +4,13 @@ import env from '../../../config/env';
 const ACCESS_TOKEN_KEY = 'accessToken';
 // Refresh this long before the access token actually expires.
 const REFRESH_BUFFER_MS = 60_000;
+// Floor on how soon the next proactive refresh can fire. A token whose
+// lifetime is shorter than REFRESH_BUFFER_MS (e.g. a short-lived dev/test
+// token) would otherwise make scheduleProactiveRefresh compute a delay of 0 -
+// and since a *successful* refresh reschedules itself the same way from the
+// new token's (equally short) expiry, that's a zero-delay loop hammering
+// /auth/refresh forever instead of a one-off catch-up refresh.
+const MIN_REFRESH_DELAY_MS = 5_000;
 const MAX_PROACTIVE_RETRY_DELAY_MS = 30_000;
 
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -64,7 +71,7 @@ const scheduleProactiveRefresh = (token: string) => {
 
 	const idealDelay = expiryMs - Date.now() - REFRESH_BUFFER_MS;
 
-	scheduleRefreshAttempt(Math.max(idealDelay, 0), expiryMs, 0);
+	scheduleRefreshAttempt(Math.max(idealDelay, MIN_REFRESH_DELAY_MS), expiryMs, 0);
 };
 
 export const getAccessToken = (): string | null => {

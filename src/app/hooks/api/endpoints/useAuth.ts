@@ -28,12 +28,6 @@ export function useLogin() {
 		method: 'POST',
 	});
 }
-export function useLogout() {
-	return useApiMutation({
-		url: AUTH_ROUTES.LOGOUT,
-		method: 'POST',
-	});
-}
 
 export function useRefresh() {
 	return useApiMutation<AuthResponse>({

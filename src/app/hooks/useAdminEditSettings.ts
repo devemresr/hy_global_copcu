@@ -5,10 +5,6 @@ const STORAGE_KEY = 'adminFieldEditSettings';
 type AdminEditSettings = {
 	confirmEdits: boolean;
 	confirmDeletes: boolean;
-	// Whether the admin's edit/confirm modals react to Enter (confirm) and
-	// Escape (cancel) - see useModalHotkeys. Separate settings since a keyboard
-	// shortcut some admins want can be an unwelcome surprise for others typing
-	// fast in the field inputs those same modals show.
 	enterToConfirm: boolean;
 	escapeToCancel: boolean;
 };
@@ -48,8 +44,14 @@ function loadSettings(): AdminEditSettings {
 	}
 }
 
-// Per-browser (localStorage), not per-admin-account - whether field
-// edits/deletions in the inventory grid pause for a confirmation step first.
+// Per-browser (localStorage), not per-admin-account: whether field
+// edits/deletions in the inventory grid pause for a confirmation step first
+// (confirmEdits/confirmDeletes), and whether the confirm/edit modals react to
+// Enter/Escape (enterToConfirm/escapeToCancel - see useModalHotkeys). Kept as
+// four separate toggles rather than one combined setting, since wanting one
+// doesn't imply wanting the others - e.g. an admin might want confirmation
+// steps but find the Enter/Escape shortcuts surprising while typing fast in
+// the same modals' inputs.
 export function useAdminEditSettings() {
 	const [settings, setSettings] = useState<AdminEditSettings>(loadSettings);
 

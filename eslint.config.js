@@ -18,5 +18,20 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // tseslint's recommended preset errors on any unused binding with no
+      // exceptions - several files (e.g. destructuring a field out just to
+      // drop it: `const { password: _password, ...rest } = user`) already
+      // rely on a leading underscore to mean "intentionally unused", so this
+      // makes that convention actually take effect instead of still erroring.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
   },
 ])
