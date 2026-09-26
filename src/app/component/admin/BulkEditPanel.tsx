@@ -79,8 +79,12 @@ type Condition = {
 	value: string;
 };
 
+let nextConditionId = 0;
+
 function newCondition(): Condition {
-	return { id: crypto.randomUUID(), field: 'bellekTipi', op: 'equals', value: '' };
+	// Just a React list key, not a security-sensitive id - avoids depending on
+	// crypto.randomUUID, which browsers only expose in a secure context (HTTPS).
+	return { id: `${Date.now()}-${nextConditionId++}`, field: 'bellekTipi', op: 'equals', value: '' };
 }
 
 // Only conditions with everything they need to actually filter make it into
