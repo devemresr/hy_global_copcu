@@ -5,17 +5,14 @@ import {
 	columnDefsBySheet,
 	FIELD_NAMES,
 } from '../constants/columnDefinitons.constant';
-import { buildInventoryRecords } from '../helpers/inventoryPageHelpers/buildInventoryRecords.helper';
 
-// Falls back to the bundled static dataset when no API-backed items are provided (the public page).
 export function useInventoryRows(
 	bellekTipiIncluded: boolean,
-	items: ItemDto[] | undefined,
+	items: ItemDto[],
 ) {
 	const rows = useMemo(() => {
-		const records = items ?? buildInventoryRecords();
-		if (bellekTipiIncluded) return records as ExcelRow[];
-		return records.map(({ bellekTipi, ...rest }) => rest) as ExcelRow[];
+		if (bellekTipiIncluded) return items as ExcelRow[];
+		return items.map(({ bellekTipi, ...rest }) => rest) as ExcelRow[];
 	}, [items, bellekTipiIncluded]);
 
 	const colDef = useMemo(
