@@ -4,7 +4,7 @@ import { useLayoutEffect } from 'react';
 import { useInventoryRows } from './hooks/useInventoryRows';
 import { InventoryBrowser } from './component/InventoryBrowser';
 import { SquareArrowOutUpRight } from 'lucide-react';
-// import { useGetItems } from './hooks/api/endpoints/useItems'; // disabled: inventory comes from an uploaded static file, not a live call
+import { useGetItems } from './hooks/api/endpoints/useItems';
 
 function getInitialTheme(): 'light' | 'dark' {
 	const saved = localStorage.getItem('theme');
@@ -19,8 +19,8 @@ function InventoryPage() {
 	// const bellekTipiIncluded = searchParams.has('detayliData');
 	const bellekTipiIncluded = true;
 
-	// const { data } = useGetItems(); // disabled: inventory comes from an uploaded static file, not a live call
-	const { rows, colDef } = useInventoryRows(bellekTipiIncluded, undefined);
+	const { data } = useGetItems();
+	const { rows, colDef } = useInventoryRows(bellekTipiIncluded, data?.items ?? []);
 
 	useLayoutEffect(() => {
 		const theme = getInitialTheme();
