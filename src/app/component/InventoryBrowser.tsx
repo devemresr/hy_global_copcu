@@ -4,6 +4,7 @@ import type { ColDef } from 'ag-grid-community';
 import type { ExcelRow } from '../types';
 import {
 	FIELD_NAMES,
+	getFieldLabel,
 	ramComparator,
 } from '../constants/columnDefinitons.constant';
 import { useInventoryColumnFilter } from '../hooks/useInventoryColumnFilter';
@@ -132,7 +133,7 @@ export function InventoryBrowser({ rows, colDef }: InventoryBrowserProps) {
 									</div>
 									{activeFilters.map((f) => (
 										<ColumnFilterPanel
-											label={f.field}
+											label={getFieldLabel(f.field)}
 											key={f.field}
 											uniqueValues={f.uniqueValues}
 											selectedValues={f.selectedValues}
@@ -152,7 +153,7 @@ export function InventoryBrowser({ rows, colDef }: InventoryBrowserProps) {
 						<span className='p-1 top-0 text-text'>Filtreler</span>
 						{activeFilters.map((f) => (
 							<ColumnFilterPanel
-								label={f.field}
+								label={getFieldLabel(f.field)}
 								key={f.field}
 								uniqueValues={f.uniqueValues}
 								selectedValues={f.selectedValues}

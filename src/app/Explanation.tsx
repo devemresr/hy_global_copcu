@@ -8,11 +8,13 @@ import {
 import { SAMPLE_PHOTOS } from './assets/photos/photos';
 import { pageContent } from './constants/explanationContent.constant';
 import { Skeleton } from './component/Skelaton';
+import { ImageLightbox } from './component/ImageLightbox';
 
 export function Explanation({ photos = SAMPLE_PHOTOS }) {
 	const [index, setIndex] = useState(0);
 	const [loadedThumbs, setLoadedThumbs] = useState<Set<string>>(new Set());
 	const [loaded, setLoaded] = useState(false);
+	const [lightboxOpen, setLightboxOpen] = useState(false);
 	const photoCount = photos.length;
 	const current = photos[index];
 
@@ -50,7 +52,7 @@ export function Explanation({ photos = SAMPLE_PHOTOS }) {
 	const { hero, infoSection, steps, whyImportant, closing } = pageContent;
 
 	return (
-		<div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 '>
+		<div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10'>
 			{/* text content */}
 			<div className='px-4 pb-6'>
 				<section>
@@ -76,7 +78,10 @@ export function Explanation({ photos = SAMPLE_PHOTOS }) {
 							src={current.url}
 							alt={current.label}
 							onLoad={() => setLoaded(true)}
-							className={`max-w-full max-h-full w-auto h-auto object-contain transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+							onClick={() => setLightboxOpen(true)}
+							onContextMenu={(e) => e.preventDefault()}
+							draggable={false}
+							className={`max-w-full max-h-full w-auto h-auto object-contain cursor-zoom-in select-none [-webkit-touch-callout:none] transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`}
 						/>
 
 						{photoCount > 1 && (
@@ -98,15 +103,13 @@ export function Explanation({ photos = SAMPLE_PHOTOS }) {
 							</>
 						)}
 
-						<a
-							href={current.url}
-							target='_blank'
-							rel='noreferrer'
+						<button
+							onClick={() => setLightboxOpen(true)}
 							aria-label='Open full size'
 							className='absolute top-3 right-3 p-1.5 rounded-sm bg-black/50 text-neutral-300 hover:text-amber-500 transition-colors'
 						>
 							<ZoomIn size={16} strokeWidth={1.5} />
-						</a>
+						</button>
 
 						<div className='absolute bottom-3 right-3 px-2 py-0.5 rounded-sm bg-black/60 font-mono text-xs text-neutral-400'>
 							{index + 1} / {photoCount}
@@ -143,7 +146,9 @@ export function Explanation({ photos = SAMPLE_PHOTOS }) {
 										src={p.url}
 										alt={p.label}
 										onLoad={() => markThumbLoaded(p.url)}
-										className={`max-w-full max-h-full min-w-0 min-h-0 w-full h-full object-cover transition-opacity duration-150 ${
+										onContextMenu={(e) => e.preventDefault()}
+										draggable={false}
+										className={`max-w-full max-h-full min-w-0 min-h-0 w-full h-full object-cover select-none [-webkit-touch-callout:none] transition-opacity duration-150 ${
 											loadedThumbs.has(p.url) ? 'opacity-100' : 'opacity-0'
 										}`}
 									/>
@@ -199,6 +204,17 @@ export function Explanation({ photos = SAMPLE_PHOTOS }) {
 
 				<p className='text-base text-text italic mt-6'>{closing.body}</p>
 			</div>
+
+			{lightboxOpen && (
+				<ImageLightbox
+					key={current.url}
+					src={current.url}
+					alt={current.label}
+					onClose={() => setLightboxOpen(false)}
+					onPrev={photoCount > 1 ? prev : undefined}
+					onNext={photoCount > 1 ? next : undefined}
+				/>
+			)}
 		</div>
 	);
 }

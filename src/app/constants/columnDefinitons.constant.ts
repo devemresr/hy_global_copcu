@@ -10,6 +10,15 @@ export const FIELD_NAMES = {
 // Declare here which fields should have a filter section.
 export const FILTERABLE_FIELDS = [FIELD_NAMES.Depoloma];
 
+// Display name for a field, e.g. for a filter panel label - derived from
+// columnDefsBySheet's headerName instead of duplicating those strings here.
+export function getFieldLabel(field: string): string {
+	return (
+		columnDefsBySheet.find((colDef) => colDef.field === field)?.headerName ??
+		field
+	);
+}
+
 // Without an explicit `width`, AG Grid defaults every column to 200px and
 // only treats `minWidth` as a floor for manual resizing - it does NOT shrink
 // the initial render down to it. That meant these columns were actually
