@@ -16,17 +16,39 @@ const DEFAULT_STEPPERS: Steppers = [
 	{ amount: 1000, label: '+1k' },
 ];
 
+// Styling: each caller passes its own look via className/stepperClassName
+// (replacing the defaults below, not merged - no tailwind-merge here), so the
+// input can match whatever controls sit next to it. Layout and the stepper
+// buttons' colors stay fixed in here.
 type Props = {
 	value: number | '';
 	onChange: Dispatch<SetStateAction<number | ''>>;
 	id?: string;
 	steppers?: Steppers;
+	// Box look: width, padding, radius, background, border.
+	className?: string;
+	// Stepper buttons' padding/line-height/radius.
+	stepperClassName?: string;
 };
+
+const DEFAULT_CLASS_NAME = `w-fit py-2 pl-3 pr-2
+        rounded-2xl border-border
+        border-2
+        shadow-xl
+        bg-button-bg text-text
+        transition-colors duration-200
+        hover:bg-button-hover-bg
+        focus:bg-button-focus-bg`;
+
+const DEFAULT_STEPPER_CLASS_NAME = 'px-2 py-1 rounded-lg';
+
 export function NumberInputWithSteppers({
 	value,
 	onChange,
 	id = 'numInput',
 	steppers = DEFAULT_STEPPERS,
+	className = DEFAULT_CLASS_NAME,
+	stepperClassName = DEFAULT_STEPPER_CLASS_NAME,
 }: Props) {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const handleInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -85,21 +107,9 @@ export function NumberInputWithSteppers({
 
 	const displayValue = value === '' ? '' : value.toLocaleString('en-US');
 	return (
-		<div
-			className='w-fit flex items-center justify-between gap-2
-        py-2 pl-3 pr-2
-        rounded-2xl border-border
-        border-2
-        shadow-xl
-        bg-button-bg text-text
-        transition-colors duration-200
-        hover:bg-button-hover-bg
-        focus:bg-button-focus-bg
-        '
-		>
+		<div className={`flex items-center justify-between gap-2 ${className}`}>
 			<input
-				className='field-sizing-content min-w-10 bg-transparent outline-none 
-          [appearance:textfield]'
+				className='field-sizing-content min-w-10 bg-transparent outline-none [appearance:textfield]'
 				type='text'
 				value={displayValue}
 				onKeyDown={handleInput}
@@ -115,9 +125,9 @@ export function NumberInputWithSteppers({
 						key={stepper.label}
 						type='button'
 						onClick={() => onChange((v) => Number(v) + stepper.amount)}
-						className='text-xs px-2 py-1 rounded-lg text-gray-500
+						className={`${stepperClassName} text-xs text-gray-500
             hover:bg-gray-300 dark:hover:bg-gray-300 hover:text-black
-            transition-colors duration-150 select-none'
+            transition-colors duration-150 select-none`}
 					>
 						{stepper.label}
 					</button>

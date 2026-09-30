@@ -58,7 +58,7 @@ export type InventoryItemRecord = {
 // BulkEditPanel, and what a valid value looks like for each - derived from
 // schemas/item.schema.ts, the one place that field list is declared.
 export type EditableInventoryItem = EditableInventoryItemInput;
-export type EditableField = keyof EditableInventoryItem;
+export type EditableField = Exclude<keyof EditableInventoryItem, 'ram'>;
 
 export type FieldChange = {
 	field: EditableField;

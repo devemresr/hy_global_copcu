@@ -212,6 +212,8 @@ export function FieldEditModal({
 								id={`field-edit-${field}`}
 								value={numericValue}
 								steppers={meta.stepperValues}
+								className='w-full rounded-xl bg-button-bg px-2 py-1.5 text-text focus-within:bg-button-focus-bg'
+								stepperClassName='px-1.5 leading-5 rounded-md'
 								onChange={handleNumericChange}
 							/>
 						) : (

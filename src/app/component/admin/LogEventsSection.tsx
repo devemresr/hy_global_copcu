@@ -14,8 +14,7 @@ import {
 } from '../../hooks/api/endpoints/useLogEvents';
 import { FIELD_REGISTRY } from '../../constants/fieldRegistry.constant';
 import { DisplayValue } from './DisplayValue';
-
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+import { Pagination } from './Pagination';
 
 // Both items and pricing rules log to the same collection (see the server's
 // LogEvent model comment), so this covers both action sets rather than
@@ -147,28 +146,6 @@ function groupLogEvents(events: LogEventDto[]): LogGroup[] {
 	}
 
 	return groups;
-}
-
-// A "1 … 4 5 6 … 42"-style window instead of just Önceki/Sonraki - always
-// anchored on the first and last page, with a small run around the current
-// one, and an ellipsis standing in for whatever's skipped in between.
-function getPageWindow(
-	current: number,
-	total: number,
-	delta = 1,
-): (number | 'ellipsis')[] {
-	if (total <= 1) return [1];
-
-	const left = Math.max(2, current - delta);
-	const right = Math.min(total - 1, current + delta);
-	const pages: (number | 'ellipsis')[] = [1];
-
-	if (left > 2) pages.push('ellipsis');
-	for (let p = left; p <= right; p++) pages.push(p);
-	if (right < total - 1) pages.push('ellipsis');
-	pages.push(total);
-
-	return pages;
 }
 
 function LogEventCard({ event }: { event: LogEventDto }) {
@@ -336,71 +313,17 @@ export function LogEventsSection() {
 						)}
 					</div>
 
-					<div className='flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3'>
-						<label className='flex items-center gap-2'>
-							<span className='opacity-70'>Sayfa başına:</span>
-							<select
-								value={pageSize}
-								onChange={(e) => {
-									setPageSize(Number(e.target.value));
-									setPage(1);
-								}}
-								className='rounded-xl bg-button-focus-bg px-2 py-1'
-							>
-								{PAGE_SIZE_OPTIONS.map((size) => (
-									<option key={size} value={size}>
-										{size}
-									</option>
-								))}
-							</select>
-						</label>
-						<span className='text-xs opacity-70'>
-							{data?.total ?? 0} kayıt
-						</span>
-					</div>
-
-					<div className='flex flex-wrap items-center gap-1 border-t border-border pt-3'>
-						<button
-							type='button'
-							onClick={() => setPage((p) => Math.max(1, p - 1))}
-							disabled={page <= 1}
-							className='rounded-xl bg-button-focus-bg px-3 py-1.5 font-medium hover:bg-button-hover-bg disabled:opacity-40'
-						>
-							Önceki
-						</button>
-						{getPageWindow(page, totalPages).map((entry, i) =>
-							entry === 'ellipsis' ? (
-								<span
-									key={`ellipsis-${i}`}
-									className='px-1.5 opacity-50'
-								>
-									…
-								</span>
-							) : (
-								<button
-									key={entry}
-									type='button'
-									onClick={() => setPage(entry)}
-									disabled={entry === page}
-									className={`rounded-xl px-3 py-1.5 font-medium hover:bg-button-hover-bg disabled:opacity-100 ${
-										entry === page
-											? 'bg-button-focus-bg'
-											: 'bg-button-bg'
-									}`}
-								>
-									{entry}
-								</button>
-							),
-						)}
-						<button
-							type='button'
-							onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-							disabled={page >= totalPages}
-							className='rounded-xl bg-button-focus-bg px-3 py-1.5 font-medium hover:bg-button-hover-bg disabled:opacity-40'
-						>
-							Sonraki
-						</button>
-					</div>
+					<Pagination
+						page={page}
+						totalPages={totalPages}
+						onPageChange={setPage}
+						pageSize={pageSize}
+						onPageSizeChange={(size) => {
+							setPageSize(size);
+							setPage(1);
+						}}
+						summary={`${data?.total ?? 0} kayıt`}
+					/>
 				</div>
 			)}
 		</>

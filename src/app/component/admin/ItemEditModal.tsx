@@ -38,7 +38,7 @@ export function ItemEditModal({
 	const [bellekTipi, setBellekTipi] = useState(item.bellekTipi ?? '');
 	const [depolama, setDepolama] = useState<number | ''>(item.depolama ?? '');
 	const [depolamaBirimi, setDepolamaBirimi] = useState(item.depolamaBirimi);
-	const [ram, setRam] = useState(item.ram ?? '');
+	// const [ram, setRam] = useState(item.ram ?? '');
 	const [fiyat, setFiyat] = useState<number | ''>(item.fiyat ?? '');
 	const [paraBirimi, setParaBirimi] = useState(item.paraBirimi);
 	const [error, setError] = useState<string | null>(null);
@@ -48,7 +48,7 @@ export function ItemEditModal({
 		setBellekTipi(item.bellekTipi ?? '');
 		setDepolama(item.depolama ?? '');
 		setDepolamaBirimi(item.depolamaBirimi);
-		setRam(item.ram ?? '');
+		// setRam(item.ram ?? '');
 		setFiyat(item.fiyat ?? '');
 		setParaBirimi(item.paraBirimi);
 		setError(null);
@@ -61,7 +61,7 @@ export function ItemEditModal({
 			bellekTipi: bellekTipi.trim() || null,
 			depolama: depolama === '' ? null : depolama,
 			depolamaBirimi,
-			ram: ram.trim() || null,
+			// ram: ram.trim() || null,
 			fiyat: fiyat === '' ? null : fiyat,
 			paraBirimi,
 		});
@@ -107,11 +107,14 @@ export function ItemEditModal({
 						value={bellekTipi}
 						onChange={setBellekTipi}
 					/>
-					<div className='flex gap-2'>
-						<label className='flex-1 flex flex-col gap-1'>
+					{/* One grid for both rows so the number inputs and selects line up at equal widths. */}
+					<div className='grid grid-cols-[max-content_max-content] gap-x-2 gap-y-3'>
+						<label className='flex flex-col gap-1'>
 							<span className='opacity-70'>Depoloma</span>
 							<NumberInputWithSteppers
 								id='depolama-input'
+								className='w-full rounded-xl bg-button-bg px-2 py-1.5 text-text focus-within:bg-button-focus-bg'
+								stepperClassName='px-1.5 leading-5 rounded-md'
 								value={depolama}
 								steppers={fieldMeta('depolama').stepperValues}
 								onChange={(update) => {
@@ -137,15 +140,15 @@ export function ItemEditModal({
 								))}
 							</select>
 						</label>
-					</div>
 
-					<TextField label='RAM' value={ram} onChange={setRam} />
+						{/* <TextField label='RAM' value={ram} onChange={setRam} /> */}
 
-					<div className='flex gap-2'>
-						<label className='flex-1 flex flex-col gap-1'>
+						<label className='flex flex-col gap-1'>
 							<span className='opacity-70'>Fiyat</span>
 							<NumberInputWithSteppers
 								id='fiyat-input'
+								className='w-full rounded-xl bg-button-bg px-2 py-1.5 text-text focus-within:bg-button-focus-bg'
+								stepperClassName='px-1.5 leading-5 rounded-md'
 								value={fiyat}
 								steppers={fieldMeta('fiyat').stepperValues}
 								onChange={(update) => {

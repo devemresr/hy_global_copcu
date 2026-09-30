@@ -1,5 +1,5 @@
 import WhatsappIcon from '../assets/icons/icons8-whatsapp.svg?react';
-import { whatsappUrl } from '../url.constant';
+import { whatsappUrl } from '../constants/url.constant';
 import '../App.css';
 import { LOGO } from '../assets/photos/photos';
 
@@ -37,7 +37,12 @@ export function Footer() {
 
 					<div className='flex justify-center'>
 						<nav className='flex items-center gap-2 md:gap-2 '>
-							<a href={whatsappUrl} className='hover:animate-hoverFloatUp'>
+							<a
+								href={whatsappUrl}
+								className='hover:animate-hoverFloatUp'
+								data-umami-event='whatsapp-click'
+								data-umami-event-location='footer'
+							>
 								<WhatsappIcon className='w-10 h-10 lg:h-12 lg:w-12 shrink-0' />
 							</a>
 						</nav>

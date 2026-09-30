@@ -9,7 +9,7 @@ import {
 	type SetStateAction,
 } from 'react';
 import type { LottieHandle } from 'lottie-react';
-import { whatsappUrl } from '../url.constant';
+import { whatsappUrl } from '../constants/url.constant';
 import WhatsappIcon from '../assets/icons/icons8-whatsapp.svg?react';
 import '../App.css';
 interface HeaderProps {
@@ -183,6 +183,8 @@ export function Header({
 					<a
 						className='hover:animate-hoverFloatUp flex items-center gap-1 md:gap-2 '
 						href={whatsappUrl}
+						data-umami-event='whatsapp-click'
+						data-umami-event-location='header'
 					>
 						<span className='whitespace-nowrap  text-text lg:text-xl'>
 							Bizimle İletişime geçin!

@@ -20,12 +20,21 @@ import {
 } from '../../helpers/inventoryPageHelpers/fieldFilter.helper';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DisplayValue } from './DisplayValue';
+import { Pagination } from './Pagination';
 import { NumberInputWithSteppers } from '../NumberInputWithSteppers';
 
-// Every field a condition can filter/match on - the full FIELD_REGISTRY,
-// since reading/matching on uretici/eslesmeTuru/sorgulananDeger is safe even
-// though they're not something a single-row edit lets an admin change.
-const FILTER_FIELDS = FIELD_KEYS.map((value) => ({
+// Data-import bookkeeping fields, not something an admin filters on.
+const HIDDEN_FILTER_FIELDS: FieldKey[] = [
+	'uretici',
+	'eslesmeTuru',
+	'sorgulananDeger',
+];
+
+// Every field a condition can filter/match on - FIELD_REGISTRY minus the
+// hidden ones above.
+const FILTER_FIELDS = FIELD_KEYS.filter(
+	(key) => !HIDDEN_FILTER_FIELDS.includes(key),
+).map((value) => ({
 	value,
 	label: fieldLabel(value),
 }));
@@ -84,7 +93,12 @@ let nextConditionId = 0;
 function newCondition(): Condition {
 	// Just a React list key, not a security-sensitive id - avoids depending on
 	// crypto.randomUUID, which browsers only expose in a secure context (HTTPS).
-	return { id: `${Date.now()}-${nextConditionId++}`, field: 'bellekTipi', op: 'equals', value: '' };
+	return {
+		id: `${Date.now()}-${nextConditionId++}`,
+		field: 'bellekTipi',
+		op: 'equals',
+		value: '',
+	};
 }
 
 // Only conditions with everything they need to actually filter make it into
@@ -92,7 +106,9 @@ function newCondition(): Condition {
 // blank) is just in-progress typing, not "match nothing".
 function toFieldFilters(conditions: Condition[]): FieldFilter[] {
 	return conditions
-		.filter((c) => c.op === 'exists' || c.op === 'notExists' || c.value.trim() !== '')
+		.filter(
+			(c) => c.op === 'exists' || c.op === 'notExists' || c.value.trim() !== '',
+		)
 		.map((c) => ({
 			field: c.field,
 			op: c.op,
@@ -104,6 +120,56 @@ function toFieldFilters(conditions: Condition[]): FieldFilter[] {
 							.filter(Boolean)
 					: c.value,
 		}));
+}
+
+// "Hazır değişiklikler": one click fills the conditions for a bellekTipi +
+// storage size combination and points the action at fiyat, so the admin only
+// has to type the new price - the apply/confirm flow stays the regular one.
+const PRESET_MEMORY_TYPES = ['eMMC', 'eMCP'] as const;
+type PresetMemoryType = (typeof PRESET_MEMORY_TYPES)[number];
+
+const PRESET_SIZES = [
+	{ label: '8GB', depolama: 8, birim: 'GB' },
+	{ label: '16GB', depolama: 16, birim: 'GB' },
+	{ label: '32GB', depolama: 32, birim: 'GB' },
+	{ label: '64GB', depolama: 64, birim: 'GB' },
+	{ label: '128GB', depolama: 128, birim: 'GB' },
+	{ label: '256GB', depolama: 256, birim: 'GB' },
+	{ label: '512GB', depolama: 512, birim: 'GB' },
+	{ label: '1TB', depolama: 1, birim: 'TB' },
+] as const;
+type PresetSize = (typeof PRESET_SIZES)[number];
+
+function presetConditions(
+	memoryType: PresetMemoryType,
+	size: PresetSize,
+): Condition[] {
+	return [
+		{ ...newCondition(), field: 'bellekTipi', value: memoryType },
+		{ ...newCondition(), field: 'depolama', value: String(size.depolama) },
+		{ ...newCondition(), field: 'depolamaBirimi', value: size.birim },
+	];
+}
+
+// Derived from the conditions themselves, so a manual edit un-highlights the
+// preset button instead of leaving it looking applied.
+function isPresetActive(
+	conditions: Condition[],
+	memoryType: PresetMemoryType,
+	size: PresetSize,
+): boolean {
+	const expected = presetConditions(memoryType, size);
+	return (
+		conditions.length === expected.length &&
+		expected.every((e, i) => {
+			const c = conditions[i];
+			return (
+				c.field === e.field &&
+				c.op === 'equals' &&
+				c.value.trim().toLowerCase() === e.value.toLowerCase()
+			);
+		})
+	);
 }
 
 const HINT_STORAGE_KEY = 'bulkEditHintVisible';
@@ -154,6 +220,16 @@ export function BulkEditPanel({
 	const [confirmingBulk, setConfirmingBulk] = useState(false);
 	const [isApplying, setIsApplying] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [presetsOpen, setPresetsOpen] = useState(false);
+	const [presetMemoryType, setPresetMemoryType] =
+		useState<PresetMemoryType>('eMMC');
+	const [previewPage, setPreviewPage] = useState(1);
+	const [previewPageSize, setPreviewPageSize] = useState(20);
+
+	// A new condition set is a new result list - start it from its first page.
+	useEffect(() => {
+		setPreviewPage(1);
+	}, [conditions]);
 
 	useEffect(() => {
 		try {
@@ -172,6 +248,18 @@ export function BulkEditPanel({
 		readyFilters.length > 0 ? filterRowsByFields(items, readyFilters) : [];
 	const actionLabel =
 		ACTION_FIELDS.find((f) => f.value === actionField)?.label ?? actionField;
+
+	const previewTotalPages = Math.max(
+		1,
+		Math.ceil(matched.length / previewPageSize),
+	);
+	// Clamped so a shrinking match set (e.g. items refetched after an apply)
+	// never leaves the preview on a page past the end.
+	const currentPreviewPage = Math.min(previewPage, previewTotalPages);
+	const previewRows = matched.slice(
+		(currentPreviewPage - 1) * previewPageSize,
+		currentPreviewPage * previewPageSize,
+	);
 
 	function updateCondition(id: string, patch: Partial<Condition>) {
 		setConditions((prev) =>
@@ -198,6 +286,26 @@ export function BulkEditPanel({
 					: c,
 			),
 		);
+	}
+
+	function applyPreset(memoryType: PresetMemoryType, size: PresetSize) {
+		setConditions(presetConditions(memoryType, size));
+		// Keep a price the admin already typed when hopping between presets.
+		if (actionField !== 'fiyat') {
+			setActionField('fiyat');
+			setActionValue('');
+		}
+		setError(null);
+	}
+
+	const activePresetSize = PRESET_SIZES.find((size) =>
+		isPresetActive(conditions, presetMemoryType, size),
+	);
+
+	function handlePresetMemoryTypeChange(memoryType: PresetMemoryType) {
+		setPresetMemoryType(memoryType);
+		// Switching type while a size is selected re-targets that same size.
+		if (activePresetSize) applyPreset(memoryType, activePresetSize);
 	}
 
 	const actionFieldMeta = fieldMeta(actionField);
@@ -311,16 +419,15 @@ export function BulkEditPanel({
 							<div className='flex flex-col gap-1.5 rounded-lg bg-button-focus-bg/60 p-2 text-xs opacity-80'>
 								<p>
 									Önce koşullarla hangi ürünlerin etkileneceğini seçin (ör.
-									Bellek Türü eşittir "UFS"), sonra hangi alanın hangi
-									değere değişeceğini belirtip aşağıdaki "Eşleşen N öğeyi
-									güncelle" düğmesine basın - eşleşen tüm ürünler tek
-									seferde güncellenir.
+									Bellek Türü eşittir "UFS"), sonra hangi alanın hangi değere
+									değişeceğini belirtip aşağıdaki "Eşleşen N öğeyi güncelle"
+									düğmesine basın - eşleşen tüm ürünler tek seferde güncellenir.
 								</p>
 								<ul className='flex flex-col gap-1 pl-4 list-disc'>
 									<li>
-										<b>İçerir</b>: girdiğiniz metni herhangi bir yerinde
-										geçiren ürünleri eşleştirir (ör. "128" hem "128GB" hem
-										"1280" ile eşleşir).
+										<b>İçerir</b>: girdiğiniz metni herhangi bir yerinde geçiren
+										ürünleri eşleştirir (ör. "128" hem "128GB" hem "1280" ile
+										eşleşir).
 									</li>
 									<li>
 										<b>Şunlardan biri / hiçbiri değil</b>: virgülle ayrılmış
@@ -338,18 +445,66 @@ export function BulkEditPanel({
 					</div>
 
 					<div className='flex flex-col gap-2'>
+						<button
+							type='button'
+							onClick={() => setPresetsOpen((o) => !o)}
+							className='flex items-center gap-1 self-start rounded-xl bg-button-focus-bg px-2 py-1 text-xs font-medium hover:bg-button-hover-bg'
+						>
+							{presetsOpen ? (
+								<ChevronDown className='h-3.5 w-3.5' />
+							) : (
+								<ChevronRight className='h-3.5 w-3.5' />
+							)}
+							Hazır Değişiklikler
+						</button>
+						{presetsOpen && (
+							<div className='flex flex-wrap items-center gap-2 rounded-lg bg-button-focus-bg/60 p-2'>
+								<select
+									value={presetMemoryType}
+									onChange={(e) =>
+										handlePresetMemoryTypeChange(
+											e.target.value as PresetMemoryType,
+										)
+									}
+									className='rounded-xl bg-button-focus-bg px-2 py-1'
+								>
+									{PRESET_MEMORY_TYPES.map((type) => (
+										<option key={type} value={type}>
+											{type}
+										</option>
+									))}
+								</select>
+								{PRESET_SIZES.map((size) => {
+									const active = size === activePresetSize;
+									return (
+										<button
+											key={size.label}
+											type='button'
+											onClick={() => applyPreset(presetMemoryType, size)}
+											aria-pressed={active}
+											className={`rounded-xl px-2 py-1 text-xs font-medium hover:bg-button-hover-bg ${
+												active
+													? 'bg-button-hover-bg ring-1 ring-text/40'
+													: 'bg-button-focus-bg'
+											}`}
+										>
+											{size.label}
+										</button>
+									);
+								})}
+							</div>
+						)}
+					</div>
+
+					<div className='flex flex-col gap-2'>
 						{conditions.map((c) => {
 							const opMeta = ALL_OPS.find((o) => o.value === c.op);
+							const valueOptions = fieldMeta(c.field as FieldKey).options;
 							return (
-								<div
-									key={c.id}
-									className='flex flex-wrap items-center gap-2'
-								>
+								<div key={c.id} className='flex flex-col gap-2 min-[426px]:flex-row min-[426px]:flex-wrap min-[426px]:items-center'>
 									<select
 										value={c.field}
-										onChange={(e) =>
-											updateConditionField(c.id, e.target.value)
-										}
+										onChange={(e) => updateConditionField(c.id, e.target.value)}
 										className='rounded-xl bg-button-focus-bg px-2 py-1'
 									>
 										{FILTER_FIELDS.map((f) => (
@@ -373,7 +528,23 @@ export function BulkEditPanel({
 											</option>
 										))}
 									</select>
-									{opMeta?.needsValue && (
+									{opMeta?.needsValue && valueOptions && (
+										<select
+											value={c.value}
+											onChange={(e) =>
+												updateCondition(c.id, { value: e.target.value })
+											}
+											className='rounded-xl bg-button-focus-bg px-2 py-1'
+										>
+											<option value=''>Seçin</option>
+											{valueOptions.map((opt) => (
+												<option key={opt.value} value={opt.value}>
+													{opt.label}
+												</option>
+											))}
+										</select>
+									)}
+									{opMeta?.needsValue && !valueOptions && (
 										<input
 											type='text'
 											value={c.value}
@@ -381,7 +552,7 @@ export function BulkEditPanel({
 												updateCondition(c.id, { value: e.target.value })
 											}
 											placeholder='Değer'
-											className='min-w-32 flex-1 rounded-xl bg-button-focus-bg px-2 py-1'
+											className='min-[426px]:field-sizing-content min-[426px]:min-w-32 min-[426px]:max-w-[33rem] rounded-xl bg-button-focus-bg px-2 py-1'
 										/>
 									)}
 									{conditions.length > 1 && (
@@ -403,16 +574,14 @@ export function BulkEditPanel({
 						})}
 						<button
 							type='button'
-							onClick={() =>
-								setConditions((prev) => [...prev, newCondition()])
-							}
+							onClick={() => setConditions((prev) => [...prev, newCondition()])}
 							className='self-start rounded-xl bg-button-focus-bg px-2 py-1 text-xs font-medium hover:bg-button-hover-bg'
 						>
 							+ Koşul Ekle
 						</button>
 					</div>
 
-					<div className='flex flex-wrap items-center gap-2 border-t border-border pt-3'>
+					<div className='flex flex-col gap-2 border-t border-border pt-3 min-[426px]:flex-row min-[426px]:flex-wrap min-[426px]:items-center'>
 						<span className='opacity-70'>Değiştir:</span>
 						<select
 							value={actionField}
@@ -448,6 +617,8 @@ export function BulkEditPanel({
 								id={`bulk-action-${actionField}`}
 								value={numericActionValue}
 								steppers={actionFieldMeta.stepperValues}
+								className='min-[426px]:w-fit rounded-xl bg-button-focus-bg px-2 py-1'
+								stepperClassName='px-1.5 leading-5 rounded-md'
 								onChange={handleNumericActionChange}
 							/>
 						) : (
@@ -459,7 +630,7 @@ export function BulkEditPanel({
 									setError(null);
 								}}
 								placeholder='Yeni değer'
-								className='rounded-xl bg-button-focus-bg px-2 py-1'
+								className='min-[426px]:field-sizing-content min-[426px]:min-w-32 min-[426px]:max-w-[33rem] rounded-xl bg-button-focus-bg px-2 py-1'
 							/>
 						)}
 						<button
@@ -482,7 +653,7 @@ export function BulkEditPanel({
 							<p className='text-xs opacity-50'>Eşleşen öğe yok</p>
 						) : (
 							<ul className='flex max-h-40 flex-col gap-1 overflow-y-auto rounded-xl bg-button-focus-bg p-2 text-xs'>
-								{matched.slice(0, 50).map((row) => {
+								{previewRows.map((row) => {
 									// The unit/currency itself isn't part of this bulk action
 									// (see PAIRED_ENUM_FIELD's own comment), so a row keeps
 									// whatever it already had - shown alongside both the old
@@ -495,32 +666,33 @@ export function BulkEditPanel({
 												| undefined)
 										: null;
 									return (
-										<li
-											key={row._id}
-											className='flex justify-between gap-2'
-										>
+										<li key={row._id} className='flex justify-between gap-2'>
 											<span className='truncate'>{row.model}</span>
 											<span className='shrink-0 opacity-60'>
 												<DisplayValue
-													value={
-														row[actionField] as string | number | null
-													}
+													value={row[actionField] as string | number | null}
 												/>
 												{unit ? ` ${unit}` : ''} →{' '}
-												<DisplayValue
-													value={actionValue.trim() || null}
-												/>
+												<DisplayValue value={actionValue.trim() || null} />
 												{unit ? ` ${unit}` : ''}
 											</span>
 										</li>
 									);
 								})}
-								{matched.length > 50 && (
-									<li className='opacity-50'>
-										+{matched.length - 50} diğer
-									</li>
-								)}
 							</ul>
+						)}
+						{matched.length > 0 && (
+							<Pagination
+								page={currentPreviewPage}
+								totalPages={previewTotalPages}
+								onPageChange={setPreviewPage}
+								pageSize={previewPageSize}
+								onPageSizeChange={(size) => {
+									setPreviewPageSize(size);
+									setPreviewPage(1);
+								}}
+								hideNavWhenSinglePage
+							/>
 						)}
 					</div>
 
@@ -531,8 +703,7 @@ export function BulkEditPanel({
 							title='Toplu değişikliği onayla'
 							message={
 								<>
-									<b>{matched.length}</b> öğenin <b>{actionLabel}</b>{' '}
-									alanı{' '}
+									<b>{matched.length}</b> öğenin <b>{actionLabel}</b> alanı{' '}
 									<b>
 										<DisplayValue value={actionValue.trim() || null} />
 									</b>{' '}

@@ -28,10 +28,3 @@ export function useLogin() {
 		method: 'POST',
 	});
 }
-
-export function useRefresh() {
-	return useApiMutation<AuthResponse>({
-		url: AUTH_ROUTES.REFRESH,
-		method: 'POST',
-	});
-}

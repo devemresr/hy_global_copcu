@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 // import {  type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { Pencil, Trash2 } from 'lucide-react';
 import type { ColDef } from 'ag-grid-community';
 // import { useWorkbookLoader } from './hooks/Useworkbookloader';
 import { useInventoryRows } from './hooks/useInventoryRows';
@@ -9,9 +10,9 @@ import { useAdminEditSettings } from './hooks/useAdminEditSettings';
 import { diffEditableItem } from './helpers/adminPageHelpers/itemDiff.helper';
 import type { ApiError } from './hooks/api/core/api-client';
 import { ItemEditModal } from './component/admin/ItemEditModal';
-import { FieldEditModal } from './component/admin/FieldEditModal';
+// import { FieldEditModal } from './component/admin/FieldEditModal';
 import { ConfirmDialog } from './component/admin/ConfirmDialog';
-import { AdminFieldCell } from './component/admin/AdminFieldCell';
+// import { AdminFieldCell } from './component/admin/AdminFieldCell';
 import { BulkEditPanel } from './component/admin/BulkEditPanel';
 import { LogEventsSection } from './component/admin/LogEventsSection';
 import { InventoryBrowser } from './component/InventoryBrowser';
@@ -19,12 +20,13 @@ import {
 	useGetItems,
 	useCreateItem,
 	useUpdateItem,
-	useUpdateAnyItem,
+	// useUpdateAnyItem,
 	useDeleteAnyItem,
 	useBulkUpdateItems,
 } from './hooks/api/endpoints/useItems';
 import type { ItemDto } from './hooks/api/endpoints/useItems';
-import { isFieldNullable } from './constants/fieldRegistry.constant';
+// import { isFieldNullable } from './constants/fieldRegistry.constant';
+import { FIELD_NAMES } from './constants/columnDefinitons.constant';
 import { CURRENCY_OPTIONS } from './constants/currency.constant';
 import { STORAGE_UNIT_OPTIONS } from './constants/storageUnit.constant';
 import type { EditableField, EditableInventoryItem } from './types';
@@ -37,7 +39,7 @@ const EMPTY_ITEM: EditableInventoryItem = {
 	bellekTipi: null,
 	depolama: null,
 	depolamaBirimi: STORAGE_UNIT_OPTIONS[0].value,
-	ram: null,
+	// ram: null,
 	fiyat: null,
 	paraBirimi: CURRENCY_OPTIONS[0].value,
 };
@@ -48,7 +50,7 @@ function toEditable(record: ItemDto): EditableInventoryItem {
 		bellekTipi,
 		depolama,
 		depolamaBirimi,
-		ram,
+		// ram,
 		fiyat,
 		paraBirimi,
 	} = record;
@@ -57,32 +59,41 @@ function toEditable(record: ItemDto): EditableInventoryItem {
 		bellekTipi,
 		depolama: depolama ?? null,
 		depolamaBirimi,
-		ram,
+		// ram,
 		fiyat,
 		paraBirimi,
 	};
 }
 
-// Appended to the shared inventory columnDefs so the admin grid gets an
-// edit/delete button pair per row that the public inventory grid has no use
-// for.
-function RowActionsCell({ data, onEdit, onDelete }: any) {
+// Replaces the Model column's renderer in the admin grid: the column's
+// original display (search highlighting) plus whole-row edit/delete icons.
+function ModelActionsCell(props: any) {
+	const { value, data, displayRenderer: Display, onEdit, onDelete } = props;
 	return (
-		<div className='flex h-full items-center gap-1'>
-			<button
-				type='button'
-				onClick={() => onEdit(data._id)}
-				className='rounded-xl bg-button-focus-bg px-2 py-1 text-xs font-medium hover:bg-button-hover-bg'
-			>
-				Düzenle
-			</button>
-			<button
-				type='button'
-				onClick={() => onDelete(data)}
-				className='rounded-xl bg-button-focus-bg px-2 py-1 text-xs font-medium hover:bg-button-hover-bg'
-			>
-				Sil
-			</button>
+		<div className='flex h-full w-full items-center justify-between gap-1'>
+			<span className='truncate min-w-0'>
+				{Display ? <Display {...props} /> : value}
+			</span>
+			<span className='flex shrink-0 gap-1'>
+				<button
+					type='button'
+					onClick={() => onEdit(data._id)}
+					title='Düzenle'
+					aria-label='Düzenle'
+					className='rounded p-1 hover:bg-button-hover-bg'
+				>
+					<Pencil className='h-3.5 w-3.5' />
+				</button>
+				<button
+					type='button'
+					onClick={() => onDelete(data)}
+					title='Sil'
+					aria-label='Sil'
+					className='rounded p-1 hover:bg-button-hover-bg'
+				>
+					<Trash2 className='h-3.5 w-3.5' />
+				</button>
+			</span>
 		</div>
 	);
 }
@@ -124,27 +135,27 @@ function AdminPage() {
 	// uses useUpdateAnyItem instead - see that hook's comment for why.
 	const {
 		confirmEdits,
-		confirmDeletes,
+		// confirmDeletes,
 		enterToConfirm,
 		escapeToCancel,
 		setConfirmEdits,
-		setConfirmDeletes,
+		// setConfirmDeletes,
 		setEnterToConfirm,
 		setEscapeToCancel,
 	} = useAdminEditSettings();
-	const updateAnyItemMutation = useUpdateAnyItem();
+	// const updateAnyItemMutation = useUpdateAnyItem();
 	const deleteAnyItemMutation = useDeleteAnyItem();
 	const bulkUpdateItemsMutation = useBulkUpdateItems();
-	const [fieldEditTarget, setFieldEditTarget] = useState<{
-		row: ItemDto;
-		field: EditableField;
-		label: string;
-	} | null>(null);
-	const [fieldDeleteTarget, setFieldDeleteTarget] = useState<{
-		row: ItemDto;
-		field: EditableField;
-		label: string;
-	} | null>(null);
+	// const [fieldEditTarget, setFieldEditTarget] = useState<{
+	// 	row: ItemDto;
+	// 	field: EditableField;
+	// 	label: string;
+	// } | null>(null);
+	// const [fieldDeleteTarget, setFieldDeleteTarget] = useState<{
+	// 	row: ItemDto;
+	// 	field: EditableField;
+	// 	label: string;
+	// } | null>(null);
 	const [rowDeleteTarget, setRowDeleteTarget] = useState<ItemDto | null>(null);
 
 	// The server records its own log entry for every PATCH/DELETE it handles
@@ -159,24 +170,24 @@ function AdminPage() {
 	// `fields` can carry more than one key - depolama/fiyat edits also carry
 	// their paired depolamaBirimi/paraBirimi (see FieldEditModal), so a single
 	// field+value pair isn't enough to describe every edit this handles.
-	function commitFieldChange(
-		row: ItemDto,
-		fields: Partial<EditableInventoryItem>,
-		label: string,
-	) {
-		updateAnyItemMutation.mutate(
-			{ id: row._id, fields },
-			{
-				onSuccess: () => {
-					invalidateAfterMutation();
-					toast.success(`${label} güncellendi`);
-				},
-				onError: (error) => {
-					toast.error('Güncelleme başarısız', { description: error.message });
-				},
-			},
-		);
-	}
+	// function commitFieldChange(
+	// 	row: ItemDto,
+	// 	fields: Partial<EditableInventoryItem>,
+	// 	label: string,
+	// ) {
+	// 	updateAnyItemMutation.mutate(
+	// 		{ id: row._id, fields },
+	// 		{
+	// 			onSuccess: () => {
+	// 				invalidateAfterMutation();
+	// 				toast.success(`${label} güncellendi`);
+	// 			},
+	// 			onError: (error) => {
+	// 				toast.error('Güncelleme başarısız', { description: error.message });
+	// 			},
+	// 		},
+	// 	);
+	// }
 
 	// One PATCH /items/bulk request setting `field` on every matched row's id,
 	// instead of firing one PATCH per row - the server does it as a single
@@ -208,21 +219,21 @@ function AdminPage() {
 		}
 	}
 
-	function handleEditField(row: ItemDto, field: EditableField, label: string) {
-		setFieldEditTarget({ row, field, label });
-	}
+	// function handleEditField(row: ItemDto, field: EditableField, label: string) {
+	// 	setFieldEditTarget({ row, field, label });
+	// }
 
-	function handleDeleteField(
-		row: ItemDto,
-		field: EditableField,
-		label: string,
-	) {
-		if (confirmDeletes) {
-			setFieldDeleteTarget({ row, field, label });
-		} else {
-			commitFieldChange(row, { [field]: null }, label);
-		}
-	}
+	// function handleDeleteField(
+	// 	row: ItemDto,
+	// 	field: EditableField,
+	// 	label: string,
+	// ) {
+	// 	if (confirmDeletes) {
+	// 		setFieldDeleteTarget({ row, field, label });
+	// 	} else {
+	// 		commitFieldChange(row, { [field]: null }, label);
+	// 	}
+	// }
 
 	// Removing the whole row is harder to reverse than clearing one field, so
 	// this always confirms regardless of the confirmDeletes setting (which
@@ -241,47 +252,51 @@ function AdminPage() {
 
 	// Same rows/columnDefs derivation the public inventory page uses, so the
 	// admin grid gets identical model/depolama/bellekTipi/fiyat columns, search
-	// and filters - plus a per-cell edit/delete button pair on every one of
-	// those columns, and one more column, appended below, for the whole-row
-	// edit/delete buttons.
+	// and filters - plus whole-row edit/delete icons inside the Model column.
 	const { rows, colDef: baseColDef } = useInventoryRows(true, items);
 	const colDef = useMemo<ColDef[]>(
-		() => [
-			...baseColDef.map((col) => ({
-				...col,
-				cellRenderer: AdminFieldCell,
-				cellRendererParams: {
-					displayRenderer: col.cellRenderer,
-					onEdit: handleEditField,
-					// A required field (e.g. model) has no valid "cleared" state, so
-					// it gets no delete button at all instead of one that always
-					// fails validation.
-					onDelete: isFieldNullable(col.field as EditableField)
-						? handleDeleteField
-						: undefined,
-					disabled: updateAnyItemMutation.isPending,
-				},
-			})),
-			{
-				colId: 'actions',
-				headerName: '',
-				sortable: false,
-				filter: false,
-				width: 140,
-				minWidth: 130,
-				cellRenderer: RowActionsCell,
-				cellRendererParams: {
-					onEdit: setEditingId,
-					onDelete: setRowDeleteTarget,
-				},
-			},
-		],
-		// updateAnyItemMutation.isPending is a dependency on purpose - it's what
-		// gives AdminFieldCell's buttons a new `disabled` value each time the
-		// pending state flips, since AG Grid only re-reads cellRendererParams
-		// when the columnDefs array itself gets a new reference.
-		[baseColDef, confirmDeletes, updateAnyItemMutation.isPending],
+		() =>
+			baseColDef.map((col) =>
+				col.field === FIELD_NAMES.MODEL
+					? {
+							...col,
+							width: 190,
+							minWidth: 160,
+							cellRenderer: ModelActionsCell,
+							cellRendererParams: {
+								displayRenderer: col.cellRenderer,
+								onEdit: setEditingId,
+								onDelete: setRowDeleteTarget,
+							},
+						}
+					: col,
+			),
+		[baseColDef],
 	);
+	// const colDef = useMemo<ColDef[]>(
+	// 	() => [
+	// 		...baseColDef.map((col) => ({
+	// 			...col,
+	// 			cellRenderer: AdminFieldCell,
+	// 			cellRendererParams: {
+	// 				displayRenderer: col.cellRenderer,
+	// 				onEdit: handleEditField,
+	// 				// A required field (e.g. model) has no valid "cleared" state, so
+	// 				// it gets no delete button at all instead of one that always
+	// 				// fails validation.
+	// 				onDelete: isFieldNullable(col.field as EditableField)
+	// 					? handleDeleteField
+	// 					: undefined,
+	// 				disabled: updateAnyItemMutation.isPending,
+	// 			},
+	// 		})),
+	// 	],
+	// 	// updateAnyItemMutation.isPending is a dependency on purpose - it's what
+	// 	// gives AdminFieldCell's buttons a new `disabled` value each time the
+	// 	// pending state flips, since AG Grid only re-reads cellRendererParams
+	// 	// when the columnDefs array itself gets a new reference.
+	// 	[baseColDef, confirmDeletes, updateAnyItemMutation.isPending],
+	// );
 
 	function handleSaveItem(updated: EditableInventoryItem) {
 		if (!editingRecord) return;
@@ -373,14 +388,14 @@ function AdminPage() {
 					/>
 					Alan düzenlemelerinde onay iste
 				</label>
-				<label className='flex items-center gap-2'>
+				{/* <label className='flex items-center gap-2'>
 					<input
 						type='checkbox'
 						checked={confirmDeletes}
 						onChange={(e) => setConfirmDeletes(e.target.checked)}
 					/>
 					Alan silmelerinde onay iste
-				</label>
+				</label> */}
 				<label className='flex items-center gap-2'>
 					<input
 						type='checkbox'
@@ -424,7 +439,7 @@ function AdminPage() {
 				/>
 			)}
 
-			{fieldEditTarget && (
+			{/* {fieldEditTarget && (
 				<FieldEditModal
 					row={fieldEditTarget.row}
 					field={fieldEditTarget.field}
@@ -465,7 +480,7 @@ function AdminPage() {
 					enterEnabled={enterToConfirm}
 					escapeEnabled={escapeToCancel}
 				/>
-			)}
+			)} */}
 
 			{rowDeleteTarget && (
 				<ConfirmDialog

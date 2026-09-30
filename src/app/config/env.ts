@@ -10,7 +10,7 @@ const env = cleanEnv(import.meta.env, {
 	VITE_LOG_LEVEL: str({ default: 'info' }),
 	VITE_GATEWAY_URL: url({ default: 'http://localhost:3001' }),
 	// Umami is optional - UmamiAnalytics only runs in production and no-ops
-	// when either is unset.
+	// unless the script URL is http(s) and the website ID is a UUID.
 	VITE_UMAMI_SCRIPT_URL: str({ default: '' }),
 	VITE_UMAMI_WEBSITE_ID: str({ default: '' }),
 });

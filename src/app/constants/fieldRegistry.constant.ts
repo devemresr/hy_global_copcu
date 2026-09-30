@@ -50,7 +50,7 @@ export const FIELD_REGISTRY = {
 		kind: 'enum',
 		options: STORAGE_UNIT_OPTIONS,
 	},
-	ram: { label: 'RAM', kind: 'string' },
+	// ram: { label: 'RAM', kind: 'string' },
 	fiyat: {
 		label: 'Fiyat',
 		kind: 'number',
@@ -131,5 +131,6 @@ export const OPS_BY_KIND: Record<FieldKind, FieldFilterOp[]> = {
 		'exists',
 		'notExists',
 	],
-	enum: ['equals', 'notEquals', 'in', 'notIn', 'exists', 'notExists'],
+	// No in/notIn: an enum's value is picked from a single-choice dropdown.
+	enum: ['equals', 'notEquals', 'exists', 'notExists'],
 };

@@ -1,24 +1,38 @@
 import { AUTH_ROUTES } from '../../../constants/routes.constant';
 import env from '../../../config/env';
+import logger from '../../../util/logger';
+
+const log = logger.child({ method: 'tokenManager' });
+
+// Two refresh paths share this module:
+// - Proactive: a timer refreshes shortly before the access token expires.
+//   It's started by setAccessToken (login/refresh responses) and, on a page
+//   load that already has a saved token, by the block at the bottom.
+// - Reactive: apiFetch calls refreshAccessToken when a request gets a 401,
+//   then retries that request once.
+// refreshAccessToken uses plain fetch, not apiFetch or the query/mutation
+// hooks: it's called from apiFetch itself and from a timer, and it needs to tell a server rejection apart from a
+// network failure (RefreshRejectedError).
 
 const ACCESS_TOKEN_KEY = 'accessToken';
-// Refresh this long before the access token actually expires.
-const REFRESH_BUFFER_MS = 60_000;
-// Floor on how soon the next proactive refresh can fire. A token whose
-// lifetime is shorter than REFRESH_BUFFER_MS (e.g. a short-lived dev/test
-// token) would otherwise make scheduleProactiveRefresh compute a delay of 0 -
-// and since a *successful* refresh reschedules itself the same way from the
-// new token's (equally short) expiry, that's a zero-delay loop hammering
-// /auth/refresh forever instead of a one-off catch-up refresh.
-const MIN_REFRESH_DELAY_MS = 5_000;
-const MAX_PROACTIVE_RETRY_DELAY_MS = 30_000;
+
+const REFRESH_TIMING = {
+	// Refresh this long before the access token actually expires.
+	bufferMs: 60_000,
+	// Floor on the proactive delay, so a token shorter-lived than bufferMs
+	// can't make each successful refresh reschedule itself at 0ms forever.
+	minDelayMs: 5_000,
+	// Proactive retry backoff after a network failure: base * 2^attempt, capped.
+	retryBaseMs: 1_000,
+	maxRetryDelayMs: 30_000,
+} as const;
 
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 let inFlightRefresh: Promise<string> | null = null;
 
-// Thrown when the server explicitly rejects a refresh (invalid/expired
-// refresh cookie), as opposed to a network-level failure.
-class RefreshRejectedError extends Error {}
+// The server rejected the refresh (refresh cookie invalid/expired) - as
+// opposed to a network failure, where retrying can still help.
+export class RefreshRejectedError extends Error {}
 
 const decodeExpiryMs = (token: string): number | null => {
 	try {
@@ -38,26 +52,38 @@ const clearScheduledRefresh = () => {
 	}
 };
 
-// Retries with exponential backoff on failure, up until a retry would land
-// after the token's actual expiry - past that, the reactive 401 handling in
-// apiFetch takes over.
+// Retries with exponential backoff on network failure, until a retry would
+// land after the token's expiry - past that, apiFetch's 401 handling takes over.
 const scheduleRefreshAttempt = (
 	delay: number,
 	expiryMs: number,
 	attempt: number,
 ) => {
 	refreshTimer = setTimeout(() => {
+		log.debug({ attempt }, 'proactive refresh firing');
 		refreshAccessToken().catch((error) => {
-			// The server explicitly rejected the refresh (refresh cookie
-			// invalid/expired) - retrying won't help, so let the reactive
-			// 401 handling in apiFetch take it from here.
-			if (error instanceof RefreshRejectedError) return;
+			if (error instanceof RefreshRejectedError) {
+				log.debug('proactive refresh rejected, not retrying');
+				return;
+			}
 
 			const retryDelay = Math.min(
-				1000 * 2 ** attempt,
-				MAX_PROACTIVE_RETRY_DELAY_MS,
+				REFRESH_TIMING.retryBaseMs * 2 ** attempt,
+				REFRESH_TIMING.maxRetryDelayMs,
 			);
-			if (Date.now() + retryDelay >= expiryMs) return;
+			if (Date.now() + retryDelay >= expiryMs) {
+				log.debug(
+					'proactive refresh failed, next retry would land after expiry - giving up',
+				);
+				return;
+			}
+			log.debug(
+				{
+					retryDelayMs: retryDelay,
+					nextAttempt: attempt + 1,
+				},
+				'proactive refresh failed, retrying',
+			);
 			scheduleRefreshAttempt(retryDelay, expiryMs, attempt + 1);
 		});
 	}, delay);
@@ -67,11 +93,21 @@ const scheduleProactiveRefresh = (token: string) => {
 	clearScheduledRefresh();
 
 	const expiryMs = decodeExpiryMs(token);
-	if (!expiryMs) return;
+	if (!expiryMs) {
+		log.debug('token has no readable exp, no proactive refresh');
+		return;
+	}
 
-	const idealDelay = expiryMs - Date.now() - REFRESH_BUFFER_MS;
-
-	scheduleRefreshAttempt(Math.max(idealDelay, MIN_REFRESH_DELAY_MS), expiryMs, 0);
+	const idealDelay = expiryMs - Date.now() - REFRESH_TIMING.bufferMs;
+	const delay = Math.max(idealDelay, REFRESH_TIMING.minDelayMs);
+	log.debug(
+		{
+			delayMs: delay,
+			expiresAt: new Date(expiryMs).toISOString(),
+		},
+		'proactive refresh scheduled',
+	);
+	scheduleRefreshAttempt(delay, expiryMs, 0);
 };
 
 export const getAccessToken = (): string | null => {
@@ -91,18 +127,19 @@ export const clearAccessToken = () => {
 	localStorage.removeItem(ACCESS_TOKEN_KEY);
 };
 
-export const isRefreshUrl = (url: string) => url === AUTH_ROUTES.REFRESH;
-
 /**
- * Calls the dedicated refresh endpoint directly (not through apiFetch, to
- * avoid recursing back into apiFetch's own 401 handling). The refresh cookie
- * is only sent here because it's scoped to the /auth/refresh path.
- * Concurrent callers share one in-flight request.
+ * POSTs the refresh endpoint; the refresh cookie is only sent here because
+ * it's scoped to the /auth/refresh path. Concurrent callers share one
+ * in-flight request.
  */
 export const refreshAccessToken = (): Promise<string> => {
-	if (inFlightRefresh) return inFlightRefresh;
+	if (inFlightRefresh) {
+		log.debug('refresh already in flight, joining it');
+		return inFlightRefresh;
+	}
 
 	const url = `${env.VITE_GATEWAY_URL}${AUTH_ROUTES.REFRESH}`;
+	log.debug('refresh request sent');
 
 	inFlightRefresh = fetch(url, {
 		method: 'POST',
@@ -112,12 +149,23 @@ export const refreshAccessToken = (): Promise<string> => {
 	})
 		.then(async (response) => {
 			if (!response.ok) {
+				log.debug(
+					{ status: response.status },
+					'refresh rejected, clearing token',
+				);
 				clearAccessToken();
 				throw new RefreshRejectedError('Failed to refresh access token');
 			}
 			const body = await response.json();
+			log.debug('refresh succeeded');
 			setAccessToken(body.accessToken);
 			return body.accessToken as string;
+		})
+		.catch((error) => {
+			if (!(error instanceof RefreshRejectedError)) {
+				log.debug({ err: error }, 'refresh network failure');
+			}
+			throw error;
 		})
 		.finally(() => {
 			inFlightRefresh = null;
@@ -126,9 +174,14 @@ export const refreshAccessToken = (): Promise<string> => {
 	return inFlightRefresh;
 };
 
-// Pick up a token already persisted from a previous session (e.g. this
-// module loading on a page other than the one that bootstraps the session).
+// The proactive timer is normally started by setAccessToken, which only runs
+// when a login or refresh response arrives. A page reload or opening a URL
+// directly skips both, so the saved token would have no timer - this runs
+// once when the module first loads and starts it for that saved token.
 if (typeof window !== 'undefined') {
 	const existingToken = getAccessToken();
-	if (existingToken) scheduleProactiveRefresh(existingToken);
+	if (existingToken) {
+		log.debug('saved token found on page load');
+		scheduleProactiveRefresh(existingToken);
+	}
 }

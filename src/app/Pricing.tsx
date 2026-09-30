@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Skeleton } from './component/Skelaton';
 import WhatsappIcon from './assets/icons/icons8-whatsapp.svg?react';
-import { displayPhoneNumber, whatsappUrl } from './url.constant';
+import { displayPhoneNumber, whatsappUrl } from './constants/url.constant';
 import { pricing } from './assets/photos/photos';
 
 function HeroCarousel() {
@@ -93,6 +93,8 @@ export function Pricing() {
 					<a
 						className='flex items-center gap-2 text-white hover:animate-hoverFloatUp dark:animate-hoverFloatUpDark'
 						href={whatsappUrl}
+						data-umami-event='whatsapp-click'
+						data-umami-event-location='pricing'
 					>
 						<WhatsappIcon className='shrink-0 w-5 h-5' />
 						<span>{displayPhoneNumber}</span>

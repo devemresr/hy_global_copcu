@@ -1,5 +1,6 @@
 import type { ColDef } from 'ag-grid-community';
 import { HighlightCellRenderer } from '../component/HighlightCellRenderer';
+import { CURRENCY_OPTIONS } from './currency.constant';
 
 export const FIELD_NAMES = {
 	BellekTipi: 'bellekTipi',
@@ -59,17 +60,7 @@ export const columnDefsBySheet: ColDef[] = [
 		valueFormatter: fiyatValueFormatter,
 		width: 95,
 		minWidth: 90,
-		comparator: (valueA: string | null, valueB: string | null) => {
-			const parse = (v: string | null): number => {
-				if (v === null || v === undefined) return -Infinity; // nulls sort first; use Infinity to sort last
-				const match = v.match(/[\d.]+/);
-				return match ? parseFloat(match[0]) : -Infinity;
-			};
-
-			const a = parse(valueA);
-			const b = parse(valueB);
-			return a - b;
-		},
+		comparator: fiyatComparator,
 	},
 ];
 
@@ -96,6 +87,42 @@ export function depolamaValueFormatter(params: any): string {
 		return data?.depolamaBirimi ? `${value} ${data.depolamaBirimi}` : String(value);
 	}
 	return value ?? '';
+}
+
+function fiyatToNumber(value: unknown): number {
+	if (typeof value === 'number') return value;
+	if (value === null || value === undefined || value === '') return NaN;
+	return parseFloat(String(value).replace(/,/g, ''));
+}
+
+// Position in CURRENCY_OPTIONS; an unknown/missing currency goes after them.
+function currencyRank(currency: unknown): number {
+	const index = CURRENCY_OPTIONS.findIndex((opt) => opt.value === currency);
+	return index === -1 ? CURRENCY_OPTIONS.length : index;
+}
+
+// Grouped by currency (CURRENCY_OPTIONS order), then by amount within each
+// group - amounts in different currencies are never compared to each other.
+// Unpriced rows go last, same as depolamaComparator's missing values.
+export function fiyatComparator(
+	valueA: unknown,
+	valueB: unknown,
+	nodeA: any,
+	nodeB: any,
+) {
+	const a = fiyatToNumber(valueA);
+	const b = fiyatToNumber(valueB);
+
+	if (isNaN(a) && isNaN(b)) return 0;
+	if (isNaN(a)) return 1;
+	if (isNaN(b)) return -1;
+
+	const rankDiff =
+		currencyRank(nodeA?.data?.paraBirimi) -
+		currencyRank(nodeB?.data?.paraBirimi);
+	if (rankDiff !== 0) return rankDiff;
+
+	return a - b;
 }
 
 export function fiyatValueFormatter(params: any): string {
