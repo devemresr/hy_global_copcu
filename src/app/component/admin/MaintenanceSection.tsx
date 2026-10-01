@@ -473,7 +473,7 @@ function NoticeForm({
 					onChange={(e) => setMessage(e.target.value)}
 					rows={3}
 					maxLength={1000}
-					placeholder='Örn. Kargo gönderimleri 3 gün gecikmeli yapılacaktır.'
+					placeholder='Örn. alımlar durdurulmuştur.'
 					className={inputClass}
 				/>
 			</label>

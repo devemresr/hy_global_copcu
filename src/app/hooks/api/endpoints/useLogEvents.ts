@@ -8,16 +8,12 @@ export type LogEventFieldChange = {
 	newValue: string | number | boolean | null;
 };
 
-export type LogEntityType =
-	| 'item'
-	| 'pricing_rule'
-	| 'site_maintenance'
-	| 'site_notice';
+export type LogEntityType = 'item' | 'site_maintenance' | 'site_notice';
 
-// Items, pricing rules and site settings write to the same log_events
-// collection server side (see the server's LogEvent model), so field names
-// here aren't limited to inventory fields - a pricing-rule entry carries
-// "price"/"sizeGb", a site-settings entry "enabled"/"until" and so on.
+// Items and site settings write to the same log_events collection server
+// side (see the server's LogEvent model), so field names here aren't limited
+// to inventory fields - a site-settings entry carries "enabled"/"until" and
+// so on.
 export type LogEventDto = {
 	_id: string;
 	adminUsername: string;
@@ -31,8 +27,8 @@ export type LogEventDto = {
 	// Shared by every row a single bulk edit touched (see the server's
 	// bulkUpdateItems/LogEvent model), null for anything else.
 	batchId: string | null;
-	// Global data version the change was written at; null for pricing rules
-	// and entries from before versioning.
+	// Global data version the change was written at; null for entries from
+	// before versioning.
 	version: number | null;
 };
 

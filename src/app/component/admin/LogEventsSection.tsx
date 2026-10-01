@@ -21,24 +21,17 @@ import { PUBLIC_PAGES } from '../../constants/publicPages.constant';
 import { DisplayValue } from './DisplayValue';
 import { Pagination } from './Pagination';
 
-// Both items and pricing rules log to the same collection (see the server's
+// Items and site settings log to the same collection (see the server's
 // LogEvent model comment), so this covers both action sets rather than
 // assuming every entry is an item edit.
 const ACTION_LABELS: Record<string, string> = {
 	'items:create': 'Ürün oluşturuldu',
 	'items:update': 'Ürün güncellendi',
 	'items:delete': 'Ürün silindi',
-	'items:add_rule': 'Fiyat kuralı eklendi',
-	'items:edit_rule': 'Fiyat kuralı düzenlendi',
-	'items:delete_rule': 'Fiyat kuralı silindi',
 	'site:maintenance_update': 'Bakım modu güncellendi',
 	'site:notice_update': 'Duyuru güncellendi',
 };
 
-// Groups both action sets into the same three visual buckets - an added
-// pricing rule reads the same as a created item to an admin skimming the
-// list, so they share create/update/delete's color and icon instead of each
-// action getting its own.
 // Site-settings changes get their own kinds (and colors) so they stand out
 // from routine catalog edits.
 type ActionKind = 'create' | 'update' | 'delete' | 'maintenance' | 'notice';
@@ -47,9 +40,6 @@ const ACTION_KIND: Record<string, ActionKind> = {
 	'items:create': 'create',
 	'items:update': 'update',
 	'items:delete': 'delete',
-	'items:add_rule': 'create',
-	'items:edit_rule': 'update',
-	'items:delete_rule': 'delete',
 	'site:maintenance_update': 'maintenance',
 	'site:notice_update': 'notice',
 };
@@ -107,7 +97,9 @@ function formatSiteValue(
 		case 'from':
 			return value ? new Date(String(value)).toLocaleString('tr-TR') : 'Hemen';
 		case 'until':
-			return value ? new Date(String(value)).toLocaleString('tr-TR') : 'Süresiz';
+			return value
+				? new Date(String(value)).toLocaleString('tr-TR')
+				: 'Süresiz';
 		case 'type':
 			return value === 'warning' ? 'Uyarı' : 'Bilgi';
 		case 'pages':
@@ -146,13 +138,12 @@ function actionLabel(event: LogEventDto): string {
 
 const LOG_FILTERS: { types: LogEntityType[]; label: string }[] = [
 	{ types: ['item'], label: 'Ürünler' },
-	{ types: ['pricing_rule'], label: 'Fiyat kuralları' },
 	{ types: ['site_maintenance'], label: 'Bakım modu' },
 	{ types: ['site_notice'], label: 'Duyuru' },
 ];
 
-// Pricing-rule fields (category/sizeGb/price/currency) aren't in
-// FIELD_REGISTRY - fall back to the raw field name for those.
+// A field outside FIELD_REGISTRY (none currently, but any future one) falls
+// back to its raw name instead of throwing.
 function fieldLabel(field: string, entityType?: LogEntityType): string {
 	if (entityType && SITE_ENTITY_TYPES.includes(entityType)) {
 		return SITE_FIELD_LABELS[field] ?? field;
@@ -279,7 +270,9 @@ function LogEventCard({ event }: { event: LogEventDto }) {
 							<span className='font-medium'>
 								{fieldLabel(f.field, event.entityType)}:
 							</span>
-							<DisplayValue value={formatValue(event, f.field, f.previousValue)} />
+							<DisplayValue
+								value={formatValue(event, f.field, f.previousValue)}
+							/>
 							<span className='opacity-50'>→</span>
 							<DisplayValue value={formatValue(event, f.field, f.newValue)} />
 						</div>
@@ -325,7 +318,9 @@ function BulkGroupCard({
 				</span>
 				<span className='flex items-center gap-1.5'>
 					<span className='font-medium'>{fieldLabel(field.field)}:</span>
-					<DisplayValue value={formatValue(first, field.field, field.newValue)} />
+					<DisplayValue
+						value={formatValue(first, field.field, field.newValue)}
+					/>
 				</span>
 				<span className='opacity-60'>· {first.adminUsername}</span>
 				<span className='ml-auto flex items-center gap-1 text-xs opacity-50'>
@@ -344,7 +339,11 @@ function BulkGroupCard({
 						<li key={e._id} className='flex items-center gap-1.5 opacity-80'>
 							<span className='font-medium'>{e.entityKey}:</span>
 							<DisplayValue
-								value={formatValue(e, e.fields[0].field, e.fields[0].previousValue)}
+								value={formatValue(
+									e,
+									e.fields[0].field,
+									e.fields[0].previousValue,
+								)}
 							/>
 							<span className='opacity-50'>→</span>
 							<DisplayValue
@@ -366,9 +365,7 @@ export function LogEventsSection() {
 	const [pageSize, setPageSize] = useState(20);
 	// Which bulk groups (keyed by their first event's id) are expanded -
 	// collapsed by default, same as BulkEditPanel itself.
-	const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-		new Set(),
-	);
+	const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
 	// Empty means every type ("Tümü").
 	const [types, setTypes] = useState<LogEntityType[]>([]);
@@ -457,7 +454,10 @@ export function LogEventsSection() {
 
 			{status === 'success' && (
 				<div className='flex flex-col gap-3 text-sm'>
-					<div className='flex flex-col gap-2' style={{ opacity: isPlaceholderData ? 0.6 : 1 }}>
+					<div
+						className='flex flex-col gap-2'
+						style={{ opacity: isPlaceholderData ? 0.6 : 1 }}
+					>
 						{events.length === 0 && (
 							<p className='opacity-70'>Henüz kayıt yok</p>
 						)}
