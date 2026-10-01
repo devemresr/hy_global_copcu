@@ -7,7 +7,7 @@ services:
         VITE_LOG_LEVEL: info
         VITE_GATEWAY_URL: https://api.hyglobalcopcu.com
         VITE_UMAMI_SCRIPT_URL: https://stats.hyglobalcopcu.com/script.js
-        VITE_UMAMI_WEBSITE_ID: placeHolder
+        VITE_UMAMI_WEBSITE_ID: b0dc3d53-41bc-4d8b-85ec-ce140d69eb72
     container_name: hy-globalcopcu-frontend
     ports:
       - '8080:80'
