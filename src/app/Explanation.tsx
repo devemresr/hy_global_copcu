@@ -56,7 +56,7 @@ export function Explanation({ photos = SAMPLE_PHOTOS }) {
 			{/* text content */}
 			<div className='px-4 pb-6'>
 				<section>
-					<h1 className='text-xl md:text-2xl font-bold text-heading-text'>
+					<h1 className='text-2xl md:text-3xl font-bold text-heading-text'>
 						{hero.heading}
 					</h1>
 					<p className='text-base text-text leading-relaxed mt-4'>
@@ -65,7 +65,7 @@ export function Explanation({ photos = SAMPLE_PHOTOS }) {
 				</section>
 
 				<section>
-					<h2 className='text-xl md:text-2xl font-semibold  mt-8 text-heading-text'>
+					<h2 className='text-xl font-semibold mt-8 text-heading-text'>
 						{infoSection.heading}
 					</h2>
 					<p className='text-base text-text mt-2'>{infoSection.body}</p>
@@ -166,7 +166,7 @@ export function Explanation({ photos = SAMPLE_PHOTOS }) {
 				</section>
 
 				<section>
-					<h2 className='text-2xl font-semibold mt-8 text-heading-text'>
+					<h2 className='text-xl font-semibold mt-8 text-heading-text'>
 						{steps.heading}
 					</h2>
 					<ol className='space-y-3 mt-4'>
@@ -196,7 +196,7 @@ export function Explanation({ photos = SAMPLE_PHOTOS }) {
 				</section>
 
 				<section>
-					<h2 className='text-2xl font-semibold text-heading-text mt-8'>
+					<h2 className='text-xl font-semibold text-heading-text mt-8'>
 						{whyImportant.heading}
 					</h2>
 					<p className='text-base text-text mt-2'>{whyImportant.body}</p>

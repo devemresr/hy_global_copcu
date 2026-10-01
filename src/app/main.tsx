@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App.tsx';
 import DevToolsBlocker from './component/DevToolsBlocker.tsx';
 import { Layout } from './component/Layout.tsx';
+import { MaintenanceGate } from './component/MaintenanceGate.tsx';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
@@ -72,9 +73,11 @@ createRoot(document.getElementById('root')!).render(
 				/>
 				<ErrorBoundary FallbackComponent={RootFallback}>
 					<BrowserRouter>
-						<Layout>
-							<App></App>
-						</Layout>
+						<MaintenanceGate>
+							<Layout>
+								<App></App>
+							</Layout>
+						</MaintenanceGate>
 					</BrowserRouter>
 				</ErrorBoundary>
 			</QueryClientProvider>

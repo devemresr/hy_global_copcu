@@ -97,7 +97,9 @@ export function InventoryBrowser({ rows, colDef }: InventoryBrowserProps) {
 	return (
 		<>
 			{isReady && (
-				<div className='flex flex-col md:flex-row md: lg:items-center gap-3 text-text py-3'>
+				// Mobile only: from sm up the sidebar panel shows the filters, and this
+				// wrapper's padding would just be empty space.
+				<div className='sm:hidden pb-4 text-text'>
 					{/* Mobile filter tablet phones/}
 					{/* Mobile trigger button hidden at sm+ */}
 					{activeFilters.length > 0 && (
@@ -147,7 +149,7 @@ export function InventoryBrowser({ rows, colDef }: InventoryBrowserProps) {
 				</div>
 			)}
 
-			<div className='grid gap-4 grid-cols-1 [grid-template-areas:"filters"_"search"_"grid"] lg:grid-cols-[1fr_4fr] lg:[grid-template-areas:"search_search"_"filters_grid"]'>
+			<div className='grid gap-4 grid-cols-1 [grid-template-areas:"search"_"grid"] sm:[grid-template-areas:"filters"_"search"_"grid"] lg:grid-cols-[1fr_4fr] lg:[grid-template-areas:"search_search"_"filters_grid"]'>
 				{activeFilters.length > 0 && (
 					<div className='hidden sm:flex sm:flex-col overflow-y-auto [&::-webkit-scrollbar]:w-0 text-text lg:h-[70vh] lg:max-h-[70vh] max-h-[40vh] gap-2 [grid-area:filters]'>
 						<span className='p-1 top-0 text-text'>Filtreler</span>

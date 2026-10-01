@@ -15,6 +15,7 @@ import { ConfirmDialog } from './component/admin/ConfirmDialog';
 // import { AdminFieldCell } from './component/admin/AdminFieldCell';
 import { BulkEditPanel } from './component/admin/BulkEditPanel';
 import { LogEventsSection } from './component/admin/LogEventsSection';
+import { MaintenanceSection } from './component/admin/MaintenanceSection';
 import { InventoryBrowser } from './component/InventoryBrowser';
 import {
 	useGetItems,
@@ -361,6 +362,8 @@ function AdminPage() {
 			{status === 'error' && (
 				<p className='text-sm text-red-500'>Ürünler yüklenemedi</p>
 			)} */}
+
+			<MaintenanceSection />
 
 			<button
 				type='button'

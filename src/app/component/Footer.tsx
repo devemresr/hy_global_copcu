@@ -5,8 +5,8 @@ import { LOGO } from '../assets/photos/photos';
 
 export function Footer() {
 	return (
-		<footer className='mt-16 md:mt-30'>
-			<div className='bg-footer-bg px-5 py-6 sm:px-8 sm:py-10 md:px-12 md:py-12 flex flex-col gap-2  lg:px-10 border-t-2 border-border'>
+		<footer className='mt-12'>
+			<div className='bg-footer-bg px-4 py-6 sm:px-6 sm:py-10 md:py-12 lg:px-8 flex flex-col gap-2 border-t-2 border-border'>
 				<div className='flex flex-col md:flex-row  md:justify-between gap-2'>
 					<div className='self-start w-fit mx-auto md:mx-0 md:self-autopx-2 py-2'>
 						<img className='w-25 h-25' src={LOGO.url} alt={LOGO.alt}></img>

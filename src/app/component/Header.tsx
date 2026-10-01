@@ -9,7 +9,9 @@ import {
 	type SetStateAction,
 } from 'react';
 import type { LottieHandle } from 'lottie-react';
+import { useLocation } from 'react-router-dom';
 import { whatsappUrl } from '../constants/url.constant';
+import { LOGO } from '../assets/photos/photos';
 import WhatsappIcon from '../assets/icons/icons8-whatsapp.svg?react';
 import '../App.css';
 interface HeaderProps {
@@ -26,6 +28,16 @@ import { useTheme } from './Layout';
 import type { Theme } from './Layout';
 import logger from '../util/logger';
 const TARGET_DURATION_THEME_ANIMATION = 0.9;
+
+// Shared by the nav links and the WhatsApp link so they read as one row.
+const HEADER_LINK_TEXT = 'whitespace-nowrap text-text lg:text-lg';
+
+const NAV_LINKS = [
+	{ href: '/', label: 'Ürünler' },
+	{ href: '/fiyatlandirma', label: 'Fiyatlandırma' },
+	{ href: '/bilgi', label: 'Kaynaklar' },
+	{ href: '/hakkimizda', label: 'Hakkımızda' },
+];
 const FRAME_RATE = 60;
 
 export function Header({
@@ -36,6 +48,7 @@ export function Header({
 	sidebarAnimationSrc,
 }: HeaderProps) {
 	const { theme } = useTheme();
+	const { pathname } = useLocation();
 
 	const lottieThemeRef = useRef<LottieHandle>(null);
 	const isAnimatingRef = useRef(false);
@@ -154,22 +167,51 @@ export function Header({
 
 	return (
 		<header>
-			<div className='h-15 top-0 px-3 lg:h-20 lg:px-10 md:px-5 bg-header-bg flex items-center justify-between w-full border-b-2 border-border'>
-				<button
-					onClick={onToggle}
-					className='sm:w-7 sm:h-7 h-5 w-5 lg:h-10 lg:w-10 '
-					aria-label='Toggle menu'
-				>
-					<Lottie
-						src={sidebarAnimationSrc}
-						loop={false}
-						autoplay={false}
-						lottieRef={sidebarAnimationRef}
-						className={`w-full h-full bg-header-bg ${
-							isOpen ? 'rotate-0' : 'rotate-180'
+			<div className='h-15 top-0 px-4 sm:px-6 lg:h-20 lg:px-8 bg-header-bg flex items-center justify-between w-full border-b-2 border-border'>
+				<div className='flex min-w-0 items-center gap-3 lg:gap-4 xl:gap-6'>
+					<button
+						onClick={onToggle}
+						className='sm:w-7 sm:h-7 h-5 w-5 lg:h-10 lg:w-10 shrink-0'
+						aria-label='Toggle menu'
+					>
+						<Lottie
+							src={sidebarAnimationSrc}
+							loop={false}
+							autoplay={false}
+							lottieRef={sidebarAnimationRef}
+							className={`w-full h-full bg-header-bg ${
+								isOpen ? 'rotate-0' : 'rotate-180'
+							}`}
+						/>
+					</button>
+					{/* The open sidebar already shows the brand and these links. */}
+					<a
+						href='/'
+						className={`hidden sm:flex items-center gap-2 whitespace-nowrap font-bold text-heading-text lg:text-lg ${
+							isOpen ? 'lg:hidden' : ''
 						}`}
-					/>
-				</button>
+					>
+						<img src={LOGO.url} alt='GLOBAL ÇÖPÇÜ' className='h-7 w-7 lg:h-9 lg:w-9' />
+						{/* Logo only from lg to xl, where the nav links need the room. */}
+						<span className='lg:hidden xl:inline'>GLOBAL ÇÖPÇÜ</span>
+					</a>
+					<nav
+						className={`hidden items-center gap-1 ${isOpen ? '' : 'lg:flex'}`}
+					>
+						{NAV_LINKS.map((link) => (
+							<a
+								key={link.href}
+								href={link.href}
+								aria-current={pathname === link.href ? 'page' : undefined}
+								className={`${HEADER_LINK_TEXT} rounded-xl px-3 py-1.5 transition-colors hover:bg-button-hover-bg dark:hover:bg-button-bg ${
+									pathname === link.href ? 'bg-button-bg font-medium' : 'opacity-80'
+								}`}
+							>
+								{link.label}
+							</a>
+						))}
+					</nav>
+				</div>
 				<div className='flex items-center gap-1 md:gap-2 '>
 					<button onClick={handleTheme}>
 						<Lottie
@@ -186,7 +228,7 @@ export function Header({
 						data-umami-event='whatsapp-click'
 						data-umami-event-location='header'
 					>
-						<span className='whitespace-nowrap  text-text lg:text-xl'>
+						<span className={HEADER_LINK_TEXT}>
 							Bizimle İletişime geçin!
 						</span>
 						<div className='w-7 h-7 lg:h-12 lg:w-12'>

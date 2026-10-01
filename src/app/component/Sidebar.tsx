@@ -10,13 +10,16 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
 	if (mode === 'push') {
+		// Sticky at viewport height so it covers the screen at any scroll
+		// position, instead of ending after the first screenful. Contents keep
+		// a fixed w-64 so nothing reflows while the width animates to 0.
 		return (
 			<aside
-				className={`bg-sidebar-bg h-screen overflow-hidden transition-all duration-600 ease-in-out flex flex-col
+				className={`bg-sidebar-bg sticky top-0 h-screen self-start shrink-0 overflow-hidden transition-all duration-600 ease-in-out flex flex-col
           ${isOpen ? 'w-64' : 'w-0'}`}
 			>
-				<div className='flex justify-between p-4 items-center'>
-					<a className='text-heading-text font-bold block' href='/'>
+				<div className='flex w-64 justify-between p-4 items-center'>
+					<a className='text-heading-text font-bold block whitespace-nowrap' href='/'>
 						GLOBAL ÇÖPÇÜ
 					</a>
 					<button className='text-text h-8 w-8 ' onClick={onClose}>
@@ -46,7 +49,7 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
 			>
 				<div className='flex justify-between p-4 items-center'>
-					<a className='text-heading-text font-bold block' href='/'>
+					<a className='text-heading-text font-bold block whitespace-nowrap' href='/'>
 						GLOBAL ÇÖPÇÜ
 					</a>
 					<button className='text-text h-8 w-8' onClick={onClose}>

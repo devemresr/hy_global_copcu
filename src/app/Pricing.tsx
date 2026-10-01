@@ -38,7 +38,7 @@ export function Pricing() {
 			<div className='mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10'>
 				{/* Header */}
 				<header className='text-center mb-6'>
-					<h1 className='font-[Big_Shoulders_Display] text-3xl sm:text-4xl md:text-5xl text-white tracking-tight'>
+					<h1 className='font-[Big_Shoulders_Display] text-2xl md:text-3xl text-white tracking-tight'>
 						Hurda Telefon Anakartı Alım Listesi
 					</h1>
 					<p className='text-white mt-2'>Eylül ayı güncel fiyatlarımız</p>

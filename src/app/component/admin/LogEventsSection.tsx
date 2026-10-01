@@ -6,13 +6,18 @@ import {
 	Layers,
 	ChevronDown,
 	ChevronRight,
+	Wrench,
+	Megaphone,
 	type LucideIcon,
 } from 'lucide-react';
 import {
 	useGetLogEvents,
+	type LogEntityType,
 	type LogEventDto,
+	type LogEventFieldChange,
 } from '../../hooks/api/endpoints/useLogEvents';
 import { FIELD_REGISTRY } from '../../constants/fieldRegistry.constant';
+import { PUBLIC_PAGES } from '../../constants/publicPages.constant';
 import { DisplayValue } from './DisplayValue';
 import { Pagination } from './Pagination';
 
@@ -26,13 +31,17 @@ const ACTION_LABELS: Record<string, string> = {
 	'items:add_rule': 'Fiyat kuralı eklendi',
 	'items:edit_rule': 'Fiyat kuralı düzenlendi',
 	'items:delete_rule': 'Fiyat kuralı silindi',
+	'site:maintenance_update': 'Bakım modu güncellendi',
+	'site:notice_update': 'Duyuru güncellendi',
 };
 
 // Groups both action sets into the same three visual buckets - an added
 // pricing rule reads the same as a created item to an admin skimming the
 // list, so they share create/update/delete's color and icon instead of each
 // action getting its own.
-type ActionKind = 'create' | 'update' | 'delete';
+// Site-settings changes get their own kinds (and colors) so they stand out
+// from routine catalog edits.
+type ActionKind = 'create' | 'update' | 'delete' | 'maintenance' | 'notice';
 
 const ACTION_KIND: Record<string, ActionKind> = {
 	'items:create': 'create',
@@ -41,6 +50,8 @@ const ACTION_KIND: Record<string, ActionKind> = {
 	'items:add_rule': 'create',
 	'items:edit_rule': 'update',
 	'items:delete_rule': 'delete',
+	'site:maintenance_update': 'maintenance',
+	'site:notice_update': 'notice',
 };
 
 const ACTION_STYLE: Record<ActionKind, { icon: LucideIcon; badge: string }> = {
@@ -56,11 +67,96 @@ const ACTION_STYLE: Record<ActionKind, { icon: LucideIcon; badge: string }> = {
 		icon: Trash2,
 		badge: 'bg-red-500/15 text-red-600 dark:text-red-400',
 	},
+	maintenance: {
+		icon: Wrench,
+		badge: 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400',
+	},
+	notice: {
+		icon: Megaphone,
+		badge: 'bg-teal-500/15 text-teal-600 dark:text-teal-400',
+	},
 };
+
+const SITE_ENTITY_TYPES: LogEntityType[] = ['site_maintenance', 'site_notice'];
+
+const SITE_FIELD_LABELS: Record<string, string> = {
+	enabled: 'Durum',
+	message: 'Mesaj',
+	from: 'Başlangıç',
+	until: 'Bitiş',
+	type: 'Tür',
+	pages: 'Sayfalar',
+	dismissible: 'Ziyaretçi kapatabilir',
+};
+
+const PAGE_LABELS: Record<string, string> = Object.fromEntries(
+	PUBLIC_PAGES.map((page) => [page.path, page.label]),
+);
+
+// Site-settings values are stored raw (booleans, ISO dates, comma-joined
+// paths) - this turns them into what the admin panel shows.
+function formatSiteValue(
+	field: string,
+	value: LogEventFieldChange['newValue'],
+): string | null {
+	switch (field) {
+		case 'enabled':
+			return value ? 'Açık' : 'Kapalı';
+		case 'dismissible':
+			return value ? 'Evet' : 'Hayır';
+		case 'from':
+			return value ? new Date(String(value)).toLocaleString('tr-TR') : 'Hemen';
+		case 'until':
+			return value ? new Date(String(value)).toLocaleString('tr-TR') : 'Süresiz';
+		case 'type':
+			return value === 'warning' ? 'Uyarı' : 'Bilgi';
+		case 'pages':
+			return value
+				? String(value)
+						.split(', ')
+						.map((path) => PAGE_LABELS[path] ?? path)
+						.join(', ')
+				: 'Tüm sayfalar';
+		default:
+			return value === null ? null : String(value);
+	}
+}
+
+function formatValue(
+	event: LogEventDto,
+	field: string,
+	value: LogEventFieldChange['newValue'],
+): string | number | null {
+	if (SITE_ENTITY_TYPES.includes(event.entityType)) {
+		return formatSiteValue(field, value);
+	}
+	return typeof value === 'boolean' ? String(value) : value;
+}
+
+// A toggled `enabled` reads better as "opened"/"closed" than "updated".
+function actionLabel(event: LogEventDto): string {
+	const enabled = event.fields.find((f) => f.field === 'enabled');
+	if (enabled && SITE_ENTITY_TYPES.includes(event.entityType)) {
+		const subject =
+			event.entityType === 'site_maintenance' ? 'Bakım modu' : 'Duyuru';
+		return `${subject} ${enabled.newValue ? 'açıldı' : 'kapatıldı'}`;
+	}
+	return ACTION_LABELS[event.action] ?? event.action;
+}
+
+const LOG_FILTERS: { types: LogEntityType[]; label: string }[] = [
+	{ types: ['item'], label: 'Ürünler' },
+	{ types: ['pricing_rule'], label: 'Fiyat kuralları' },
+	{ types: ['site_maintenance'], label: 'Bakım modu' },
+	{ types: ['site_notice'], label: 'Duyuru' },
+];
 
 // Pricing-rule fields (category/sizeGb/price/currency) aren't in
 // FIELD_REGISTRY - fall back to the raw field name for those.
-function fieldLabel(field: string): string {
+function fieldLabel(field: string, entityType?: LogEntityType): string {
+	if (entityType && SITE_ENTITY_TYPES.includes(entityType)) {
+		return SITE_FIELD_LABELS[field] ?? field;
+	}
 	return (
 		(FIELD_REGISTRY as Record<string, { label: string } | undefined>)[field]
 			?.label ?? field
@@ -165,9 +261,11 @@ function LogEventCard({ event }: { event: LogEventDto }) {
 					className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${badge}`}
 				>
 					<Icon className='h-3.5 w-3.5' />
-					{ACTION_LABELS[event.action] ?? event.action}
+					{actionLabel(event)}
 				</span>
-				<span className='font-medium'>{event.entityKey}</span>
+				{!SITE_ENTITY_TYPES.includes(event.entityType) && (
+					<span className='font-medium'>{event.entityKey}</span>
+				)}
 				<span className='opacity-60'>· {event.adminUsername}</span>
 				<span className='ml-auto text-xs opacity-50'>
 					{new Date(event.createdAt).toLocaleString('tr-TR')}
@@ -178,10 +276,12 @@ function LogEventCard({ event }: { event: LogEventDto }) {
 				<div className='flex flex-col gap-1 pl-1 text-xs'>
 					{changedFields.map((f, i) => (
 						<div key={i} className='flex items-center gap-1.5 opacity-80'>
-							<span className='font-medium'>{fieldLabel(f.field)}:</span>
-							<DisplayValue value={f.previousValue} />
+							<span className='font-medium'>
+								{fieldLabel(f.field, event.entityType)}:
+							</span>
+							<DisplayValue value={formatValue(event, f.field, f.previousValue)} />
 							<span className='opacity-50'>→</span>
-							<DisplayValue value={f.newValue} />
+							<DisplayValue value={formatValue(event, f.field, f.newValue)} />
 						</div>
 					))}
 				</div>
@@ -225,7 +325,7 @@ function BulkGroupCard({
 				</span>
 				<span className='flex items-center gap-1.5'>
 					<span className='font-medium'>{fieldLabel(field.field)}:</span>
-					<DisplayValue value={field.newValue} />
+					<DisplayValue value={formatValue(first, field.field, field.newValue)} />
 				</span>
 				<span className='opacity-60'>· {first.adminUsername}</span>
 				<span className='ml-auto flex items-center gap-1 text-xs opacity-50'>
@@ -243,9 +343,13 @@ function BulkGroupCard({
 					{events.slice(0, 50).map((e) => (
 						<li key={e._id} className='flex items-center gap-1.5 opacity-80'>
 							<span className='font-medium'>{e.entityKey}:</span>
-							<DisplayValue value={e.fields[0].previousValue} />
+							<DisplayValue
+								value={formatValue(e, e.fields[0].field, e.fields[0].previousValue)}
+							/>
 							<span className='opacity-50'>→</span>
-							<DisplayValue value={e.fields[0].newValue} />
+							<DisplayValue
+								value={formatValue(e, e.fields[0].field, e.fields[0].newValue)}
+							/>
 						</li>
 					))}
 					{events.length > 50 && (
@@ -266,9 +370,35 @@ export function LogEventsSection() {
 		new Set(),
 	);
 
-	const { data, status, isPlaceholderData } = useGetLogEvents(page, pageSize);
+	// Empty means every type ("Tümü").
+	const [types, setTypes] = useState<LogEntityType[]>([]);
+
+	const { data, status, isPlaceholderData } = useGetLogEvents(
+		page,
+		pageSize,
+		types,
+	);
 	const events = data?.events ?? [];
 	const totalPages = data?.totalPages ?? 1;
+
+	function toggleFilter(filterTypes: LogEntityType[]) {
+		setTypes((current) => {
+			const isOn = filterTypes.every((t) => current.includes(t));
+			const next = isOn
+				? current.filter((t) => !filterTypes.includes(t))
+				: [...current, ...filterTypes];
+			// Every filter on is the same as "Tümü".
+			return next.length === LOG_FILTERS.flatMap((f) => f.types).length
+				? []
+				: next;
+		});
+		setPage(1);
+	}
+
+	const chipClass = (selected: boolean) =>
+		`rounded-full px-3 py-1 text-xs ${
+			selected ? 'bg-text text-bg' : 'bg-button-bg hover:bg-button-hover-bg'
+		}`;
 
 	function toggleGroup(id: string) {
 		setExpandedGroups((prev) => {
@@ -285,6 +415,38 @@ export function LogEventsSection() {
 	return (
 		<>
 			<h2 className='text-lg font-semibold mt-8 mb-2'>Değişiklik Geçmişi</h2>
+
+			<div
+				className='mb-3 flex flex-wrap gap-2'
+				role='group'
+				aria-label='Kayıt filtresi'
+			>
+				<button
+					type='button'
+					aria-pressed={types.length === 0}
+					onClick={() => {
+						setTypes([]);
+						setPage(1);
+					}}
+					className={chipClass(types.length === 0)}
+				>
+					Tümü
+				</button>
+				{LOG_FILTERS.map((filter) => {
+					const selected = filter.types.every((t) => types.includes(t));
+					return (
+						<button
+							key={filter.label}
+							type='button'
+							aria-pressed={selected}
+							onClick={() => toggleFilter(filter.types)}
+							className={chipClass(selected)}
+						>
+							{filter.label}
+						</button>
+					);
+				})}
+			</div>
 
 			{status === 'pending' && (
 				<p className='text-sm opacity-70'>Yükleniyor...</p>
