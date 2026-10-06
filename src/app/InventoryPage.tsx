@@ -86,8 +86,10 @@ function InventoryPage() {
 						const Icon = WHY_US_ICONS[i];
 						return (
 							<div key={item.title} className='rounded-xl bg-button-bg p-4'>
-								<Icon className='mb-2 h-5 w-5 text-text opacity-80' aria-hidden />
-								<p className='font-semibold text-text'>{item.title}</p>
+								<div className='mb-1 flex items-center gap-2'>
+									<Icon className='h-5 w-5 shrink-0 text-text opacity-80' aria-hidden />
+									<p className='font-semibold text-text'>{item.title}</p>
+								</div>
 								<p className='text-sm text-text opacity-75'>{item.text}</p>
 							</div>
 						);

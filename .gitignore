@@ -18,9 +18,6 @@ dist-ssr
 .env.*
 !.env.example
 
-# Backend now lives in its own git repo
-/server
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

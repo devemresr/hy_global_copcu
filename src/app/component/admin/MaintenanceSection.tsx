@@ -116,7 +116,7 @@ function ScheduleFields({
 	const fields = [
 		{ label: 'Başlangıç (boş: hemen)', value: from, onChange: onFromChange },
 		{
-			label: 'Bitiş (boş: manuel olarak değiştirilene kadar)',
+			label: 'Bitiş (boş: süresiz)',
 			value: until,
 			onChange: onUntilChange,
 		},
