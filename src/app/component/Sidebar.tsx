@@ -1,5 +1,6 @@
 import CancelIcon from '../assets/icons/icons8-cancel.svg?react';
 import '../App.css';
+import { PAGE_PATHS } from '../constants/pagePaths.constant';
 
 export type sideBarDisplayMode = 'push' | 'overlay';
 interface SidebarProps {
@@ -19,7 +20,7 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
           ${isOpen ? 'w-64' : 'w-0'}`}
 			>
 				<div className='flex w-64 justify-between p-4 items-center'>
-					<a className='text-heading-text font-bold block whitespace-nowrap' href='/'>
+					<a className='text-heading-text font-bold block whitespace-nowrap' href={PAGE_PATHS.HOME}>
 						GLOBAL ÇÖPÇÜ
 					</a>
 					<button className='text-text h-8 w-8 ' onClick={onClose}>
@@ -28,9 +29,9 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
 				</div>
 
 				<nav className='flex flex-col px-4 py-2 gap-4 text-text w-64'>
-					<a href='/fiyatlandirma'>Fiyatlandırma</a>
-					<a href='/bilgi'>Kaynaklar</a>
-					<a href='/hakkimizda'>Hakkımızda</a>
+					<a href={PAGE_PATHS.PRICING}>Fiyatlandırma</a>
+					<a href={PAGE_PATHS.INFO}>Kaynaklar</a>
+					<a href={PAGE_PATHS.ABOUT}>Hakkımızda</a>
 				</nav>
 			</aside>
 		);
@@ -49,7 +50,7 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
 			>
 				<div className='flex justify-between p-4 items-center'>
-					<a className='text-heading-text font-bold block whitespace-nowrap' href='/'>
+					<a className='text-heading-text font-bold block whitespace-nowrap' href={PAGE_PATHS.HOME}>
 						GLOBAL ÇÖPÇÜ
 					</a>
 					<button className='text-text h-8 w-8' onClick={onClose}>
@@ -58,9 +59,9 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
 				</div>
 
 				<nav className='flex flex-col px-4 py-2 gap-4 text-text'>
-					<a href='/fiyatlandirma'>Fiyatlandırma</a>
-					<a href='/bilgi'>Kaynaklar</a>
-					<a href='/hakkimizda'>Hakkımızda</a>
+					<a href={PAGE_PATHS.PRICING}>Fiyatlandırma</a>
+					<a href={PAGE_PATHS.INFO}>Kaynaklar</a>
+					<a href={PAGE_PATHS.ABOUT}>Hakkımızda</a>
 				</nav>
 			</aside>
 		</>

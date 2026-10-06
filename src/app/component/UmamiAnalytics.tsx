@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import env from '../config/env';
+import { STAFF_PATH_PREFIXES } from '../constants/pagePaths.constant';
 
 /**
  * Injects Umami's tracking script directly, pointed at whatever instance
@@ -12,7 +13,7 @@ import env from '../config/env';
  */
 
 // Staff pages would otherwise dominate the stats of a small public site.
-const EXCLUDED_PATH_PREFIXES = ['/admin', '/login'];
+const EXCLUDED_PATH_PREFIXES = STAFF_PATH_PREFIXES;
 const BEFORE_SEND_HOOK = '__umamiBeforeSend';
 
 const UUID_PATTERN =

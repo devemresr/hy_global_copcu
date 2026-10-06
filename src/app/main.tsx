@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { Toaster } from 'sonner';
 import type { CSSProperties } from 'react';
+import { setupApiClient } from './config/apiClient.config';
 
 function RootFallback({ error }: FallbackProps) {
 	const message = error instanceof Error ? error.message : String(error);
@@ -22,6 +23,8 @@ function RootFallback({ error }: FallbackProps) {
 		</div>
 	);
 }
+
+setupApiClient();
 
 const queryClient = new QueryClient({
 	defaultOptions: {

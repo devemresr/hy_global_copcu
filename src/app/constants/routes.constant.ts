@@ -11,9 +11,13 @@ export const SITE_ROUTES = {
 	NOTICE: `${API_BASE_PATHS.SITE}/notice`,
 } as const;
 
+// Must match the server - the refresh cookie is only sent under this path.
+const AUTH_SESSION_PATH = `${API_BASE_PATHS.AUTH}/session`;
+
 export const AUTH_ROUTES = {
 	LOGIN: `${API_BASE_PATHS.AUTH}/login`,
-	REFRESH: `${API_BASE_PATHS.AUTH}/refresh`,
+	REFRESH: `${AUTH_SESSION_PATH}/refresh`,
+	LOGOUT: `${AUTH_SESSION_PATH}/logout`,
 } as const;
 
 export const ITEM_ROUTES = {

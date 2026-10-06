@@ -14,6 +14,7 @@ import { ItemEditModal } from './component/admin/ItemEditModal';
 import { ConfirmDialog } from './component/admin/ConfirmDialog';
 // import { AdminFieldCell } from './component/admin/AdminFieldCell';
 import { BulkEditPanel } from './component/admin/BulkEditPanel';
+import { useLogout } from './hooks/api/endpoints/useAuth';
 import { LogEventsSection } from './component/admin/LogEventsSection';
 import { MaintenanceSection } from './component/admin/MaintenanceSection';
 import { InventoryBrowser } from './component/InventoryBrowser';
@@ -122,6 +123,7 @@ function AdminPage() {
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [isCreatingItem, setIsCreatingItem] = useState(false);
 	const queryClient = useQueryClient();
+	const logout = useLogout();
 
 	const editingRecord = items.find((item) => item._id === editingId) ?? null;
 	const editingItem = editingRecord ? toEditable(editingRecord) : null;
@@ -362,6 +364,17 @@ function AdminPage() {
 			{status === 'error' && (
 				<p className='text-sm text-red-500'>Ürünler yüklenemedi</p>
 			)} */}
+
+			<div className='mb-3 flex justify-end'>
+				<button
+					type='button'
+					onClick={() => logout.mutate()}
+					disabled={logout.isPending}
+					className='rounded-xl border-2 border-border px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg disabled:opacity-50'
+				>
+					{logout.isPending ? 'Çıkış yapılıyor...' : 'Çıkış yap'}
+				</button>
+			</div>
 
 			<MaintenanceSection />
 

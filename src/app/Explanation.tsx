@@ -9,6 +9,7 @@ import { SAMPLE_PHOTOS } from './assets/photos/photos';
 import { pageContent } from './constants/explanationContent.constant';
 import { Skeleton } from './component/Skelaton';
 import { ImageLightbox } from './component/ImageLightbox';
+import { PAGE_PATHS } from './constants/pagePaths.constant';
 
 export function Explanation({ photos = SAMPLE_PHOTOS }) {
 	const [index, setIndex] = useState(0);
@@ -181,7 +182,7 @@ export function Explanation({ photos = SAMPLE_PHOTOS }) {
 										{item.text}{' '}
 										{item?.link && (
 											<a
-												href='/fiyatlandirma'
+												href={PAGE_PATHS.PRICING}
 												className='underline underline-offset-2 font-medium hover:opacity-80 transition-opacity text-text text-sm'
 											>
 												{item.link}

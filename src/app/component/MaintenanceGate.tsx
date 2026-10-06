@@ -9,9 +9,10 @@ import {
 } from '../hooks/api/endpoints/useSiteStatus';
 import { displayPhoneNumber, whatsappUrl } from '../constants/url.constant';
 import { SiteNotice } from './SiteNotice';
+import { STAFF_PATH_PREFIXES } from '../constants/pagePaths.constant';
 
 // Admins must be able to reach the switch that turns this off.
-const EXEMPT_PATH_PREFIXES = ['/admin', '/login'];
+const EXEMPT_PATH_PREFIXES = STAFF_PATH_PREFIXES;
 
 const DEFAULT_MESSAGE = 'Hizmetimiz geçici olarak kullanılamıyor.';
 

@@ -2,6 +2,7 @@ import WhatsappIcon from '../assets/icons/icons8-whatsapp.svg?react';
 import { whatsappUrl } from '../constants/url.constant';
 import '../App.css';
 import { LOGO } from '../assets/photos/photos';
+import { PAGE_PATHS } from '../constants/pagePaths.constant';
 
 export function Footer() {
 	return (
@@ -15,19 +16,19 @@ export function Footer() {
 					<div className='flex flex-col md:flex-row gap-2 items-center'>
 						<nav className='flex flex-wrap gap-2 mx-auto '>
 							<a
-								href='/fiyatlandirma'
+								href={PAGE_PATHS.PRICING}
 								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp dark:animate-hoverFloatUpDark'
 							>
 								Fiyatlandırma
 							</a>
 							<a
-								href='/bilgi'
+								href={PAGE_PATHS.INFO}
 								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp dark:animate-hoverFloatUpDark'
 							>
 								Kaynaklar
 							</a>
 							<a
-								href='/hakkimizda'
+								href={PAGE_PATHS.ABOUT}
 								className='text-sm text-text hover:text-gray-300 transition-colors hover:animate-hoverFloatUp dark:animate-hoverFloatUpDark'
 							>
 								Hakkımızda

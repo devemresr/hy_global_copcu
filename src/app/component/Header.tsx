@@ -27,6 +27,7 @@ interface HeaderProps {
 import { useTheme } from './Layout';
 import type { Theme } from './Layout';
 import logger from '../util/logger';
+import { PAGE_PATHS } from '../constants/pagePaths.constant';
 const TARGET_DURATION_THEME_ANIMATION = 0.9;
 
 // Shared by the nav links and the WhatsApp link so they read as one row.
@@ -186,7 +187,7 @@ export function Header({
 					</button>
 					{/* The open sidebar already shows the brand and these links. */}
 					<a
-						href='/'
+						href={PAGE_PATHS.HOME}
 						className={`hidden sm:flex items-center gap-2 whitespace-nowrap font-bold text-heading-text lg:text-lg ${
 							isOpen ? 'lg:hidden' : ''
 						}`}

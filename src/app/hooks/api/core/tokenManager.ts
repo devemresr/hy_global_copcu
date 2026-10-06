@@ -38,7 +38,9 @@ const decodeExpiryMs = (token: string): number | null => {
 	try {
 		const payload = token.split('.')[1];
 		if (!payload) return null;
-		const decoded = JSON.parse(atob(payload));
+		// JWTs are base64url; atob only accepts standard base64.
+		const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+		const decoded = JSON.parse(atob(base64));
 		return typeof decoded.exp === 'number' ? decoded.exp * 1000 : null;
 	} catch {
 		return null;
@@ -129,7 +131,7 @@ export const clearAccessToken = () => {
 
 /**
  * POSTs the refresh endpoint; the refresh cookie is only sent here because
- * it's scoped to the /auth/refresh path. Concurrent callers share one
+ * it's scoped to the /auth/session path. Concurrent callers share one
  * in-flight request.
  */
 export const refreshAccessToken = (): Promise<string> => {

@@ -2,6 +2,7 @@ import { useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useLogin } from './hooks/api/endpoints/useAuth';
 import { loginSchema } from './schemas/auth.schema';
+import { PAGE_PATHS } from './constants/pagePaths.constant';
 
 export function LoginPage() {
 	const [email, setEmail] = useState('');
@@ -18,7 +19,7 @@ export function LoginPage() {
 			return;
 		}
 		setFormError(null);
-		mutate(result.data, { onSuccess: () => navigate('/admin') });
+		mutate(result.data, { onSuccess: () => navigate(PAGE_PATHS.ADMIN) });
 	}
 
 	return (

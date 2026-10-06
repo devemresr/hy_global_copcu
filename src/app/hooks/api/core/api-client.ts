@@ -8,14 +8,16 @@ import env from '../../../config/env';
 import logger from '../../../util/logger';
 import { AUTH_ROUTES } from '../../../constants/routes.constant';
 
-// Only admin pages need a session; public pages (e.g. the inventory list)
-// share these endpoints and must never be bounced to the login page.
-function redirectToLoginFromAdmin() {
-	if (typeof window === 'undefined') return;
-	if (!window.location.pathname.startsWith('/admin')) return;
-	logger.debug('[apiFetch] session expired on an admin page, redirecting to /login');
-	// replace, so Back doesn't land on the admin page and bounce again.
-	window.location.replace('/login');
+export type ApiClientConfig = {
+	// Runs when the server rejects a refresh, i.e. the session is gone.
+	onSessionExpired?: () => void;
+};
+
+let clientConfig: ApiClientConfig = {};
+
+/** Registers app-specific behaviour once at startup (see main.tsx). */
+export function configureApiClient(config: ApiClientConfig) {
+	clientConfig = { ...clientConfig, ...config };
 }
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -91,8 +93,10 @@ export async function apiFetch<TData>(
 				return apiFetch<TData>(url, options, true);
 			} catch (error) {
 				// A network failure doesn't mean the session is gone - only a
-				// server rejection redirects. Either way the original 401 surfaces.
-				if (error instanceof RefreshRejectedError) redirectToLoginFromAdmin();
+				// server rejection ends it. Either way the original 401 surfaces.
+				if (error instanceof RefreshRejectedError) {
+					clientConfig.onSessionExpired?.();
+				}
 			}
 		}
 
