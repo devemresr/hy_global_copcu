@@ -1,3 +1,5 @@
+import { PAGE_PATHS } from './pagePaths.constant';
+
 // Copy for the inventory (home) page. Claims here are restated from the
 // Kaynaklar (explanationContent.constant.ts) and Hakkımızda (About.tsx) pages,
 // so the home page never promises more than those do.
@@ -8,18 +10,22 @@ export const inventoryPageContent = {
 		primaryCta: { label: 'Fiyatları incele', href: '/fiyatlandirma' },
 		secondaryCta: { label: 'Kodu nasıl bulurum?', href: '/bilgi' },
 	},
+	// A step link without href focuses the search box instead of navigating.
 	steps: [
 		{
 			title: 'Kodu bulun',
 			text: 'Anakart üzerindeki bellek çipinin model/parça kodunu tespit edin.',
+			link: { label: 'Kodu nasıl bulurum?', href: PAGE_PATHS.INFO },
 		},
 		{
 			title: 'Listede arayın',
 			text: 'Kodu aşağıdaki arama alanına yazın, eşleşen kayıtları görün.',
+			link: { label: 'Aramaya başla' },
 		},
 		{
 			title: 'Değerini öğrenin',
 			text: 'Bellek tipi ve kapasitesine göre fiyatlandırmayı değerlendirin.',
+			link: { label: 'Fiyatları incele', href: PAGE_PATHS.PRICING },
 		},
 	],
 	whyUs: {

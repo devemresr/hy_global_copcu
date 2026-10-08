@@ -1,9 +1,19 @@
 import './App.css';
 
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { useInventoryRows } from './hooks/useInventoryRows';
-import { InventoryBrowser } from './component/InventoryBrowser';
-import { ArrowRight, Coins, Search, ShieldCheck, Truck, Wallet, ScanSearch } from 'lucide-react';
+import { InventoryBrowser, type InventoryBrowserHandle } from './component/InventoryBrowser';
+import {
+	ArrowDown,
+	ArrowRight,
+	Coins,
+	Search,
+	ShieldCheck,
+	SquareArrowOutUpRight,
+	Truck,
+	Wallet,
+	ScanSearch,
+} from 'lucide-react';
 import { useGetItems } from './hooks/api/endpoints/useItems';
 import { inventoryPageContent } from './constants/inventoryPageContent.constant';
 import { whatsappUrl } from './constants/url.constant';
@@ -20,6 +30,9 @@ function getInitialTheme(): 'light' | 'dark' {
 
 const STEP_ICONS = [ScanSearch, Search, Coins];
 const WHY_US_ICONS = [ShieldCheck, Wallet, Truck];
+// Same link look as the steps on the Kaynaklar page (Explanation.tsx).
+const STEP_LINK_CLASS =
+	'mt-1 inline-block cursor-pointer text-left underline underline-offset-2 font-medium hover:opacity-80 transition-opacity text-text text-sm';
 
 function InventoryPage() {
 	// const bellekTipiIncluded = searchParams.has('detayliData');
@@ -28,6 +41,7 @@ function InventoryPage() {
 	const { data } = useGetItems();
 	const { rows, colDef } = useInventoryRows(bellekTipiIncluded, data?.items ?? []);
 	const { hero, steps, whyUs, contact } = inventoryPageContent;
+	const browserRef = useRef<InventoryBrowserHandle>(null);
 
 	useLayoutEffect(() => {
 		const theme = getInitialTheme();
@@ -71,13 +85,28 @@ function InventoryPage() {
 									{i + 1}. {step.title}
 								</p>
 								<p className='text-sm text-text opacity-75'>{step.text}</p>
+								{step.link.href ? (
+									<a href={step.link.href} className={STEP_LINK_CLASS}>
+										{step.link.label}
+										<SquareArrowOutUpRight className='inline-block w-4 h-4 ml-1 -mt-0.5' />
+									</a>
+								) : (
+									<button
+										type='button'
+										onClick={() => browserRef.current?.focusSearch()}
+										className={STEP_LINK_CLASS}
+									>
+										{step.link.label}
+										<ArrowDown className='inline-block w-4 h-4 ml-1 -mt-0.5' />
+									</button>
+								)}
 							</div>
 						</li>
 					);
 				})}
 			</ol>
 
-			<InventoryBrowser rows={rows} colDef={colDef} />
+			<InventoryBrowser ref={browserRef} rows={rows} colDef={colDef} />
 
 			<section className='mt-12'>
 				<h2 className='mb-4 text-xl font-semibold text-heading-text'>{whyUs.heading}</h2>

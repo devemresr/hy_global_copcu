@@ -1,4 +1,11 @@
-import { useMemo, useRef, useState, useLayoutEffect } from 'react';
+import {
+	useImperativeHandle,
+	useMemo,
+	useRef,
+	useState,
+	useLayoutEffect,
+	type Ref,
+} from 'react';
 import type { AgGridReact } from 'ag-grid-react';
 import type { ColDef } from 'ag-grid-community';
 import type { ExcelRow } from '../types';
@@ -17,9 +24,14 @@ import {
 import { InventoryDataGrid } from './InventoryDataGrid';
 import CancelIcon from '../assets/icons/icons8-cancel.svg?react';
 
+export type InventoryBrowserHandle = {
+	focusSearch: () => void;
+};
+
 type InventoryBrowserProps = {
 	rows: ExcelRow[];
 	colDef: ColDef[];
+	ref?: Ref<InventoryBrowserHandle>;
 };
 
 // Bundles the whole inventory-browsing UI - the Fuse search box, the
@@ -27,10 +39,19 @@ type InventoryBrowserProps = {
 // AG Grid itself - so both the public inventory page and the admin item list
 // can render the same search+filter+grid experience over their own
 // rows/columnDefs instead of duplicating this layout.
-export function InventoryBrowser({ rows, colDef }: InventoryBrowserProps) {
+export function InventoryBrowser({ rows, colDef, ref }: InventoryBrowserProps) {
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const gridRef = useRef<AgGridReact>(null);
 	const fuseSearchRef = useRef<FuseSearchBoxHandle>(null);
+	const searchAreaRef = useRef<HTMLDivElement>(null);
+
+	useImperativeHandle(ref, () => ({
+		focusSearch: () => {
+			searchAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			// preventScroll, or focus() jumps there instantly and cancels the smooth scroll
+			fuseSearchRef.current?.focus({ preventScroll: true });
+		},
+	}));
 	const [searchResults, setSearchResults] = useState<FuseSearchResults>(null);
 	const isReady = rows.length > 0;
 
@@ -164,7 +185,7 @@ export function InventoryBrowser({ rows, colDef }: InventoryBrowserProps) {
 						))}
 					</div>
 				)}
-				<div className='[grid-area:search]'>
+				<div ref={searchAreaRef} className='[grid-area:search]'>
 					<FuseSearchBox
 						ref={fuseSearchRef}
 						rows={rows}

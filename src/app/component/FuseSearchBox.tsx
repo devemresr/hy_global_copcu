@@ -15,7 +15,7 @@ import ExtendedSearchIcon from '../assets/icons/icons8-extendedSearch.svg?react'
 export type FuseSearchResults = ReturnType<typeof useRowSearch>['searchResults'];
 
 export type FuseSearchBoxHandle = {
-	focus: () => void;
+	focus: (options?: FocusOptions) => void;
 };
 
 type FuseSearchBoxProps = {
@@ -74,7 +74,7 @@ export const FuseSearchBox = forwardRef<FuseSearchBoxHandle, FuseSearchBoxProps>
 		const hintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 		useImperativeHandle(ref, () => ({
-			focus: () => searchRef.current?.focus(),
+			focus: (options) => searchRef.current?.focus(options),
 		}));
 
 		useEffect(() => {
