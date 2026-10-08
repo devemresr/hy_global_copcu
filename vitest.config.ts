@@ -9,6 +9,7 @@ export default defineConfig({
 		setupFiles: ['src/tests/setup.ts'],
 		env: {
 			VITE_GATEWAY_URL: 'http://api.test',
+			VITE_STAFF_PATH_PREFIX: 'staff-path-for-tests',
 		},
 	},
 });
