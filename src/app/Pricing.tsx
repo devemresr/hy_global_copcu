@@ -16,6 +16,15 @@ import WhatsappIcon from './assets/icons/icons8-whatsapp.svg?react';
 import { displayPhoneNumber, whatsappUrl } from './constants/url.constant';
 import { pricing } from './assets/photos/photos';
 
+// Istanbul time, so the month flips with the business, not the visitor's clock.
+function currentMonthTr(): string {
+	const month = new Date().toLocaleDateString('tr-TR', {
+		month: 'long',
+		timeZone: 'Europe/Istanbul',
+	});
+	return month.charAt(0).toLocaleUpperCase('tr-TR') + month.slice(1);
+}
+
 function HeroCarousel() {
 	const [loaded, setLoaded] = useState(false);
 
@@ -41,7 +50,7 @@ export function Pricing() {
 					<h1 className='font-[Big_Shoulders_Display] text-2xl md:text-3xl text-white tracking-tight'>
 						Hurda Telefon Anakartı Alım Listesi
 					</h1>
-					<p className='text-white mt-2'>Eylül ayı güncel fiyatlarımız</p>
+					<p className='text-white mt-2'>{currentMonthTr()} ayı güncel fiyatlarımız</p>
 				</header>
 
 				<HeroCarousel />
@@ -91,13 +100,13 @@ export function Pricing() {
 						<span>İstanbul Ümraniye, elden teslim alınır</span>
 					</div>
 					<a
-						className='flex items-center gap-2 text-white hover:animate-hoverFloatUp dark:animate-hoverFloatUpDark'
+						className='inline-flex shrink-0 items-center gap-2 self-start rounded-xl bg-button-focus-bg px-4 py-2 font-medium text-text hover:bg-button-hover-bg md:ml-auto md:self-auto'
 						href={whatsappUrl}
 						data-umami-event='whatsapp-click'
 						data-umami-event-location='pricing'
 					>
-						<WhatsappIcon className='shrink-0 w-5 h-5' />
-						<span>{displayPhoneNumber}</span>
+						<WhatsappIcon className='h-6 w-6' />
+						{displayPhoneNumber}
 					</a>
 				</div>
 
