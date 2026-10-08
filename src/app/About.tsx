@@ -7,7 +7,7 @@ type AboutSection = {
 
 export const aboutContent: AboutSection[] = [
 	{
-		title: 'Biz Kimiz',
+		title: 'Biz Kimiz?',
 		body: [
 			{ text: 'Global Çöpçü', bold: true },
 			{
@@ -22,13 +22,16 @@ export const aboutContent: AboutSection[] = [
 		],
 	},
 	{
-		title: 'Ne Yapıyoruz',
+		title: 'Ne Yapıyoruz?',
 		body: [
 			{
 				text: 'İşimizin özü basit: gönderdiğiniz ürünleri ',
 				bold: false,
 			},
-			{ text: 'dürüst bir şekilde ayrıştırıp doğru fiyat üzerinden değerlendiriyor', bold: true },
+			{
+				text: 'dürüst bir şekilde ayrıştırıp doğru fiyat üzerinden değerlendiriyor',
+				bold: true,
+			},
 			{
 				text: ' ve ',
 				bold: false,
@@ -64,7 +67,11 @@ export const aboutContent: AboutSection[] = [
 				text: ' değerlendiriyor, ',
 				bold: false,
 			},
-			{ text: 'Türkiye genelinde kargo ile teslim alıyor ve aynı gün ödeme yapıyoruz', bold: true, italic: true },
+			{
+				text: 'Türkiye genelinde kargo ile teslim alıyor ve aynı gün ödeme yapıyoruz',
+				bold: true,
+				italic: true,
+			},
 			{
 				text: ' - bir gün değil, her gün.',
 				bold: false,
@@ -78,8 +85,15 @@ export const aboutContent: AboutSection[] = [
 				text: 'Sorularınız veya geri bildirimleriniz için ',
 				bold: false,
 			},
-			{ text: 'WhatsApp üzerinden bize ulaşabilirsiniz', bold: true, italic: true },
-			{ text: ', size en kısa sürede dönüş yapmaktan memnuniyet duyarız.', bold: false },
+			{
+				text: 'WhatsApp üzerinden bize ulaşabilirsiniz',
+				bold: true,
+				italic: true,
+			},
+			{
+				text: ', size en kısa sürede dönüş yapmaktan memnuniyet duyarız.',
+				bold: false,
+			},
 		],
 	},
 ];
