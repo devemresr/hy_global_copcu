@@ -1,3 +1,5 @@
+# Run through deploy/deploy.sh, which starts this as a blue or green compose
+# project and sets HOST_PORT for it.
 services:
   frontend:
     build:
@@ -8,7 +10,8 @@ services:
         VITE_GATEWAY_URL: https://api.hyglobalcopcu.com
         VITE_UMAMI_SCRIPT_URL: https://stats.hyglobalcopcu.com/script.js
         VITE_UMAMI_WEBSITE_ID: b0dc3d53-41bc-4d8b-85ec-ce140d69eb72
-    container_name: hy-globalcopcu-frontend
+        # Kept out of git - set in a .env file next to this compose file.
+        VITE_STAFF_PATH_PREFIX: ${VITE_STAFF_PATH_PREFIX:?set VITE_STAFF_PATH_PREFIX in .env}
     ports:
-      - '8080:80'
+      - '127.0.0.1:${HOST_PORT:?run via deploy/deploy.sh}:80'
     restart: always
