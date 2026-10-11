@@ -297,6 +297,9 @@ function BulkGroupCard({
 }) {
 	const first = events[0];
 	const field = first.fields[0];
+	// A bulk insert/delete logs every field per row, so there's no one shared change to summarize.
+	const kind = ACTION_KIND[first.action];
+	const isRowSnapshot = kind === 'create' || kind === 'delete';
 	const latestCreatedAt = events.reduce(
 		(latest, e) => (e.createdAt > latest ? e.createdAt : latest),
 		first.createdAt,
@@ -309,19 +312,31 @@ function BulkGroupCard({
 				onClick={onToggle}
 				className='flex w-full flex-wrap items-center gap-2 text-left'
 			>
-				<span className='flex items-center gap-1 rounded-full bg-indigo-500/15 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400'>
+				<span
+					className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+						isRowSnapshot
+							? ACTION_STYLE[kind].badge
+							: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400'
+					}`}
+				>
 					<Layers className='h-3.5 w-3.5' />
-					Toplu güncelleme
+					{kind === 'create'
+						? 'Toplu ekleme'
+						: kind === 'delete'
+							? 'Toplu silme'
+							: 'Toplu güncelleme'}
 				</span>
 				<span className='rounded-full bg-button-focus-bg px-2 py-0.5 text-xs opacity-70'>
 					{events.length} öğe
 				</span>
-				<span className='flex items-center gap-1.5'>
-					<span className='font-medium'>{fieldLabel(field.field)}:</span>
-					<DisplayValue
-						value={formatValue(first, field.field, field.newValue)}
-					/>
-				</span>
+				{!isRowSnapshot && (
+					<span className='flex items-center gap-1.5'>
+						<span className='font-medium'>{fieldLabel(field.field)}:</span>
+						<DisplayValue
+							value={formatValue(first, field.field, field.newValue)}
+						/>
+					</span>
+				)}
 				<span className='opacity-60'>· {first.adminUsername}</span>
 				<span className='ml-auto flex items-center gap-1 text-xs opacity-50'>
 					{new Date(latestCreatedAt).toLocaleString('tr-TR')}
@@ -335,22 +350,28 @@ function BulkGroupCard({
 
 			{expanded && (
 				<ul className='flex flex-col gap-1 pl-1 text-xs'>
-					{events.slice(0, 50).map((e) => (
-						<li key={e._id} className='flex items-center gap-1.5 opacity-80'>
-							<span className='font-medium'>{e.entityKey}:</span>
-							<DisplayValue
-								value={formatValue(
-									e,
-									e.fields[0].field,
-									e.fields[0].previousValue,
-								)}
-							/>
-							<span className='opacity-50'>→</span>
-							<DisplayValue
-								value={formatValue(e, e.fields[0].field, e.fields[0].newValue)}
-							/>
-						</li>
-					))}
+					{events.slice(0, 50).map((e) =>
+						isRowSnapshot ? (
+							<li key={e._id} className='font-medium opacity-80'>
+								{e.entityKey}
+							</li>
+						) : (
+							<li key={e._id} className='flex items-center gap-1.5 opacity-80'>
+								<span className='font-medium'>{e.entityKey}:</span>
+								<DisplayValue
+									value={formatValue(
+										e,
+										e.fields[0].field,
+										e.fields[0].previousValue,
+									)}
+								/>
+								<span className='opacity-50'>→</span>
+								<DisplayValue
+									value={formatValue(e, e.fields[0].field, e.fields[0].newValue)}
+								/>
+							</li>
+						),
+					)}
 					{events.length > 50 && (
 						<li className='opacity-50'>+{events.length - 50} diğer</li>
 					)}
