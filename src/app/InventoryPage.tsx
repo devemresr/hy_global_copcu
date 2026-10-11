@@ -1,6 +1,6 @@
 import './App.css';
 
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useInventoryRows } from './hooks/useInventoryRows';
 import { InventoryBrowser, type InventoryBrowserHandle } from './component/InventoryBrowser';
 import {
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useGetItems } from './hooks/api/endpoints/useItems';
 import { inventoryPageContent } from './constants/inventoryPageContent.constant';
+import { isDisplayedBellekTipi } from './constants/bellekTipi.constant';
 import { whatsappUrl } from './constants/url.constant';
 import WhatsappIcon from './assets/icons/icons8-whatsapp.svg?react';
 
@@ -39,7 +40,11 @@ function InventoryPage() {
 	const bellekTipiIncluded = true;
 
 	const { data } = useGetItems();
-	const { rows, colDef } = useInventoryRows(bellekTipiIncluded, data?.items ?? []);
+	const displayedItems = useMemo(
+		() => (data?.items ?? []).filter((item) => isDisplayedBellekTipi(item.bellekTipi)),
+		[data?.items],
+	);
+	const { rows, colDef } = useInventoryRows(bellekTipiIncluded, displayedItems);
 	const { hero, steps, whyUs, contact } = inventoryPageContent;
 	const browserRef = useRef<InventoryBrowserHandle>(null);
 
