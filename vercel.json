@@ -1,4 +1,0 @@
-{
-	"rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
-	"ignoreCommand": "git log -1 --pretty=%B | grep -q '\\[skip vercel\\]'"
-}
