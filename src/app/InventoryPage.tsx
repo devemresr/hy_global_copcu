@@ -5,6 +5,7 @@ import { useInventoryRows } from './hooks/useInventoryRows';
 import { InventoryBrowser, type InventoryBrowserHandle } from './component/InventoryBrowser';
 import {
 	ArrowDown,
+	ArrowUp,
 	ArrowRight,
 	Coins,
 	Search,
@@ -45,7 +46,7 @@ function InventoryPage() {
 		[data?.items],
 	);
 	const { rows, colDef } = useInventoryRows(bellekTipiIncluded, displayedItems);
-	const { hero, steps, whyUs, contact } = inventoryPageContent;
+	const { hero, stepsHeading, steps, whyUs, contact } = inventoryPageContent;
 	const browserRef = useRef<InventoryBrowserHandle>(null);
 
 	useLayoutEffect(() => {
@@ -77,41 +78,56 @@ function InventoryPage() {
 				</div>
 			</section>
 
-			<ol className='mb-6 grid gap-3 sm:grid-cols-3'>
-				{steps.map((step, i) => {
-					const Icon = STEP_ICONS[i];
-					return (
-						<li key={step.title} className='flex gap-3 rounded-xl bg-button-bg p-4'>
-							<span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-button-focus-bg text-text'>
-								<Icon className='h-4 w-4' aria-hidden />
-							</span>
-							<div>
-								<p className='font-semibold text-text'>
-									{i + 1}. {step.title}
-								</p>
-								<p className='text-sm text-text opacity-75'>{step.text}</p>
-								{step.link.href ? (
-									<a href={step.link.href} className={STEP_LINK_CLASS}>
-										{step.link.label}
-										<SquareArrowOutUpRight className='inline-block w-4 h-4 ml-1 -mt-0.5' />
-									</a>
-								) : (
-									<button
-										type='button'
-										onClick={() => browserRef.current?.focusSearch()}
-										className={STEP_LINK_CLASS}
-									>
-										{step.link.label}
-										<ArrowDown className='inline-block w-4 h-4 ml-1 -mt-0.5' />
-									</button>
-								)}
-							</div>
-						</li>
-					);
-				})}
-			</ol>
+			{/* Steps sit below the grid on mobile, above it from sm up. */}
+			<div className='flex flex-col'>
+				<section className='order-last mt-6 sm:order-first sm:mt-0 sm:mb-6'>
+					<h2 className='mb-4 text-xl font-semibold text-heading-text sm:hidden'>{stepsHeading}</h2>
+					<ol className='grid gap-3 sm:grid-cols-3'>
+						{steps.map((step, i) => {
+							const Icon = STEP_ICONS[i];
+							return (
+								<li key={step.title} className='flex gap-3 rounded-xl bg-button-bg p-4'>
+									<span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-button-focus-bg text-text'>
+										<Icon className='h-4 w-4' aria-hidden />
+									</span>
+									<div>
+										<p className='font-semibold text-text'>
+											{i + 1}. {step.title}
+										</p>
+										{step.mobileText ? (
+											<>
+												<p className='text-sm text-text opacity-75 sm:hidden'>{step.mobileText}</p>
+												<p className='hidden text-sm text-text opacity-75 sm:block'>{step.text}</p>
+											</>
+										) : (
+											<p className='text-sm text-text opacity-75'>{step.text}</p>
+										)}
+										{step.link.href ? (
+											<a href={step.link.href} className={STEP_LINK_CLASS}>
+												{step.link.label}
+												<SquareArrowOutUpRight className='inline-block w-4 h-4 ml-1 -mt-0.5' />
+											</a>
+										) : (
+											<button
+												type='button'
+												onClick={() => browserRef.current?.focusSearch()}
+												className={STEP_LINK_CLASS}
+											>
+												{step.link.label}
+												{/* The search box sits above the steps on mobile, below them from sm up. */}
+												<ArrowUp className='inline-block w-4 h-4 ml-1 -mt-0.5 sm:hidden' />
+												<ArrowDown className='hidden w-4 h-4 ml-1 -mt-0.5 sm:inline-block' />
+											</button>
+										)}
+									</div>
+								</li>
+							);
+						})}
+					</ol>
+				</section>
 
-			<InventoryBrowser ref={browserRef} rows={rows} colDef={colDef} />
+				<InventoryBrowser ref={browserRef} rows={rows} colDef={colDef} />
+			</div>
 
 			<section className='mt-12'>
 				<h2 className='mb-4 text-xl font-semibold text-heading-text'>{whyUs.heading}</h2>

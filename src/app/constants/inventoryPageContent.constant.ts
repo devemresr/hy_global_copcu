@@ -10,6 +10,8 @@ export const inventoryPageContent = {
 		primaryCta: { label: 'Fiyatları incele', href: '/fiyatlandirma' },
 		secondaryCta: { label: 'Kodu nasıl bulurum?', href: '/bilgi' },
 	},
+	// Shown above the steps on mobile only, where they sit below the grid.
+	stepsHeading: 'Nasıl çalışır?',
 	// A step link without href focuses the search box instead of navigating.
 	steps: [
 		{
@@ -20,6 +22,8 @@ export const inventoryPageContent = {
 		{
 			title: 'Listede arayın',
 			text: 'Kodu aşağıdaki arama alanına yazın, eşleşen kayıtları görün.',
+			// On mobile the search box is above the steps.
+			mobileText: 'Kodu yukarıdaki arama alanına yazın, eşleşen kayıtları görün.',
 			link: { label: 'Aramaya başla' },
 		},
 		{
