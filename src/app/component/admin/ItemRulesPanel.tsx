@@ -8,7 +8,7 @@ import { FilterConditionEditor } from './FilterConditionEditor';
 import { BulkActionEditor } from './BulkActionEditor';
 import { FilterWorkspace } from './FilterWorkspace';
 import { ConfirmDialog } from './ConfirmDialog';
-
+import { Switch } from './Switch';
 
 export function ItemRulesPanel({ rules, onChange, disabled = false }: { rules: ItemRule[]; onChange: (rules: ItemRule[]) => void | Promise<void>; disabled?: boolean }) {
 	const [open, setOpen] = useState(false);
@@ -60,7 +60,7 @@ export function ItemRulesPanel({ rules, onChange, disabled = false }: { rules: I
 					{rules.map((rule, index) => <li key={rule.id} id={`item-rule-${rule.id}`} className='rounded-xl bg-button-focus-bg p-3'>
 						<div className='flex flex-wrap items-center gap-2'>
 							<b className='min-w-0 flex-1 break-words'>{index + 1}. {rule.name}</b>
-							<label className='flex items-center gap-1 text-xs'><input type='checkbox' checked={rule.enabled} onChange={(event) => persist(rules.map((item) => item.id === rule.id ? { ...item, enabled: event.target.checked } : item))} />Etkin</label>
+							<Switch checked={rule.enabled} disabled={saving || disabled} label={<span className='text-xs'>Etkin</span>} onChange={(enabled) => { void persist(rules.map((item) => item.id === rule.id ? { ...item, enabled } : item)); }} />
 							<button type='button' aria-label={`${rule.name} önceliğini artır`} className={buttonClass} disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp size={14} /></button>
 							<button type='button' aria-label={`${rule.name} önceliğini azalt`} className={buttonClass} disabled={index === rules.length - 1} onClick={() => move(index, 1)}><ArrowDown size={14} /></button>
 							<button type='button' className={buttonClass} onClick={() => { setEditingId(rule.id); setName(rule.name); setConditions(rule.conditions.map((condition) => ({ ...newFilterCondition(), ...condition }))); setActions(rule.actions.map((action) => ({ ...action }))); setError(''); }}>Düzenle</button>

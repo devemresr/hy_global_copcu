@@ -154,6 +154,7 @@ export function InventoryBrowser({ rows, colDef, ref }: InventoryBrowserProps) {
 											key={f.field}
 											uniqueValues={f.uniqueValues}
 											selectedValues={f.selectedValues}
+												valueCounts={f.valueCounts}
 											onChange={f.setSelectedValues}
 										/>
 									))}
@@ -174,6 +175,7 @@ export function InventoryBrowser({ rows, colDef, ref }: InventoryBrowserProps) {
 								key={f.field}
 								uniqueValues={f.uniqueValues}
 								selectedValues={f.selectedValues}
+								valueCounts={f.valueCounts}
 								onChange={f.setSelectedValues}
 							/>
 						))}

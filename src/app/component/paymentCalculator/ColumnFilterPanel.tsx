@@ -4,6 +4,7 @@ interface ColumnFilterPanelProps {
 	label: string;
 	uniqueValues: string[]; // raw display strings, already deduped case-insensitively
 	selectedValues: Set<string>; // normalized (trimmed, lowercased) values
+	valueCounts?: ReadonlyMap<string, number>;
 	onChange: (next: Set<string>) => void;
 }
 
@@ -11,6 +12,7 @@ export function ColumnFilterPanel({
 	label,
 	uniqueValues,
 	selectedValues,
+	valueCounts,
 	onChange,
 }: ColumnFilterPanelProps) {
 	const [highlighted, setHighlighted] = useState(0);
@@ -114,14 +116,15 @@ export function ColumnFilterPanel({
 					<li
 						className={`bg-button-bg hover:bg-button-hover-bg ${highlighted === 0 ? 'bg-button-focus-bg' : ''} pl-4`}
 					>
-						<label className='flex gap-1'>
+						<label className='flex items-baseline gap-1'>
 							<input
 								type='checkbox'
 								tabIndex={-1}
 								checked={allSelected}
 								onChange={toggleAll}
 							/>
-							(Hepsini Seç)
+							<span className='opacity-60'>(Hepsini Seç)</span>
+							{valueCounts && <span className='text-[0.8em] italic opacity-60'>({[...valueCounts.values()].reduce((sum, count) => sum + count, 0)})</span>}
 						</label>
 					</li>
 					{uniqueValues.map((value, i) => (
@@ -129,7 +132,7 @@ export function ColumnFilterPanel({
 							key={value}
 							className={`${highlighted === i + 1 ? 'bg-button-focus-bg' : ''} bg-button-bg hover:bg-button-hover-bg pl-4 last:rounded-bl-xl last:rounded-br-xl`}
 						>
-							<label className='flex gap-1 align-middle'>
+							<label className='flex items-baseline gap-1'>
 								<input
 									type='checkbox'
 									tabIndex={-1}
@@ -137,6 +140,7 @@ export function ColumnFilterPanel({
 									onChange={() => toggleValue(value)}
 								/>
 								{value}
+								{valueCounts && <span className='text-[0.8em] italic opacity-60'>({valueCounts.get(toKey(value)) ?? 0})</span>}
 							</label>
 						</li>
 					))}

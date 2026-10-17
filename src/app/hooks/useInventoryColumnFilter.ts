@@ -15,9 +15,8 @@ export interface UseInventoryColumnFilterOptions {
 	excludedValues?: string[];
 	// How to read this field's display value off a row, in place of the
 	// default `String(row[field]).trim()`. Needed when the field isn't a
-	// single string on every row shape - e.g. a DB-backed item's depolama is
-	// a plain number with its unit in a sibling depolamaBirimi field, while
-	// the bundled static dataset's depolama is already one "128GB" string.
+	// plain string - e.g. depolama is a number with its unit in a sibling
+	// depolamaBirimi field.
 	getValue?: (row: ExcelRow) => string | null;
 }
 
@@ -98,6 +97,17 @@ export function useInventoryColumnFilter(
 	);
 
 	const [selectedValues, setSelectedValues] = useState<Set<string>>(new Set());
+	const valueCounts = useMemo(() => {
+		const counts = new Map<string, number>();
+		if (!hasColumn) return counts;
+		for (const row of rows) {
+			const value = getValue(row);
+			const key = value === null ? emptyValueLabel.toLowerCase() : value.toLowerCase();
+			if (value !== null && excludedValues.has(key)) continue;
+			counts.set(key, (counts.get(key) ?? 0) + 1);
+		}
+		return counts;
+	}, [rows, hasColumn, getValue, emptyValueLabel, excludedValues]);
 	// mirrors the reducer's FILTER_INITIALIZED: seed the selection once the
 	// column's values are known, but never clobber a selection the user made.
 	const initializedRef = useRef(false);
@@ -141,6 +151,7 @@ export function useInventoryColumnFilter(
 	return {
 		hasColumn,
 		uniqueValues,
+		valueCounts,
 		selectedValues,
 		setSelectedValues,
 		matches,
