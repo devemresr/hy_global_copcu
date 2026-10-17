@@ -177,14 +177,26 @@ export type BulkUpdateItemsResponse = {
 	modifiedCount: number;
 };
 
-export type BulkDeleteItemsResponse = { success: boolean; matchedCount: number; deletedCount: number };
+export type BulkDeleteItemsResponse = { success: boolean; matchedCount: number; deletedCount: number; deletedIds: string[]; version: number };
 
 export function useBulkDeleteItems() {
+	const queryClient = useQueryClient();
 	return useMutation<BulkDeleteItemsResponse, ApiError, { ids: string[] }>({
+		onMutate: async () => { await queryClient.cancelQueries({ queryKey: ITEMS_QUERY_KEY }); },
 		mutationFn: ({ ids }) => apiFetch<BulkDeleteItemsResponse>(ITEM_ROUTES.BULK_DELETE, {
 			method: 'DELETE',
 			body: { ids },
 		}),
+		onSuccess: async (result) => {
+			await queryClient.cancelQueries({ queryKey: ITEMS_QUERY_KEY });
+			const deleted = new Set(result.deletedIds);
+			queryClient.setQueryData<ItemsData>(ITEMS_QUERY_KEY, (previous) => previous ? {
+				...previous, items: previous.items.filter((item) => !deleted.has(item._id)),
+			} : previous);
+			// Keep the prior sync cursor: the next delta request must still merge
+			// unrelated writes that happened before this deletion's version.
+			await queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY });
+		},
 	});
 }
 

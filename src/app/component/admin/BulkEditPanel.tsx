@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type SetStateAction } from 'react';
 import { ChevronDown, ChevronRight, Lightbulb } from 'lucide-react';
 import type { EditableInventoryItem } from '../../types';
 import type { ItemDto } from '../../hooks/api/endpoints/useItems';
@@ -125,7 +125,12 @@ export function BulkEditPanel({
 	// carry the same visual weight as a single field/row edit.
 	const [isOpen, setIsOpen] = useState(false);
 	const [hintVisible, setHintVisible] = useState(loadHintVisible);
-	const [conditions, setConditions] = useState<Condition[]>([newCondition()]);
+	const [conditions, setConditionState] = useState<Condition[]>([newCondition()]);
+	const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+	function setConditions(update: SetStateAction<Condition[]>) {
+		setConditionState(update);
+		setExcludedIds(new Set());
+	}
 	const [actions, setActions] = useState<BulkAction[]>([{ field: 'bellekTipi', value: '' }]);
 	const [pendingBulk, setPendingBulk] = useState<{ matched: ItemDto[]; fields: Partial<EditableInventoryItem> } | null>(null);
 	const [isApplying, setIsApplying] = useState(false);
@@ -160,6 +165,14 @@ export function BulkEditPanel({
 	// falling through to that and selecting every row by default.
 	const matched =
 		readyFilters.length > 0 ? filterRowsByFields(items, readyFilters) : [];
+	const selected = matched.filter((item) => !excludedIds.has(item._id));
+	function toggleItem(id: string, checked: boolean) {
+		setExcludedIds((current) => {
+			const next = new Set(current);
+			if (checked) next.delete(id); else next.add(id);
+			return next;
+		});
+	}
 
 	const previewTotalPages = Math.max(
 		1,
@@ -206,9 +219,9 @@ export function BulkEditPanel({
 	}
 
 	function handleApplyClick() {
-		if (matched.length === 0 || busy) return;
+		if (selected.length === 0 || selected.length > 1000 || busy) return;
 		try {
-			const target = { matched: [...matched], fields: buildBulkFields(actions) };
+			const target = { matched: [...selected], fields: buildBulkFields(actions) };
 			setError(null);
 			if (requireApproval) setPendingBulk(target);
 			else void applyChange(target);
@@ -357,41 +370,49 @@ export function BulkEditPanel({
 						<button
 							type='button'
 							onClick={handleApplyClick}
-							disabled={matched.length === 0 || busy}
+							disabled={selected.length === 0 || selected.length > 1000 || busy}
 							className='self-start rounded-xl bg-button-focus-bg px-3 py-1.5 disabled:opacity-40'
 						>
-							{isApplying ? 'Güncelleniyor...' : <>Eşleşen <strong className='text-red-600 dark:text-red-400'>{matched.length}</strong> öğeyi güncelle</>}
+							{isApplying ? 'Güncelleniyor...' : <>Seçili <strong className='text-red-600 dark:text-red-400'>{selected.length}</strong> öğeyi güncelle</>}
 						</button>
 					</fieldset>
+					{selected.length > 1000 && <p className='text-xs text-amber-700 dark:text-amber-300'>Tek seferde en fazla 1000 öğe değiştirilebilir. Seçimi azaltın veya filtrenizi daraltın.</p>}
 					{onDelete && <div className='flex flex-col items-start gap-1 border-t border-border pt-3'>
 						<button
 							type='button'
-							disabled={matched.length === 0 || matched.length > 1000 || busy}
-							onClick={() => { setError(null); setPendingDelete([...matched]); }}
+							disabled={selected.length === 0 || selected.length > 1000 || busy}
+							onClick={() => { setError(null); setPendingDelete([...selected]); }}
 							className='rounded-xl border border-red-500/50 bg-red-500/10 px-3 py-1.5 font-medium text-red-600 hover:bg-red-500/20 disabled:opacity-40 dark:text-red-400'
 						>
-							{isDeleting ? 'Siliniyor...' : `Eşleşen ${matched.length} öğeyi sil`}
+							{isDeleting ? 'Siliniyor...' : `Seçili ${selected.length} öğeyi sil`}
 						</button>
-						{matched.length > 1000 && <p className='text-xs text-amber-700 dark:text-amber-300'>Tek seferde en fazla 1000 öğe silinebilir. Filtrenizi daraltın.</p>}
 					</div>}
 					<div className='flex flex-col gap-1 border-t border-border pt-3'>
 						<div className='flex flex-wrap items-center justify-between gap-2'>
 							<span>
-								Etkilenecek <strong className='text-red-600 dark:text-red-400'>{matched.length}</strong> öğe:
+								Etkilenecek <strong className='text-red-600 dark:text-red-400'>{selected.length}</strong> öğe <span className='text-xs opacity-60'>({matched.length} eşleşen)</span>:
 							</span>
 							<label className='flex cursor-pointer items-center gap-2 text-xs'>
-								<input type='checkbox' checked={showAllProperties} onChange={(event) => setShowAllProperties(event.target.checked)} />
+								<input type='checkbox' aria-label='Tüm özellikleri göster' checked={showAllProperties} onChange={(event) => setShowAllProperties(event.target.checked)} />
 								Tüm özellikleri göster
 							</label>
 						</div>
+						{matched.length > 0 && <label className='flex items-center gap-2 text-xs'>
+							<input type='checkbox' aria-label='Tüm eşleşenleri seç' disabled={busy} checked={selected.length === matched.length} ref={(input) => { if (input) input.indeterminate = selected.length > 0 && selected.length < matched.length; }} onChange={(event) => setExcludedIds(event.target.checked ? new Set() : new Set(matched.map((item) => item._id)))} />
+							Tüm eşleşenleri seç (tüm sayfalar)
+						</label>}
 						{showAllProperties && <p className='text-xs text-amber-700 dark:text-amber-300'>Vurgulanan alanlar değiştirilecek; diğer özellikler mevcut değerlerdir.</p>}
 						{matched.length === 0 ? (
 							<p className='text-xs opacity-50'>Eşleşen öğe yok</p>
 						) : (
 							<ul aria-label='Etkilenecek öğeler' className='flex max-h-[60dvh] min-h-64 flex-col gap-2 overflow-y-auto rounded-xl bg-button-focus-bg p-2 text-xs'>
 								{previewRows.map((row, index) => (
-									<li key={row._id} className='flex flex-col gap-1 border-b border-border py-1'>
-										<b><span className='mr-2 font-normal opacity-50'>{(currentPreviewPage - 1) * previewPageSize + index + 1}.</span>{row.model}</b>
+									<li key={row._id} className={`border-b border-border ${excludedIds.has(row._id) ? 'opacity-60' : ''}`}>
+										<label className={`flex flex-col gap-1 py-1 ${busy ? 'cursor-default' : 'cursor-pointer'}`}>
+										<span className='flex items-center gap-2'>
+											<input type='checkbox' aria-label={`${row.model} seç`} disabled={busy} checked={!excludedIds.has(row._id)} onChange={(event) => toggleItem(row._id, event.target.checked)} />
+											<b><span className='mr-2 font-normal opacity-50'>{(currentPreviewPage - 1) * previewPageSize + index + 1}.</span>{row.model}</b>
+										</span>
 										{actions.filter((action) => PREVIEW_FIELDS.has(action.field)).map((action) => {
 											const paired = PAIRED_ENUM_FIELD[action.field];
 											const oldUnit = paired ? row[paired] : null;
@@ -410,6 +431,7 @@ export function BulkEditPanel({
 													{Object.hasOwn(FIELD_REGISTRY, field) ? fieldLabel(field as FieldKey) : field === 'ram' ? 'RAM' : field === '_id' ? 'Kayıt ID' : field === 'version' ? 'Sürüm' : field}: <DisplayValue value={value ?? null} />
 												</span>
 											))}
+										</label>
 									</li>
 								))}
 							</ul>

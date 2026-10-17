@@ -148,7 +148,7 @@ describe('affected item preview', () => {
 		});
 		expect(container.textContent).toContain('PREVIEW123');
 		expect(container.textContent).not.toContain('PreviewMaker');
-		const toggle = container.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+		const toggle = container.querySelector<HTMLInputElement>('input[aria-label="Tüm özellikleri göster"]')!;
 		act(() => toggle.click());
 		expect(container.textContent).not.toContain('PreviewMaker');
 		expect(container.textContent).not.toContain('6GB');
@@ -174,19 +174,55 @@ describe('filtered bulk deletion', () => {
 		const onDelete = vi.fn().mockResolvedValue(undefined);
 		act(() => root!.render(createElement(BulkEditPanel, { items, onDelete, onApply: () => {}, requireApproval: false, enterEnabled: false, escapeEnabled: true })));
 		act(() => [...container.querySelectorAll('button')].find((button) => button.textContent?.includes('Toplu Düzenleme'))!.click());
-		const deleteButton = () => [...container.querySelectorAll('button')].find((button) => button.textContent?.startsWith('Eşleşen') && button.textContent.endsWith('öğeyi sil'))!;
+		const deleteButton = () => [...container.querySelectorAll('button')].find((button) => button.textContent?.startsWith('Seçili') && button.textContent.endsWith('öğeyi sil'))!;
 		expect(deleteButton().disabled).toBe(true);
 		const operator = container.querySelector<HTMLSelectElement>('select[aria-label="Koşul işleci"]')!;
 		act(() => { operator.value = 'exists'; operator.dispatchEvent(new Event('change', { bubbles: true })); });
+		const firstCheckbox = container.querySelector<HTMLInputElement>('input[aria-label="MATCH0 seç"]')!;
+		const firstRow = firstCheckbox.closest('li')!;
+		// The property preview is part of the checkbox label too.
+		act(() => firstRow.querySelector<HTMLSpanElement>('label > span:last-child')!.click());
+		expect(firstCheckbox.checked).toBe(false);
+		expect(firstRow.classList.contains('opacity-60')).toBe(true);
+		act(() => firstRow.querySelector('b')!.click());
+		expect(firstCheckbox.checked).toBe(true);
+		act(() => firstCheckbox.click());
+		expect(firstCheckbox.checked).toBe(false);
+		expect(firstCheckbox.closest('li')?.classList.contains('opacity-60')).toBe(true);
+		expect(container.querySelector<HTMLInputElement>('input[aria-label="Tüm eşleşenleri seç"]')!.indeterminate).toBe(true);
 		act(() => deleteButton().click());
 		expect(onDelete).not.toHaveBeenCalled();
-		expect(container.textContent).toContain('25 öğe silinecek');
+		expect(container.textContent).toContain('24 öğe silinecek');
 		act(() => [...container.querySelectorAll('button')].find((button) => button.textContent === 'Vazgeç')!.click());
 		expect(onDelete).not.toHaveBeenCalled();
 		act(() => deleteButton().click());
 		// A background filter change cannot enlarge the captured selection.
 		act(() => { operator.value = 'notExists'; operator.dispatchEvent(new Event('change', { bubbles: true })); });
 		await act(async () => [...container.querySelectorAll('button')].find((button) => button.textContent === 'Öğeleri sil')!.click());
-		expect(onDelete).toHaveBeenCalledExactlyOnceWith(items);
+		expect(onDelete).toHaveBeenCalledExactlyOnceWith(items.slice(1));
+	});
+	it('updates only checked items and disables actions when none are selected', async () => {
+		container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
+		const items = ['A', 'B'].map((model) => ({ _id: model, model, version: 1, bellekTipi: 'UFS', depolamaBirimi: 'GB' as const, fiyat: 10, paraBirimi: 'TRY' as const }));
+		const onApply = vi.fn();
+		act(() => root!.render(createElement(BulkEditPanel, { items, onApply, onDelete: vi.fn(), requireApproval: false, enterEnabled: false, escapeEnabled: true })));
+		act(() => [...container.querySelectorAll('button')].find((button) => button.textContent?.includes('Toplu Düzenleme'))!.click());
+		const operator = container.querySelector<HTMLSelectElement>('select[aria-label="Koşul işleci"]')!;
+		act(() => { operator.value = 'exists'; operator.dispatchEvent(new Event('change', { bubbles: true })); });
+		const all = container.querySelector<HTMLInputElement>('input[aria-label="Tüm eşleşenleri seç"]')!;
+		act(() => all.click());
+		const updateButton = () => [...container.querySelectorAll('button')].find((button) => button.textContent?.endsWith('öğeyi güncelle'))!;
+		expect(updateButton().disabled).toBe(true);
+		expect([...container.querySelectorAll('button')].find((button) => button.textContent?.endsWith('öğeyi sil'))!.disabled).toBe(true);
+		act(() => container.querySelector<HTMLInputElement>('input[aria-label="B seç"]')!.click());
+		const value = container.querySelector<HTMLInputElement>('fieldset input[type="text"]')!;
+		act(() => {
+			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(value, 'eMMC');
+			value.dispatchEvent(new Event('input', { bubbles: true }));
+		});
+		await act(async () => updateButton().click());
+		expect(onApply).toHaveBeenCalledExactlyOnceWith([items[1]], { bellekTipi: 'eMMC' });
+		act(() => all.click());
+		expect(container.querySelectorAll('li.opacity-60')).toHaveLength(0);
 	});
 });
