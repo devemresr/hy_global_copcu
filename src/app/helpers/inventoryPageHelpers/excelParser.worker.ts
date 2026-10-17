@@ -1,10 +1,9 @@
-import * as XLSX from 'xlsx';
 import type { WorkerResponse } from '../../types';
+import { parseWorkbookFromBuffer } from './sheet.helper';
 
 self.onmessage = (event: MessageEvent<{ arrayBuffer: ArrayBuffer }>) => {
 	try {
-		const data = new Uint8Array(event.data.arrayBuffer);
-		const wb = XLSX.read(data, { type: 'array', cellDates: true });
+		const wb = parseWorkbookFromBuffer(event.data.arrayBuffer);
 		const response: WorkerResponse = {
 			status: 'success',
 			sheetNames: wb.SheetNames,

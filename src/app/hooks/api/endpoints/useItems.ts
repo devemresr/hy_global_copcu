@@ -7,10 +7,18 @@ import { ITEM_ROUTES } from '../../../constants/routes.constant';
 import type { EditableInventoryItem, InventoryItemRecord } from '../../../types';
 import { useSiteStatus } from './useSiteStatus';
 
-// _id isn't on InventoryItemRecord (that type also covers the bundled
-// static dataset, which has no DB row behind it) - items from this endpoint
+// _id isn't on InventoryItemRecord (that type also covers the static
+// snapshot, which has no DB row behind it) - items from this endpoint
 // always have one.
 export type ItemDto = InventoryItemRecord & { _id: string; version: number };
+
+// Written by server/local/exportItemsSnapshot.ts into public/.
+export type ItemsSnapshot = {
+	exportedAt: string;
+	items: InventoryItemRecord[];
+};
+
+const ITEMS_SNAPSHOT_URL = `${import.meta.env.BASE_URL}items-snapshot.json`;
 
 export type ItemsData = {
 	// Global version the list is current as of.
@@ -98,6 +106,26 @@ export function useGetItems() {
 	]);
 
 	return query;
+}
+
+/**
+ * The last exported copy of the item list, served from the frontend's own
+ * host - stale, but still something to show while GET /items is down.
+ * Fetched only when `enabled`, so a healthy visit never downloads it.
+ */
+export function useItemsSnapshot(enabled: boolean) {
+	return useQuery<ItemsSnapshot>({
+		queryKey: ['itemsSnapshot'],
+		queryFn: async () => {
+			const response = await fetch(ITEMS_SNAPSHOT_URL);
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			return response.json();
+		},
+		enabled,
+		staleTime: Infinity,
+	});
 }
 
 export function useCreateItem() {

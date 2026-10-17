@@ -38,9 +38,9 @@ export type OnErrorCallback = (message: string) => void;
 // currency codes are listed.
 export type Currency = SchemaCurrency;
 
-// One inventory item as it lives in the catalog/DB: every field sourced from
-// inventoryData.ts, plus the fiyat/paraBirimi split. Keys are Turkish
-// (camelCase) to match the DB's own field names.
+// One inventory item as it lives in the DB (and in the static snapshot the
+// public page falls back to). Keys are Turkish (camelCase) to match the DB's
+// own field names.
 export type InventoryItemRecord = {
 	uretici?: string | null;
 	ram?: string | null;

@@ -61,19 +61,13 @@ export function InventoryBrowser({ rows, colDef, ref }: InventoryBrowserProps) {
 		rows,
 		ramComparator,
 		{
-			// A DB-backed row's depolama is a plain number with its unit in a
-			// sibling depolamaBirimi field; the bundled static dataset's depolama
-			// is already one "128GB" string (see buildInventoryRecords.helper.ts).
-			// Without this, trimmedOrNull's default string-only read would treat
-			// every DB row's numeric depolama as "no value".
+			// depolama is numeric, so trimmedOrNull's default string-only read
+			// would treat every row's value as "no value".
 			getValue: (row) => {
 				const raw = row.depolama;
-				if (typeof raw === 'number') {
-					return Number.isNaN(raw)
-						? null
-						: `${raw} ${row.depolamaBirimi ?? 'GB'}`;
-				}
-				return typeof raw === 'string' ? raw.trim() || null : null;
+				return typeof raw === 'number' && !Number.isNaN(raw)
+					? `${raw} ${row.depolamaBirimi ?? 'GB'}`
+					: null;
 			},
 		},
 	);

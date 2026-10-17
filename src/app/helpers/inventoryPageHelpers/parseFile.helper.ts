@@ -1,6 +1,7 @@
 // Files larger than this get parsed in a Web Worker instead of the main thread.
 import * as XLSX from 'xlsx';
 import type { OnErrorCallback, WorkerResponse } from '../../types';
+import { parseWorkbookFromBuffer } from './sheet.helper';
 
 // Below this, worker spin-up + postMessage overhead isn't worth it.
 export const WORKER_SIZE_THRESHOLD_BYTES = 2 * 1024 * 1024; // 2MB
@@ -18,12 +19,6 @@ export function readFileAsArrayBuffer(
 	};
 	reader.onerror = () => onError('Failed to read file');
 	reader.readAsArrayBuffer(file);
-}
-
-//  Workbook parsing (shared XLSX.read logic)
-export function parseWorkbookFromBuffer(buffer: ArrayBuffer): XLSX.WorkBook {
-	const data = new Uint8Array(buffer);
-	return XLSX.read(data, { type: 'array', cellDates: true });
 }
 
 //  Inline path: read + parse on main thread
@@ -91,30 +86,4 @@ export function parseWithWorker(
 		},
 		onError,
 	);
-}
-
-export function unmergeSheet(sheet: XLSX.WorkSheet): XLSX.WorkSheet {
-	const merges = sheet['!merges'] || [];
-	merges.forEach((merge) => {
-		const topLeftAddr = XLSX.utils.encode_cell({
-			r: merge.s.r,
-			c: merge.s.c,
-		});
-		const topLeftCell = sheet[topLeftAddr];
-		if (!topLeftCell) return;
-
-		for (let r = merge.s.r; r <= merge.e.r; r++) {
-			for (let c = merge.s.c; c <= merge.e.c; c++) {
-				const addr = XLSX.utils.encode_cell({ r, c });
-				if (addr === topLeftAddr) continue; // don't overwrite the source cell
-				sheet[addr] = { ...topLeftCell };
-			}
-		}
-	});
-
-	// merges are now fully filled in as real cell values, so clear the merge metadata
-	sheet['!merges'] = [];
-
-	const sheetWithUnmergedValues = sheet;
-	return sheetWithUnmergedValues;
 }

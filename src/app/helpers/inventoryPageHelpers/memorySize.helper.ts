@@ -1,87 +1,63 @@
-// Shared "how big is this memory chip" parsing, used both to clean uploaded
-// rows (normalizeAndFilterRows) and to compare them against the temp
-// reference data (tempDataValidation.debug.ts). Kept in one place so both
-// sides always agree on what counts as "the same" storage size.
+// Shared "how big is this memory chip" parsing, used to clean uploaded rows
+// (rowNormalize.helper.ts), price them (displaySafe.helper.ts), filter them by
+// size (fieldFilter.helper.ts) and by the server's import scripts. Kept in one
+// place so every caller agrees on what counts as "the same" storage size.
+//
+// parseSize is the only function that reads a size out of text; the rest
+// build on its result, one job each:
+//   parseSize    "1 TB"            -> { value: 1, unit: 'TB' }  (keeps the unit)
+//   toGb         { 1, 'TB' }       -> 1024
+//   parseSizeGb  "1 TB"            -> 1024                      (parseSize + toGb)
+//   formatGb     1024              -> "1 Tb"
+//
+// Not anchored to the full string: uploaded values look like "256GB NAND" or
+// "128GB TLC NAND", so the first "<number><unit>" wins and the rest is ignored.
+// A bare M/G/T (no B) can't be followed by another letter, though - otherwise
+// "64 TLC" or "500 TL" would read as terabytes. extractLeadingNumber is the
+// unit-agnostic counterpart for fields that have no size unit, like Fiyat.
 
 import type { StorageUnit } from '../../schemas/item.schema';
 
-/**
- * Pulls the leading numeric portion out of a free-form string or number,
- * e.g. "256GB NAND" -> 256, "500 TL" -> 500, "8" -> 8. Purely numeric, no
- * unit awareness - shared by parseMemorySize below (which additionally
- * requires and converts a M/G/T unit) and by plain numeric field
- * comparisons (tempDataValidation.debug.ts's matchesFieldFilter) where
- * there's no unit to convert, like Fiyat. Deliberately kept unit-agnostic:
- * a value like "500 TL" would misparse as Terabytes if run through
- * parseMemorySize's unit matching, since "TL" also starts with "T".
- */
+export type SizeUnit = 'MB' | StorageUnit;
+export type ParsedSize = { value: number; unit: SizeUnit };
+
+const SIZE_PATTERN = /(\d+(?:\.\d+)?)\s*([MGT])(?:B|(?![a-z]))/i;
+
+const GB_PER_UNIT: Record<SizeUnit, number> = {
+	MB: 1 / 1024,
+	GB: 1,
+	TB: 1024,
+};
+
+/** Leading number of a free-form value, no unit handling: "500 TL" -> 500. */
 export function extractLeadingNumber(raw: unknown): number | null {
 	if (typeof raw === 'number') return Number.isNaN(raw) ? null : raw;
 	if (typeof raw !== 'string') return null;
-	const match = raw.trim().match(/-?\d+(?:\.\d+)?/);
+	const match = raw.match(/-?\d+(?:\.\d+)?/);
 	return match ? parseFloat(match[0]) : null;
 }
 
-export function toGb(num: number, unit: string) {
-	if (unit === 'G') return num;
-	if (unit === 'T') return num * 1024;
+/** Size and the unit it was written in: "256GB NAND" -> { 256, 'GB' }. */
+export function parseSize(raw: unknown): ParsedSize | null {
+	const match = String(raw ?? '').match(SIZE_PATTERN);
+	if (!match) return null; // unparseable - left for manual review
+	return {
+		value: parseFloat(match[1]),
+		unit: `${match[2].toUpperCase()}B` as SizeUnit,
+	};
 }
 
-/**
- * Extracts a GB value from a free-form size string. Not anchored to the full
- * string on purpose: values coming from the temp dataset look like
- * "256GB NAND" or "128GB TLC NAND" (a size followed by a descriptor), so this
- * grabs the leading "<number><unit>" and ignores whatever follows it.
- */
-export function parseMemorySize(raw: string) {
-	if (raw === undefined || raw === null) return null;
-	const s = String(raw).trim();
-	if (!s || s === '?') return null;
-
-	const simple = s.match(/(\d+(?:\.\d+)?)\s*([MGT])B?/i);
-	if (!simple) return null; // unparseable returned for manual review
-
-	const num = extractLeadingNumber(simple[1]);
-	if (num === null) return null;
-	return toGb(num, simple[2].toUpperCase());
+export function toGb({ value, unit }: ParsedSize): number {
+	return value * GB_PER_UNIT[unit];
 }
 
-/**
- * Splits a free-form size string like "128GB" or "1 TB" into its magnitude
- * and the unit it was actually expressed in - unlike parseMemorySize, which
- * always normalizes to a GB number and throws the original unit away. Used
- * once, by the DB seed script, to migrate the bundled dataset's single
- * depolama string into the Item model's separate depolama/depolamaBirimi
- * fields. Only recognizes G/T (the two units depolamaBirimi's schema
- * allows) - an M-unit source string simply won't match, same as an
- * otherwise-unparseable one.
- */
-export function parseStorageSize(
-	raw: string,
-): { value: number; unit: StorageUnit } | null {
-	const s = String(raw ?? '').trim();
-	if (!s || s === '?') return null;
-
-	const match = s.match(/(\d+(?:\.\d+)?)\s*([GT])B?/i);
-	if (!match) return null;
-
-	const value = extractLeadingNumber(match[1]);
-	if (value === null) return null;
-	return { value, unit: match[2].toUpperCase() === 'T' ? 'TB' : 'GB' };
+/** Size normalized to GB: "1 Tb" -> 1024. Null when unparseable. */
+export function parseSizeGb(raw: unknown): number | null {
+	const size = parseSize(raw);
+	return size ? toGb(size) : null;
 }
 
-// Accepts null/undefined because parseMemorySize can return either (unparseable
-// input) and callers compare formatMemorySize(parseMemorySize(x)) directly —
-// behavior for those cases (falls through to `${gbValue} Gb`) is unchanged
-// from before this was split out, only the signature is now honest about it.
-export function formatMemorySize(gbValue: number | null | undefined) {
-	if (
-		gbValue !== null &&
-		gbValue !== undefined &&
-		gbValue >= 1024 &&
-		gbValue % 1024 === 0
-	) {
-		return `${gbValue / 1024} Tb`;
-	}
-	return `${gbValue} Gb`;
+/** Display form; whole terabytes collapse to Tb: 1024 -> "1 Tb", 256 -> "256 Gb". */
+export function formatGb(gb: number): string {
+	return gb >= 1024 && gb % 1024 === 0 ? `${gb / 1024} Tb` : `${gb} Gb`;
 }

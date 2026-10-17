@@ -8,7 +8,6 @@ import {
 import * as XLSX from 'xlsx';
 import logger from '../util/logger';
 import type {
-	ExcelRow,
 	ParseStatus,
 	ParseMethod,
 	OnErrorCallback,
@@ -16,15 +15,14 @@ import type {
 import {
 	parseInline,
 	parseWithWorker,
-	unmergeSheet,
 	WORKER_SIZE_THRESHOLD_BYTES,
 } from '../helpers/inventoryPageHelpers/parseFile.helper';
+import { parseSheetRows } from '../helpers/inventoryPageHelpers/sheet.helper';
 import {
 	initialWorkbookState,
 	workbookReducer,
 } from '../helpers/inventoryPageHelpers/wbState.helper';
 import { normalizeAndFilterRows } from '../helpers/inventoryPageHelpers/rowNormalize.helper';
-import { exampleDataCleaningComparingFunc } from '../helpers/inventoryPageHelpers/tempDataValidation.debug';
 
 type ParseState = {
 	status: ParseStatus;
@@ -32,22 +30,11 @@ type ParseState = {
 	parseMethod: ParseMethod;
 };
 
-function parseSelectedSheet(wb: XLSX.WorkBook, sheetName: string): ExcelRow[] {
-	const sheet = wb.Sheets[sheetName];
-	unmergeSheet(sheet);
-
-	return XLSX.utils.sheet_to_json<ExcelRow>(sheet);
-}
-
 /**
  * Generic Excel-workbook loading hook: reads an uploaded File into an
  * XLSX.WorkBook (inline on the main thread, or off-thread via a Web Worker
  * once it's past WORKER_SIZE_THRESHOLD_BYTES), then parses and normalizes
  * the selected sheet into rows.
- *
- * Page-agnostic on purpose: it doesn't know about ag-grid column defs or any
- * particular dataset's display rules, so any page can plug it in and decide
- * for itself how to turn `rows` into UI.
  */
 export function useWorkbookLoader() {
 	const [parseState, setParseState] = useState<ParseState>({
@@ -80,10 +67,8 @@ export function useWorkbookLoader() {
 	useLayoutEffect(() => {
 		if (!workbook || !selectedSheet) return;
 
-		const parsedRows = parseSelectedSheet(workbook, selectedSheet);
+		const parsedRows = parseSheetRows(workbook, selectedSheet);
 		const normalizedRows = normalizeAndFilterRows(parsedRows);
-
-		exampleDataCleaningComparingFunc(normalizedRows);
 
 		dispatch({ type: 'ROWS_PARSED', rows: normalizedRows });
 	}, [workbook, selectedSheet]);

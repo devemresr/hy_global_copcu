@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
-import type { ExcelRow } from '../types';
-import type { ItemDto } from './api/endpoints/useItems';
+import type { ExcelRow, InventoryItemRecord } from '../types';
 import {
 	columnDefsBySheet,
 	FIELD_NAMES,
@@ -8,7 +7,7 @@ import {
 
 export function useInventoryRows(
 	bellekTipiIncluded: boolean,
-	items: ItemDto[],
+	items: InventoryItemRecord[],
 ) {
 	const rows = useMemo(() => {
 		if (bellekTipiIncluded) return items as ExcelRow[];

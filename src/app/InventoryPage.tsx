@@ -14,8 +14,9 @@ import {
 	Truck,
 	Wallet,
 	ScanSearch,
+	TriangleAlert,
 } from 'lucide-react';
-import { useGetItems } from './hooks/api/endpoints/useItems';
+import { useGetItems, useItemsSnapshot } from './hooks/api/endpoints/useItems';
 import { inventoryPageContent } from './constants/inventoryPageContent.constant';
 import { isDisplayedBellekTipi } from './constants/bellekTipi.constant';
 import { whatsappUrl } from './constants/url.constant';
@@ -36,14 +37,34 @@ const WHY_US_ICONS = [ShieldCheck, Wallet, Truck];
 const STEP_LINK_CLASS =
 	'mt-1 inline-block cursor-pointer text-left underline underline-offset-2 font-medium hover:opacity-80 transition-opacity text-text text-sm';
 
+function SnapshotWarning({ exportedAt }: { exportedAt: string }) {
+	const date = new Date(exportedAt).toLocaleDateString('tr-TR', { dateStyle: 'long' });
+	return (
+		<div
+			role='status'
+			className='mb-3 flex items-start gap-3 rounded-xl border border-border bg-button-bg p-4 text-sm text-text'
+		>
+			<TriangleAlert className='mt-0.5 h-4 w-4 shrink-0 text-amber-500' aria-hidden />
+			<p>
+				Sunucuya şu an ulaşılamıyor. Aşağıdaki liste {date} tarihli bir kopyadır;
+				ürünler ve fiyatlar güncel olmayabilir.
+			</p>
+		</div>
+	);
+}
+
 function InventoryPage() {
 	// const bellekTipiIncluded = searchParams.has('detayliData');
 	const bellekTipiIncluded = true;
 
-	const { data } = useGetItems();
+	const { data, failureCount } = useGetItems();
+	const { data: snapshot } = useItemsSnapshot(!data && failureCount > 0);
+	// Live data replaces the snapshot as soon as a later refetch succeeds.
+	const showingSnapshot = !data && !!snapshot;
+	const items = data?.items ?? snapshot?.items;
 	const displayedItems = useMemo(
-		() => (data?.items ?? []).filter((item) => isDisplayedBellekTipi(item.bellekTipi)),
-		[data?.items],
+		() => (items ?? []).filter((item) => isDisplayedBellekTipi(item.bellekTipi)),
+		[items],
 	);
 	const { rows, colDef } = useInventoryRows(bellekTipiIncluded, displayedItems);
 	const { hero, stepsHeading, steps, whyUs, contact } = inventoryPageContent;
@@ -126,7 +147,10 @@ function InventoryPage() {
 					</ol>
 				</section>
 
-				<InventoryBrowser ref={browserRef} rows={rows} colDef={colDef} />
+				<div>
+					{showingSnapshot && <SnapshotWarning exportedAt={snapshot.exportedAt} />}
+					<InventoryBrowser ref={browserRef} rows={rows} colDef={colDef} />
+				</div>
 			</div>
 
 			<section className='mt-12'>

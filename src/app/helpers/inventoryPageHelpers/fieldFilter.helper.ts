@@ -1,8 +1,8 @@
-import { extractLeadingNumber, parseMemorySize } from './memorySize.helper';
+import { extractLeadingNumber, parseSizeGb } from './memorySize.helper';
 
 // Generic field filtering: query rows by any field's presence/absence or by
-// a value/numeric comparison. Shared by the debug data-cleaning pipeline
-// (tempDataValidation.debug.ts) and the admin bulk-edit rule builder
+// a value/numeric comparison. Shared by the display-safe transform
+// (displaySafe.helper.ts) and the admin bulk-edit rule builder
 // (component/admin/BulkEditPanel.tsx) - it's plain data-shape logic with no
 // dependency on either caller, so it lives on its own rather than inside one
 // of them.
@@ -41,12 +41,10 @@ export type FieldFilter = {
 	/** Required for every op except 'exists'/'notExists'. Array for 'in'/'notIn'. */
 	value?: unknown;
 	/**
-	 * gt/gte/lt/lte only: parse both the row's value and `value` as memory
-	 * sizes ("1 Tb" -> 1024) via parseMemorySize instead of a unit-agnostic
-	 * leading number. gt/gte/lt/lte stay unit-agnostic by default (see
-	 * extractLeadingNumber's doc comment for why "500 TL" can't safely be run
-	 * through unit parsing) - set this for a field that does carry a size
-	 * unit, e.g. { field: 'Depoloma', op: 'gt', value: 128, sizeAware: true }.
+	 * gt/gte/lt/lte only: compare as memory sizes in GB ("1 Tb" -> 1024) via
+	 * parseSizeGb instead of a unit-agnostic leading number. Set this for a
+	 * field whose text carries a size unit, e.g.
+	 * { field: 'Depoloma', op: 'gt', value: 128, sizeAware: true }.
 	 */
 	sizeAware?: boolean;
 };
@@ -60,18 +58,10 @@ function fieldHasValue(row: Record<string, unknown>, field: string): boolean {
 	return true;
 }
 
-/**
- * Resolves a size-comparison operand to a GB value. Strings go through
- * parseMemorySize (so "1 Tb" -> 1024, "256GB NAND" -> 256); a plain number
- * is treated as already being GB - the unit parseMemorySize itself
- * normalizes to - so a filter can be written as
- * `{ field: 'Depoloma', op: 'gt', value: 128, sizeAware: true }` without
- * spelling out a unit on the comparison value.
- */
+/** Size-comparison operand in GB; a plain number is taken as GB already. */
 function resolveSizeGb(value: unknown): number | null {
 	if (typeof value === 'number') return Number.isNaN(value) ? null : value;
-	if (typeof value === 'string') return parseMemorySize(value) ?? null;
-	return null;
+	return parseSizeGb(value);
 }
 
 /** Whether a single row satisfies a single field filter. */

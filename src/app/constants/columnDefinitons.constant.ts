@@ -64,21 +64,10 @@ export const columnDefsBySheet: ColDef[] = [
 	},
 ];
 
-// DB-backed rows store depolama as a plain magnitude plus a separate
-// depolamaBirimi unit ('GB'/'TB'); the bundled static dataset (the public
-// page's fallback when there's no live item - see
-// buildInventoryRecords.helper.ts) still has depolama as one un-split
-// "128GB"-style string. Both shapes flow through this same column, so
-// display/sort branch on which one a given row actually has.
+// depolama is a plain magnitude, its unit ('GB'/'TB') in depolamaBirimi.
 function depolamaToGb(value: unknown, unit: unknown): number {
-	if (typeof value === 'number') {
-		return Number.isNaN(value) ? NaN : unit === 'TB' ? value * 1024 : value;
-	}
-	try {
-		return ramToGb(String(value ?? ''));
-	} catch {
-		return NaN;
-	}
+	if (typeof value !== 'number') return NaN;
+	return unit === 'TB' ? value * 1024 : value;
 }
 
 export function depolamaValueFormatter(params: any): string {
