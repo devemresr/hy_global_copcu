@@ -23,6 +23,7 @@ export const editableInventoryItemSchema = z.object({
 	depolama: z
 		.number({ invalid_type_error: 'Geçerli bir depolama girin' })
 		.positive('Geçerli bir depolama girin')
+		.refine((value) => Number.isFinite(value) && 2 ** Math.round(Math.log2(value)) === value, 'Depolama değeri 2’nin kuvveti olmalıdır (ör. 8, 16, 32, 64).')
 		.nullable(),
 	depolamaBirimi: storageUnitSchema,
 	ram: z.string().trim().min(1).nullable().optional(),

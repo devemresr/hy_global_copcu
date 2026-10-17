@@ -5,6 +5,7 @@ import {
 	type Dispatch,
 	type SetStateAction,
 } from 'react';
+import { StorageSizeInput } from './StorageSizeInput';
 
 export type Stepper = { amount: number; label: string };
 
@@ -21,6 +22,9 @@ const DEFAULT_STEPPERS: Steppers = [
 // input can match whatever controls sit next to it. Layout and the stepper
 // buttons' colors stay fixed in here.
 type Props = {
+	storage?: boolean;
+	disabled?: boolean;
+	describedBy?: string;
 	value: number | '';
 	onChange: Dispatch<SetStateAction<number | ''>>;
 	id?: string;
@@ -42,7 +46,13 @@ const DEFAULT_CLASS_NAME = `w-fit py-2 pl-3 pr-2
 
 const DEFAULT_STEPPER_CLASS_NAME = 'px-2 py-1 rounded-lg';
 
-export function NumberInputWithSteppers({
+export function NumberInputWithSteppers({ storage, ...props }: Props) {
+	return storage ? <StorageSizeInput {...props} /> : <AdditiveNumberInput {...props} />;
+}
+
+function AdditiveNumberInput({
+	disabled = false,
+	describedBy,
 	value,
 	onChange,
 	id = 'numInput',
@@ -62,6 +72,7 @@ export function NumberInputWithSteppers({
 		if (!el) return;
 
 		const handleWheel = (e: WheelEvent) => {
+			if (disabled) return;
 			e.preventDefault();
 			onChange((prev) => {
 				const current = prev === '' ? 0 : Number(prev);
@@ -72,7 +83,7 @@ export function NumberInputWithSteppers({
 
 		el.addEventListener('wheel', handleWheel, { passive: false });
 		return () => el.removeEventListener('wheel', handleWheel);
-	}, [onChange]);
+	}, [onChange, disabled]);
 
 	const handleChange = useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,6 +120,8 @@ export function NumberInputWithSteppers({
 	return (
 		<div className={`flex items-center justify-between gap-2 ${className}`}>
 			<input
+				disabled={disabled}
+				aria-describedby={describedBy}
 				className='field-sizing-content min-w-10 bg-transparent outline-none [appearance:textfield]'
 				type='text'
 				value={displayValue}
@@ -122,6 +135,7 @@ export function NumberInputWithSteppers({
 			<div className='flex items-center gap-1'>
 				{steppers.map((stepper) => (
 					<button
+						disabled={disabled}
 						key={stepper.label}
 						type='button'
 						onClick={() => onChange((v) => Number(v) + stepper.amount)}

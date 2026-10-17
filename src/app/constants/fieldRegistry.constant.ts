@@ -40,10 +40,6 @@ export const FIELD_REGISTRY = {
 	depolama: {
 		label: 'Depoloma',
 		kind: 'number',
-		stepperValues: [
-			{ amount: 8, label: '+8' },
-			{ amount: 16, label: '+16' },
-		],
 	},
 	depolamaBirimi: {
 		label: 'Depolama Birimi',

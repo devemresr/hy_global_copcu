@@ -209,6 +209,7 @@ export function FieldEditModal({
 							</select>
 						) : meta.kind === 'number' ? (
 							<NumberInputWithSteppers
+								storage={field === 'depolama'}
 								id={`field-edit-${field}`}
 								value={numericValue}
 								steppers={meta.stepperValues}
