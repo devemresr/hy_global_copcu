@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { FIELD_KEYS, OPS_BY_KIND, fieldMeta, type FieldKey } from '../../constants/fieldRegistry.constant';
+import { FIELD_KEYS, filterOpsForField, type FieldKey } from '../../constants/fieldRegistry.constant';
 import type { FieldFilterOp } from '../inventoryPageHelpers/fieldFilter.helper';
 
 export type SavedCondition = { field: FieldKey; op: FieldFilterOp; value: string };
@@ -12,8 +12,11 @@ const conditionSchema = z.object({
 	value: z.string().max(10000),
 }).superRefine((condition, context) => {
 	if (!FIELD_KEYS.includes(condition.field as FieldKey)) return;
-	if (!OPS_BY_KIND[fieldMeta(condition.field as FieldKey).kind].includes(condition.op as FieldFilterOp)) {
+	if (!filterOpsForField(condition.field as FieldKey).includes(condition.op as FieldFilterOp)) {
 		context.addIssue({ code: 'custom', message: 'Geçersiz filtre işleci' });
+	}
+	if (condition.op.startsWith('length') && (!/^\d+$/.test(condition.value.trim()) || !Number.isSafeInteger(Number(condition.value)))) {
+		context.addIssue({ code: 'custom', message: 'Karakter sayısı sıfır veya pozitif bir tam sayı olmalıdır' });
 	}
 	if (!['exists', 'notExists'].includes(condition.op) && !condition.value.trim()) {
 		context.addIssue({ code: 'custom', message: 'Filtre değeri boş olamaz' });

@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { FIELD_KEYS, OPS_BY_KIND, fieldMeta, type FieldKey } from '../../constants/fieldRegistry.constant';
+import { FIELD_KEYS, filterOpsForField, fieldMeta, type FieldKey } from '../../constants/fieldRegistry.constant';
 import { FILTER_OPERATORS, newFilterCondition, type FilterCondition } from '../../helpers/adminPageHelpers/filterConditions.helper';
 
 const fields = FIELD_KEYS.filter((field) => !['uretici', 'eslesmeTuru', 'sorgulananDeger'].includes(field));
@@ -15,13 +15,14 @@ export function FilterConditionEditor({ conditions, onChange }: {
 		<div className='flex flex-col gap-2'>
 			{conditions.map((condition) => {
 				const meta = fieldMeta(condition.field);
-				const operators = FILTER_OPERATORS.filter((operator) => OPS_BY_KIND[meta.kind].includes(operator.value));
+				const operators = FILTER_OPERATORS.filter((operator) => filterOpsForField(condition.field).includes(operator.value));
+				const lengthFilter = condition.op.startsWith('length');
 				const needsValue = FILTER_OPERATORS.find((operator) => operator.value === condition.op)?.needsValue;
 				return (
 					<div key={condition.id} className='flex flex-wrap items-center gap-2'>
 						<select aria-label='Koşul alanı' value={condition.field} className='max-w-full rounded-xl bg-button-focus-bg px-2 py-1' onChange={(event) => {
 							const field = event.target.value as FieldKey;
-							const allowed = OPS_BY_KIND[fieldMeta(field).kind];
+							const allowed = filterOpsForField(field);
 							update(condition.id, { field, op: allowed.includes(condition.op) ? condition.op : allowed[0], value: '' });
 						}}>
 							{fields.map((field) => <option key={field} value={field}>{fieldMeta(field).label}</option>)}
@@ -34,7 +35,7 @@ export function FilterConditionEditor({ conditions, onChange }: {
 								<option value=''>Seçin</option>
 								{meta.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
 							</select>
-						) : <input aria-label='Koşul değeri' type='text' value={condition.value} placeholder='Değer' onChange={(event) => update(condition.id, { value: event.target.value })} className='min-w-0 max-w-full rounded-xl bg-button-focus-bg px-2 py-1' />)}
+						) : <input aria-label='Koşul değeri' type={lengthFilter ? 'number' : 'text'} min={lengthFilter ? 0 : undefined} step={lengthFilter ? 1 : undefined} value={condition.value} placeholder={lengthFilter ? 'Karakter sayısı' : 'Değer'} onChange={(event) => update(condition.id, { value: event.target.value })} className='min-w-0 max-w-full rounded-xl bg-button-focus-bg px-2 py-1' />)}
 						{conditions.length > 1 && <button type='button' aria-label='Koşulu sil' className='rounded-lg px-2 py-1 hover:bg-button-hover-bg' onClick={() => onChange((current) => current.filter((item) => item.id !== condition.id))}>×</button>}
 					</div>
 				);

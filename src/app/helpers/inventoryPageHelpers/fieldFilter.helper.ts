@@ -26,6 +26,11 @@ export type FieldFilterOp =
 	| 'notIn'
 	/** The field's value contains `value` as a substring (case-insensitive). */
 	| 'contains'
+	| 'lengthEquals'
+	| 'lengthGt'
+	| 'lengthGte'
+	| 'lengthLt'
+	| 'lengthLte'
 	/** The field's value is greater than `value`, numerically. */
 	| 'gt'
 	/** The field's value is greater than or equal to `value`, numerically. */
@@ -72,6 +77,23 @@ export function matchesFieldFilter(
 	const hasValue = fieldHasValue(row, filter.field);
 
 	switch (filter.op) {
+		case 'lengthEquals':
+		case 'lengthGt':
+		case 'lengthGte':
+		case 'lengthLt':
+		case 'lengthLte': {
+			if (filter.field !== 'model' || !hasValue || typeof row.model !== 'string') return false;
+			const raw = filter.value;
+			if (typeof raw !== 'number' && (typeof raw !== 'string' || !/^\d+$/.test(raw.trim()))) return false;
+			const target = Number(raw);
+			if (!Number.isSafeInteger(target) || target < 0) return false;
+			const length = Array.from(row.model.trim()).length;
+			if (filter.op === 'lengthEquals') return length === target;
+			if (filter.op === 'lengthGt') return length > target;
+			if (filter.op === 'lengthGte') return length >= target;
+			if (filter.op === 'lengthLt') return length < target;
+			return length <= target;
+		}
 		case 'exists':
 			return hasValue;
 		case 'notExists':

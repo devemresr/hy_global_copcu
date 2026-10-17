@@ -130,3 +130,11 @@ export const OPS_BY_KIND: Record<FieldKind, FieldFilterOp[]> = {
 	// No in/notIn: an enum's value is picked from a single-choice dropdown.
 	enum: ['equals', 'notEquals', 'exists', 'notExists'],
 };
+
+/** Character-count comparisons are offered only for model names. */
+export function filterOpsForField(field: FieldKey): FieldFilterOp[] {
+	const operators = OPS_BY_KIND[fieldMeta(field).kind];
+	return field === 'model'
+		? [...operators, 'lengthEquals', 'lengthGt', 'lengthGte', 'lengthLt', 'lengthLte']
+		: operators;
+}
