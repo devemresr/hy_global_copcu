@@ -1,131 +1,41 @@
-import { useEffect, useState, type SetStateAction } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronRight, Lightbulb } from 'lucide-react';
-import type { EditableField } from '../../types';
+import type { EditableInventoryItem } from '../../types';
 import type { ItemDto } from '../../hooks/api/endpoints/useItems';
-import { editableInventoryItemSchema } from '../../schemas/item.schema';
 import {
 	FIELD_REGISTRY,
-	FIELD_KEYS,
-	EDITABLE_FIELD_KEYS,
-	OPS_BY_KIND,
 	PAIRED_ENUM_FIELD,
 	fieldLabel,
-	fieldMeta,
 	type FieldKey,
 } from '../../constants/fieldRegistry.constant';
 import {
 	filterRowsByFields,
 	type FieldFilter,
-	type FieldFilterOp,
 } from '../../helpers/inventoryPageHelpers/fieldFilter.helper';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DisplayValue } from './DisplayValue';
 import { Pagination } from './Pagination';
-import { NumberInputWithSteppers } from '../NumberInputWithSteppers';
+import { BulkActionEditor } from './BulkActionEditor';
+import { buildBulkFields, type BulkAction } from '../../helpers/adminPageHelpers/bulkEdit.helper';
+import { FilterWorkspace } from './FilterWorkspace';
+import { conditionsToFilters, newFilterCondition as newCondition, type FilterCondition as Condition } from '../../helpers/adminPageHelpers/filterConditions.helper';
+import { FilterConditionEditor } from './FilterConditionEditor';
 
-// Data-import bookkeeping fields, not something an admin filters on.
-const HIDDEN_FILTER_FIELDS: FieldKey[] = [
-	'uretici',
-	'eslesmeTuru',
-	'sorgulananDeger',
-];
-
-// Every field a condition can filter/match on - FIELD_REGISTRY minus the
-// hidden ones above.
-const FILTER_FIELDS = FIELD_KEYS.filter(
-	(key) => !HIDDEN_FILTER_FIELDS.includes(key),
-).map((value) => ({
-	value,
-	label: fieldLabel(value),
-}));
-
-// Only the fields a bulk action is allowed to write - derived from the same
-// FIELD_REGISTRY as EditableField (types.ts) instead of restating the list,
-// so the two can't drift apart.
-const ACTION_FIELDS = EDITABLE_FIELD_KEYS.map((value) => ({
-	value,
-	label: fieldLabel(value),
-}));
-
-// Every operator a condition can use, with its label. Which of these are
-// actually offered for a given condition depends on that condition's field -
-// see opsForField, backed by FIELD_REGISTRY's per-field `kind` and
-// OPS_BY_KIND (a string field like "model" has no use for gte, a number
-// field like "fiyat" has no use for contains).
-const ALL_OPS: { value: FieldFilterOp; label: string; needsValue: boolean }[] =
-	[
-		{ value: 'equals', label: 'Eşittir', needsValue: true },
-		{ value: 'notEquals', label: 'Eşit değildir', needsValue: true },
-		{ value: 'contains', label: 'İçerir', needsValue: true },
-		{
-			value: 'in',
-			label: 'Şunlardan biri (virgülle ayırın)',
-			needsValue: true,
-		},
-		{
-			value: 'notIn',
-			label: 'Şunların hiçbiri değil (virgülle ayırın)',
-			needsValue: true,
-		},
-		{ value: 'gt', label: 'Büyüktür', needsValue: true },
-		{ value: 'gte', label: 'Büyük veya eşittir', needsValue: true },
-		{ value: 'lt', label: 'Küçüktür', needsValue: true },
-		{ value: 'lte', label: 'Küçük veya eşittir', needsValue: true },
-		{ value: 'exists', label: 'Değeri var', needsValue: false },
-		{ value: 'notExists', label: 'Değeri yok', needsValue: false },
-	];
-
-function opsForField(field: string) {
-	const kind = FIELD_REGISTRY[field as FieldKey]?.kind ?? 'string';
-	const allowed = OPS_BY_KIND[kind];
-	return ALL_OPS.filter((o) => allowed.includes(o.value));
-}
-
-type Condition = {
-	id: string;
-	field: string;
-	op: FieldFilterOp;
-	value: string;
-};
-
-let nextConditionId = 0;
-
-function newCondition(): Condition {
-	// Just a React list key, not a security-sensitive id - avoids depending on
-	// crypto.randomUUID, which browsers only expose in a secure context (HTTPS).
-	return {
-		id: `${Date.now()}-${nextConditionId++}`,
-		field: 'bellekTipi',
-		op: 'equals',
-		value: '',
-	};
-}
+const PREVIEW_FIELDS = new Set(['model', 'bellekTipi', 'depolama', 'fiyat', 'paraBirimi']);
 
 // Only conditions with everything they need to actually filter make it into
 // the real FieldFilter list - a half-filled row (op picked, value still
 // blank) is just in-progress typing, not "match nothing".
 function toFieldFilters(conditions: Condition[]): FieldFilter[] {
-	return conditions
-		.filter(
+	return conditionsToFilters(conditions.filter(
 			(c) => c.op === 'exists' || c.op === 'notExists' || c.value.trim() !== '',
-		)
-		.map((c) => ({
-			field: c.field,
-			op: c.op,
-			value:
-				c.op === 'in' || c.op === 'notIn'
-					? c.value
-							.split(',')
-							.map((v) => v.trim())
-							.filter(Boolean)
-					: c.value,
-		}));
+		));
 }
 
 // "Hazır değişiklikler": one click fills the conditions for a bellekTipi +
 // storage size combination and points the action at fiyat, so the admin only
 // has to type the new price - the apply/confirm flow stays the regular one.
-const PRESET_MEMORY_TYPES = ['eMMC', 'eMCP'] as const;
+const PRESET_MEMORY_TYPES = ['eMMC', 'eMCP', 'all'] as const;
 type PresetMemoryType = (typeof PRESET_MEMORY_TYPES)[number];
 
 const PRESET_SIZES = [
@@ -145,7 +55,7 @@ function presetConditions(
 	size: PresetSize,
 ): Condition[] {
 	return [
-		{ ...newCondition(), field: 'bellekTipi', value: memoryType },
+		...(memoryType === 'all' ? [] : [{ ...newCondition(), field: 'bellekTipi' as const, value: memoryType }]),
 		{ ...newCondition(), field: 'depolama', value: String(size.depolama) },
 		{ ...newCondition(), field: 'depolamaBirimi', value: size.birim },
 	];
@@ -188,20 +98,20 @@ function loadHintVisible(): boolean {
 }
 
 type BulkEditPanelProps = {
+	onDelete?: (matched: ItemDto[]) => void | Promise<void>;
 	items: ItemDto[];
 	requireApproval: boolean;
 	enterEnabled: boolean;
 	escapeEnabled: boolean;
 	onApply: (
 		matched: ItemDto[],
-		field: EditableField,
-		newValue: string | number | null,
+		fields: Partial<EditableInventoryItem>,
 	) => void | Promise<void>;
 };
 
 // Rule-based bulk edit: build up filter conditions (field + operator + value,
 // same shape as FieldFilter/FieldFilterOp) to select a set of items, then
-// apply one field change to all of them at once - e.g. every item with
+// apply several field changes to all of them at once - e.g. every item with
 // bellekTipi "EMMC" changed to "UFS" in one step instead of one row at a time.
 export function BulkEditPanel({
 	items,
@@ -209,22 +119,26 @@ export function BulkEditPanel({
 	enterEnabled,
 	escapeEnabled,
 	onApply,
+	onDelete,
 }: BulkEditPanelProps) {
 	// Closed by default - a bulk action touches many rows at once and shouldn't
 	// carry the same visual weight as a single field/row edit.
 	const [isOpen, setIsOpen] = useState(false);
 	const [hintVisible, setHintVisible] = useState(loadHintVisible);
 	const [conditions, setConditions] = useState<Condition[]>([newCondition()]);
-	const [actionField, setActionField] = useState<EditableField>('bellekTipi');
-	const [actionValue, setActionValue] = useState('');
-	const [confirmingBulk, setConfirmingBulk] = useState(false);
+	const [actions, setActions] = useState<BulkAction[]>([{ field: 'bellekTipi', value: '' }]);
+	const [pendingBulk, setPendingBulk] = useState<{ matched: ItemDto[]; fields: Partial<EditableInventoryItem> } | null>(null);
 	const [isApplying, setIsApplying] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const [pendingDelete, setPendingDelete] = useState<ItemDto[] | null>(null);
+	const busy = isApplying || isDeleting;
 	const [error, setError] = useState<string | null>(null);
 	const [presetsOpen, setPresetsOpen] = useState(false);
 	const [presetMemoryType, setPresetMemoryType] =
 		useState<PresetMemoryType>('eMMC');
 	const [previewPage, setPreviewPage] = useState(1);
 	const [previewPageSize, setPreviewPageSize] = useState(20);
+	const [showAllProperties, setShowAllProperties] = useState(false);
 
 	// A new condition set is a new result list - start it from its first page.
 	useEffect(() => {
@@ -246,8 +160,6 @@ export function BulkEditPanel({
 	// falling through to that and selecting every row by default.
 	const matched =
 		readyFilters.length > 0 ? filterRowsByFields(items, readyFilters) : [];
-	const actionLabel =
-		ACTION_FIELDS.find((f) => f.value === actionField)?.label ?? actionField;
 
 	const previewTotalPages = Math.max(
 		1,
@@ -261,40 +173,13 @@ export function BulkEditPanel({
 		currentPreviewPage * previewPageSize,
 	);
 
-	function updateCondition(id: string, patch: Partial<Condition>) {
-		setConditions((prev) =>
-			prev.map((c) => (c.id === id ? { ...c, ...patch } : c)),
-		);
-	}
-
-	// Changing a condition's field can leave it pointing at an operator that
-	// no longer makes sense (e.g. switching from "fiyat" to "model" while "gte"
-	// is selected) - fall back to that field's first allowed operator instead.
-	function updateConditionField(id: string, field: string) {
-		const allowed = opsForField(field);
-		setConditions((prev) =>
-			prev.map((c) =>
-				c.id === id
-					? {
-							...c,
-							field,
-							op: allowed.some((o) => o.value === c.op)
-								? c.op
-								: allowed[0].value,
-							value: '',
-						}
-					: c,
-			),
-		);
-	}
-
 	function applyPreset(memoryType: PresetMemoryType, size: PresetSize) {
 		setConditions(presetConditions(memoryType, size));
-		// Keep a price the admin already typed when hopping between presets.
-		if (actionField !== 'fiyat') {
-			setActionField('fiyat');
-			setActionValue('');
-		}
+		setActions((current) => {
+			if (current.some((action) => action.field === 'fiyat')) return current;
+			if (current.length === 1 && current[0].field === 'bellekTipi' && current[0].value === '') return [{ field: 'fiyat', value: '' }];
+			return [...current, { field: 'fiyat', value: '' }];
+		});
 		setError(null);
 	}
 
@@ -308,78 +193,37 @@ export function BulkEditPanel({
 		if (activePresetSize) applyPreset(memoryType, activePresetSize);
 	}
 
-	const actionFieldMeta = fieldMeta(actionField);
-
-	// NumberInputWithSteppers works in number|'' - `actionValue` itself stays a
-	// string since this same state also backs the plain text/select inputs
-	// above for a string/enum-kind actionField.
-	const numericActionValue: number | '' =
-		actionValue.trim() === '' ? '' : Number(actionValue);
-	function handleNumericActionChange(update: SetStateAction<number | ''>) {
-		setActionValue((prev) => {
-			const prevNumeric: number | '' = prev.trim() === '' ? '' : Number(prev);
-			const next =
-				typeof update === 'function'
-					? (update as (p: number | '') => number | '')(prevNumeric)
-					: update;
-			return next === '' ? '' : String(next);
-		});
-		setError(null);
-	}
-
-	// Raw text input coerced into the shape editableInventoryItemSchema expects
-	// for actionField, before validation - same rule FieldEditModal's
-	// candidateValue uses for a single-field edit.
-	function candidateActionValue(): string | number | null {
-		if (actionFieldMeta.kind === 'number') {
-			const trimmed = actionValue.trim();
-			return trimmed === '' ? null : Number(trimmed);
-		}
-		return actionFieldMeta.kind === 'enum'
-			? actionValue
-			: actionValue.trim() || null;
-	}
-
-	// Bulk-editing a matched set fires one PATCH per row (see Admin.tsx's
-	// commitBulkFieldChange), so it can stay in flight for a while - isApplying
-	// keeps a second click from starting an overlapping batch on the same rows
-	// while the first one is still running.
-	async function applyChange(newValue: string | number | null) {
+	async function applyChange(target: { matched: ItemDto[]; fields: Partial<EditableInventoryItem> }) {
+		if (busy) return;
 		setIsApplying(true);
 		try {
-			await onApply(matched, actionField, newValue);
+			await onApply(target.matched, target.fields);
+		} catch (error) {
+			setError(error instanceof Error ? error.message : 'Güncelleme başarısız');
 		} finally {
 			setIsApplying(false);
 		}
 	}
 
 	function handleApplyClick() {
-		if (matched.length === 0 || isApplying) return;
-		const result = editableInventoryItemSchema.shape[actionField].safeParse(
-			candidateActionValue(),
-		);
-		if (!result.success) {
-			setError(result.error.issues[0].message);
-			return;
-		}
-		setError(null);
-		if (requireApproval) {
-			setConfirmingBulk(true);
-		} else {
-			void applyChange(result.data ?? null);
+		if (matched.length === 0 || busy) return;
+		try {
+			const target = { matched: [...matched], fields: buildBulkFields(actions) };
+			setError(null);
+			if (requireApproval) setPendingBulk(target);
+			else void applyChange(target);
+		} catch (error) {
+			setError(error instanceof Error ? error.message : 'Geçersiz değişiklik');
 		}
 	}
 
-	// The action-value input stays mounted (just visually covered) under the
-	// confirm dialog's overlay, so actionValue could in principle still change
-	// before Onayla is clicked - re-validates with safeParse rather than the
-	// throwing form handleApplyClick already used, falling back to null
-	// instead of crashing the page if it somehow no longer passes.
-	function confirmedActionValue(): string | number | null {
-		const result = editableInventoryItemSchema.shape[actionField].safeParse(
-			candidateActionValue(),
-		);
-		return result.success ? (result.data ?? null) : null;
+	async function deleteMatched(target: ItemDto[]) {
+		if (!onDelete || busy) return;
+		setIsDeleting(true);
+		setError(null);
+		try { await onDelete(target); }
+		catch (error) { setError(error instanceof Error ? error.message : 'Toplu silme başarısız'); }
+		finally { setIsDeleting(false); }
 	}
 
 	return (
@@ -392,7 +236,7 @@ export function BulkEditPanel({
 				<span className='flex items-center gap-2'>
 					Toplu Düzenleme
 					{matched.length > 0 && (
-						<span className='rounded-full bg-button-focus-bg px-2 py-0.5 text-xs font-normal opacity-70'>
+						<span className='rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400'>
 							{matched.length} eşleşen
 						</span>
 					)}
@@ -405,7 +249,13 @@ export function BulkEditPanel({
 			</button>
 
 			{isOpen && (
-				<>
+				<FilterWorkspace
+					conditions={conditions.filter((condition) => condition.op === 'exists' || condition.op === 'notExists' || condition.value.trim() !== '')}
+					onLoad={(saved) => {
+						setConditions(saved.map((condition) => ({ ...newCondition(), ...condition })));
+						setError(null);
+					}}
+				>
 					<div className='flex flex-col gap-1'>
 						<button
 							type='button'
@@ -460,6 +310,7 @@ export function BulkEditPanel({
 						{presetsOpen && (
 							<div className='flex flex-wrap items-center gap-2 rounded-lg bg-button-focus-bg/60 p-2'>
 								<select
+									aria-label='IC türü'
 									value={presetMemoryType}
 									onChange={(e) =>
 										handlePresetMemoryTypeChange(
@@ -470,7 +321,7 @@ export function BulkEditPanel({
 								>
 									{PRESET_MEMORY_TYPES.map((type) => (
 										<option key={type} value={type}>
-											{type}
+											{type === 'all' ? 'Tüm IC türleri' : type}
 										</option>
 									))}
 								</select>
@@ -496,189 +347,71 @@ export function BulkEditPanel({
 						)}
 					</div>
 
-					<div className='flex flex-col gap-2'>
-						{conditions.map((c) => {
-							const opMeta = ALL_OPS.find((o) => o.value === c.op);
-							const valueOptions = fieldMeta(c.field as FieldKey).options;
-							return (
-								<div key={c.id} className='flex flex-col gap-2 min-[426px]:flex-row min-[426px]:flex-wrap min-[426px]:items-center'>
-									<select
-										value={c.field}
-										onChange={(e) => updateConditionField(c.id, e.target.value)}
-										className='rounded-xl bg-button-focus-bg px-2 py-1'
-									>
-										{FILTER_FIELDS.map((f) => (
-											<option key={f.value} value={f.value}>
-												{f.label}
-											</option>
-										))}
-									</select>
-									<select
-										value={c.op}
-										onChange={(e) =>
-											updateCondition(c.id, {
-												op: e.target.value as FieldFilterOp,
-											})
-										}
-										className='rounded-xl bg-button-focus-bg px-2 py-1'
-									>
-										{opsForField(c.field).map((o) => (
-											<option key={o.value} value={o.value}>
-												{o.label}
-											</option>
-										))}
-									</select>
-									{opMeta?.needsValue && valueOptions && (
-										<select
-											value={c.value}
-											onChange={(e) =>
-												updateCondition(c.id, { value: e.target.value })
-											}
-											className='rounded-xl bg-button-focus-bg px-2 py-1'
-										>
-											<option value=''>Seçin</option>
-											{valueOptions.map((opt) => (
-												<option key={opt.value} value={opt.value}>
-													{opt.label}
-												</option>
-											))}
-										</select>
-									)}
-									{opMeta?.needsValue && !valueOptions && (
-										<input
-											type='text'
-											value={c.value}
-											onChange={(e) =>
-												updateCondition(c.id, { value: e.target.value })
-											}
-											placeholder='Değer'
-											className='min-[426px]:field-sizing-content min-[426px]:min-w-32 min-[426px]:max-w-[33rem] rounded-xl bg-button-focus-bg px-2 py-1'
-										/>
-									)}
-									{conditions.length > 1 && (
-										<button
-											type='button'
-											onClick={() =>
-												setConditions((prev) =>
-													prev.filter((cond) => cond.id !== c.id),
-												)
-											}
-											aria-label='Koşulu sil'
-											className='rounded-xl px-2 py-1 hover:bg-button-hover-bg'
-										>
-											×
-										</button>
-									)}
-								</div>
-							);
-						})}
-						<button
-							type='button'
-							onClick={() => setConditions((prev) => [...prev, newCondition()])}
-							className='self-start rounded-xl bg-button-focus-bg px-2 py-1 text-xs font-medium hover:bg-button-hover-bg'
-						>
-							+ Koşul Ekle
-						</button>
-					</div>
-
-					<div className='flex flex-col gap-2 border-t border-border pt-3 min-[426px]:flex-row min-[426px]:flex-wrap min-[426px]:items-center'>
-						<span className='opacity-70'>Değiştir:</span>
-						<select
-							value={actionField}
-							onChange={(e) => {
-								setActionField(e.target.value as EditableField);
-								setActionValue('');
-								setError(null);
-							}}
-							className='rounded-xl bg-button-focus-bg px-2 py-1'
-						>
-							{ACTION_FIELDS.map((f) => (
-								<option key={f.value} value={f.value}>
-									{f.label}
-								</option>
-							))}
-						</select>
-						<span className='opacity-70'>→</span>
-						{actionFieldMeta.options ? (
-							<select
-								value={actionValue}
-								onChange={(e) => setActionValue(e.target.value)}
-								className='rounded-xl bg-button-focus-bg px-2 py-1'
-							>
-								<option value=''>Seçin</option>
-								{actionFieldMeta.options.map((opt) => (
-									<option key={opt.value} value={opt.value}>
-										{opt.label}
-									</option>
-								))}
-							</select>
-						) : actionFieldMeta.kind === 'number' ? (
-							<NumberInputWithSteppers
-								id={`bulk-action-${actionField}`}
-								value={numericActionValue}
-								steppers={actionFieldMeta.stepperValues}
-								className='min-[426px]:w-fit rounded-xl bg-button-focus-bg px-2 py-1'
-								stepperClassName='px-1.5 leading-5 rounded-md'
-								onChange={handleNumericActionChange}
-							/>
-						) : (
-							<input
-								type='text'
-								value={actionValue}
-								onChange={(e) => {
-									setActionValue(e.target.value);
-									setError(null);
-								}}
-								placeholder='Yeni değer'
-								className='min-[426px]:field-sizing-content min-[426px]:min-w-32 min-[426px]:max-w-[33rem] rounded-xl bg-button-focus-bg px-2 py-1'
-							/>
-						)}
+					<FilterConditionEditor conditions={conditions} onChange={setConditions} />
+					<fieldset disabled={busy} className='flex flex-col gap-2 border-t border-border pt-3'>
+						<legend>Değiştirilecek alanlar</legend>
+						<BulkActionEditor actions={actions} onChange={(update) => {
+							setActions(update);
+							setError(null);
+						}} />
 						<button
 							type='button'
 							onClick={handleApplyClick}
-							disabled={matched.length === 0 || isApplying}
-							className='rounded-xl bg-button-focus-bg px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg disabled:opacity-40'
+							disabled={matched.length === 0 || busy}
+							className='self-start rounded-xl bg-button-focus-bg px-3 py-1.5 disabled:opacity-40'
 						>
-							{isApplying
-								? 'Güncelleniyor...'
-								: `Eşleşen ${matched.length} öğeyi güncelle`}
+							{isApplying ? 'Güncelleniyor...' : <>Eşleşen <strong className='text-red-600 dark:text-red-400'>{matched.length}</strong> öğeyi güncelle</>}
 						</button>
-					</div>
-
+					</fieldset>
+					{onDelete && <div className='flex flex-col items-start gap-1 border-t border-border pt-3'>
+						<button
+							type='button'
+							disabled={matched.length === 0 || matched.length > 1000 || busy}
+							onClick={() => { setError(null); setPendingDelete([...matched]); }}
+							className='rounded-xl border border-red-500/50 bg-red-500/10 px-3 py-1.5 font-medium text-red-600 hover:bg-red-500/20 disabled:opacity-40 dark:text-red-400'
+						>
+							{isDeleting ? 'Siliniyor...' : `Eşleşen ${matched.length} öğeyi sil`}
+						</button>
+						{matched.length > 1000 && <p className='text-xs text-amber-700 dark:text-amber-300'>Tek seferde en fazla 1000 öğe silinebilir. Filtrenizi daraltın.</p>}
+					</div>}
 					<div className='flex flex-col gap-1 border-t border-border pt-3'>
-						<span className='opacity-70'>
-							Etkilenecek {matched.length} öğe:
-						</span>
+						<div className='flex flex-wrap items-center justify-between gap-2'>
+							<span>
+								Etkilenecek <strong className='text-red-600 dark:text-red-400'>{matched.length}</strong> öğe:
+							</span>
+							<label className='flex cursor-pointer items-center gap-2 text-xs'>
+								<input type='checkbox' checked={showAllProperties} onChange={(event) => setShowAllProperties(event.target.checked)} />
+								Tüm özellikleri göster
+							</label>
+						</div>
+						{showAllProperties && <p className='text-xs text-amber-700 dark:text-amber-300'>Vurgulanan alanlar değiştirilecek; diğer özellikler mevcut değerlerdir.</p>}
 						{matched.length === 0 ? (
 							<p className='text-xs opacity-50'>Eşleşen öğe yok</p>
 						) : (
-							<ul className='flex max-h-40 flex-col gap-1 overflow-y-auto rounded-xl bg-button-focus-bg p-2 text-xs'>
-								{previewRows.map((row) => {
-									// The unit/currency itself isn't part of this bulk action
-									// (see PAIRED_ENUM_FIELD's own comment), so a row keeps
-									// whatever it already had - shown alongside both the old
-									// and new magnitude so it's clear what unit they're in.
-									const pairedField = PAIRED_ENUM_FIELD[actionField];
-									const unit = pairedField
-										? (row[pairedField as keyof ItemDto] as
-												| string
-												| null
-												| undefined)
-										: null;
-									return (
-										<li key={row._id} className='flex justify-between gap-2'>
-											<span className='truncate'>{row.model}</span>
-											<span className='shrink-0 opacity-60'>
-												<DisplayValue
-													value={row[actionField] as string | number | null}
-												/>
-												{unit ? ` ${unit}` : ''} →{' '}
-												<DisplayValue value={actionValue.trim() || null} />
-												{unit ? ` ${unit}` : ''}
-											</span>
-										</li>
-									);
-								})}
+							<ul aria-label='Etkilenecek öğeler' className='flex max-h-[60dvh] min-h-64 flex-col gap-2 overflow-y-auto rounded-xl bg-button-focus-bg p-2 text-xs'>
+								{previewRows.map((row, index) => (
+									<li key={row._id} className='flex flex-col gap-1 border-b border-border py-1'>
+										<b><span className='mr-2 font-normal opacity-50'>{(currentPreviewPage - 1) * previewPageSize + index + 1}.</span>{row.model}</b>
+										{actions.filter((action) => PREVIEW_FIELDS.has(action.field)).map((action) => {
+											const paired = PAIRED_ENUM_FIELD[action.field];
+											const oldUnit = paired ? row[paired] : null;
+											const newUnit = paired ? actions.find((item) => item.field === paired)?.value ?? oldUnit : null;
+											return (
+												<span key={action.field} className={showAllProperties ? 'rounded bg-amber-500/10 px-2 py-1 font-medium text-amber-700 dark:text-amber-300' : 'opacity-70'}>
+													{fieldLabel(action.field)}: <DisplayValue value={row[action.field] ?? null} />{oldUnit ? ` ${oldUnit}` : ''}
+													{' → '}<DisplayValue value={action.value.trim() || null} />{newUnit ? ` ${newUnit}` : ''}
+												</span>
+											);
+										})}
+										{showAllProperties && Object.entries(row)
+											.filter(([field]) => PREVIEW_FIELDS.has(field) && field !== 'model' && !actions.some((action) => action.field === field))
+											.map(([field, value]) => (
+												<span key={field} className='px-2 py-0.5 opacity-60'>
+													{Object.hasOwn(FIELD_REGISTRY, field) ? fieldLabel(field as FieldKey) : field === 'ram' ? 'RAM' : field === '_id' ? 'Kayıt ID' : field === 'version' ? 'Sürüm' : field}: <DisplayValue value={value ?? null} />
+												</span>
+											))}
+									</li>
+								))}
 							</ul>
 						)}
 						{matched.length > 0 && (
@@ -698,28 +431,40 @@ export function BulkEditPanel({
 
 					{error && <p className='text-red-500'>{error}</p>}
 
-					{confirmingBulk && (
+					{pendingBulk && (
 						<ConfirmDialog
 							title='Toplu değişikliği onayla'
 							message={
-								<>
-									<b>{matched.length}</b> öğenin <b>{actionLabel}</b> alanı{' '}
-									<b>
-										<DisplayValue value={actionValue.trim() || null} />
-									</b>{' '}
-									olarak güncellenecek.
-								</>
+								<div className='flex flex-col gap-1'>
+									<p><strong className='text-red-600 dark:text-red-400'>{pendingBulk.matched.length}</strong> öğe güncellenecek:</p>
+									{Object.entries(pendingBulk.fields).map(([field, value]) => (
+										<p key={field}>{fieldLabel(field as FieldKey)}: <DisplayValue value={value ?? null} /></p>
+									))}
+								</div>
 							}
 							onConfirm={() => {
-								void applyChange(confirmedActionValue());
-								setConfirmingBulk(false);
+								void applyChange(pendingBulk);
+								setPendingBulk(null);
 							}}
-							onCancel={() => setConfirmingBulk(false)}
+							onCancel={() => setPendingBulk(null)}
 							enterEnabled={enterEnabled}
 							escapeEnabled={escapeEnabled}
 						/>
 					)}
-				</>
+					{pendingDelete && <ConfirmDialog
+						danger
+						title='Toplu silmeyi onayla'
+						confirmLabel='Öğeleri sil'
+						message={<div className='flex flex-col gap-2'>
+							<p><strong className='text-red-600 dark:text-red-400'>{pendingDelete.length}</strong> öğe silinecek ve listeden kaldırılacak.</p>
+							<ul className='max-h-40 overflow-y-auto text-xs'>{pendingDelete.map((item, index) => <li key={item._id}>{index + 1}. {item.model}</li>)}</ul>
+						</div>}
+						onConfirm={() => { void deleteMatched(pendingDelete); setPendingDelete(null); }}
+						onCancel={() => setPendingDelete(null)}
+						enterEnabled={enterEnabled}
+						escapeEnabled={escapeEnabled}
+					/>}
+				</FilterWorkspace>
 			)}
 		</div>
 	);

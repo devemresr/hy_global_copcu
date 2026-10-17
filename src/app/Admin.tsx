@@ -14,6 +14,8 @@ import { ItemEditModal } from './component/admin/ItemEditModal';
 import { ConfirmDialog } from './component/admin/ConfirmDialog';
 // import { AdminFieldCell } from './component/admin/AdminFieldCell';
 import { BulkEditPanel } from './component/admin/BulkEditPanel';
+import { ItemRulesPanel } from './component/admin/ItemRulesPanel';
+import { useItemRules } from './hooks/useItemRules';
 import { useLogout } from './hooks/api/endpoints/useAuth';
 import { LogEventsSection } from './component/admin/LogEventsSection';
 import { MaintenanceSection } from './component/admin/MaintenanceSection';
@@ -25,13 +27,14 @@ import {
 	// useUpdateAnyItem,
 	useDeleteAnyItem,
 	useBulkUpdateItems,
+	useBulkDeleteItems,
 } from './hooks/api/endpoints/useItems';
 import type { ItemDto } from './hooks/api/endpoints/useItems';
 // import { isFieldNullable } from './constants/fieldRegistry.constant';
 import { FIELD_NAMES } from './constants/columnDefinitons.constant';
 import { CURRENCY_OPTIONS } from './constants/currency.constant';
 import { STORAGE_UNIT_OPTIONS } from './constants/storageUnit.constant';
-import type { EditableField, EditableInventoryItem } from './types';
+import type { EditableInventoryItem } from './types';
 
 // A stable reference, so ItemEditModal's item-changed effect (which resets
 // its form state) doesn't fire on every AdminPage re-render while the create
@@ -122,6 +125,7 @@ function AdminPage() {
 
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [isCreatingItem, setIsCreatingItem] = useState(false);
+	const { rules: itemRules, saveRules, isLoading: rulesLoading, isSaving: rulesSaving, error: rulesError, refetch: refetchRules, legacyRules, importLegacyRules } = useItemRules();
 	const queryClient = useQueryClient();
 	const logout = useLogout();
 
@@ -149,6 +153,7 @@ function AdminPage() {
 	// const updateAnyItemMutation = useUpdateAnyItem();
 	const deleteAnyItemMutation = useDeleteAnyItem();
 	const bulkUpdateItemsMutation = useBulkUpdateItems();
+	const bulkDeleteItemsMutation = useBulkDeleteItems();
 	// const [fieldEditTarget, setFieldEditTarget] = useState<{
 	// 	row: ItemDto;
 	// 	field: EditableField;
@@ -192,18 +197,17 @@ function AdminPage() {
 	// 	);
 	// }
 
-	// One PATCH /items/bulk request setting `field` on every matched row's id,
+	// One PATCH /items/bulk request setting all chosen fields on each matched row,
 	// instead of firing one PATCH per row - the server does it as a single
 	// updateMany (see items.controller.ts's bulkUpdateItems).
 	async function commitBulkFieldChange(
 		matched: ItemDto[],
-		field: EditableField,
-		newValue: string | number | null,
+		fields: Partial<EditableInventoryItem>,
 	) {
 		try {
 			const result = await bulkUpdateItemsMutation.mutateAsync({
 				ids: matched.map((row) => row._id),
-				fields: { [field]: newValue } as Partial<EditableInventoryItem>,
+				fields,
 			});
 			invalidateAfterMutation();
 
@@ -219,6 +223,20 @@ function AdminPage() {
 			toast.error('Toplu güncelleme başarısız', {
 				description: (error as ApiError).message,
 			});
+		}
+	}
+
+	async function commitBulkDelete(matched: ItemDto[]) {
+		try {
+			const result = await bulkDeleteItemsMutation.mutateAsync({ ids: matched.map((row) => row._id) });
+			invalidateAfterMutation();
+			const skipped = matched.length - result.deletedCount;
+			if (skipped > 0) toast.warning(`${result.deletedCount} öğe silindi, ${skipped} öğe artık mevcut değil`);
+			else toast.success(`${result.deletedCount} öğe silindi`);
+		} catch (error) {
+			invalidateAfterMutation();
+			toast.error('Toplu silme başarısız', { description: (error as ApiError).message });
+			throw error;
 		}
 	}
 
@@ -381,6 +399,7 @@ function AdminPage() {
 			<button
 				type='button'
 				onClick={() => setIsCreatingItem(true)}
+				disabled={rulesLoading || Boolean(rulesError) || rulesSaving}
 				className='mb-3 rounded-xl bg-button-focus-bg px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
 			>
 				+ Yeni Ürün Ekle
@@ -392,7 +411,12 @@ function AdminPage() {
 				enterEnabled={enterToConfirm}
 				escapeEnabled={escapeToCancel}
 				onApply={commitBulkFieldChange}
+				onDelete={commitBulkDelete}
 			/>
+			{rulesLoading && <p className='mb-3 text-sm opacity-70'>Kurallar yükleniyor...</p>}
+			{rulesError && <div className='mb-3 text-sm text-red-600 dark:text-red-400'>Kurallar yüklenemedi: {rulesError.message} <button type='button' className='underline' onClick={() => void refetchRules()}>Tekrar dene</button></div>}
+			{legacyRules.length > 0 && <button type='button' disabled={rulesLoading || Boolean(rulesError) || rulesSaving} className='mb-3 rounded-xl bg-button-focus-bg px-3 py-1.5 text-sm disabled:opacity-40' onClick={() => void importLegacyRules().catch(() => {})}>Bu tarayıcıdaki {legacyRules.length} kuralı sunucuya aktar</button>}
+			<ItemRulesPanel rules={itemRules} onChange={saveRules} disabled={rulesLoading || Boolean(rulesError) || rulesSaving} />
 
 			<div className='mb-3 flex flex-col gap-1 rounded-xl bg-button-bg p-3 text-sm'>
 				<span className='font-medium'>Alan düzenleme ayarları</span>
@@ -446,10 +470,11 @@ function AdminPage() {
 			{isCreatingItem && (
 				<ItemEditModal
 					mode='create'
+					rules={itemRules}
 					item={EMPTY_ITEM}
 					onClose={() => setIsCreatingItem(false)}
 					onSave={handleCreateItem}
-					isSaving={createItemMutation.isPending}
+					isSaving={createItemMutation.isPending || rulesLoading || Boolean(rulesError) || rulesSaving}
 					enterEnabled={enterToConfirm}
 					escapeEnabled={escapeToCancel}
 				/>

@@ -177,6 +177,17 @@ export type BulkUpdateItemsResponse = {
 	modifiedCount: number;
 };
 
+export type BulkDeleteItemsResponse = { success: boolean; matchedCount: number; deletedCount: number };
+
+export function useBulkDeleteItems() {
+	return useMutation<BulkDeleteItemsResponse, ApiError, { ids: string[] }>({
+		mutationFn: ({ ids }) => apiFetch<BulkDeleteItemsResponse>(ITEM_ROUTES.BULK_DELETE, {
+			method: 'DELETE',
+			body: { ids },
+		}),
+	});
+}
+
 // One request setting the same fields on every id, instead of BulkEditPanel's
 // old N-requests-via-Promise.allSettled approach - the server does it as a
 // single updateMany.

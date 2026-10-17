@@ -24,8 +24,11 @@ export const ITEM_ROUTES = {
 	LIST: `${API_BASE_PATHS.ITEMS}`,
 	UPDATE: (id: string) => `${API_BASE_PATHS.ITEMS}/${id}`,
 	BULK_UPDATE: `${API_BASE_PATHS.ITEMS}/bulk`,
+	BULK_DELETE: `${API_BASE_PATHS.ITEMS}/bulk`,
 	CHANGES: `${API_BASE_PATHS.ITEMS}/changes`,
 } as const;
+
+export const ITEM_RULE_ROUTES = { LIST: '/item-rules', SAVE: '/item-rules' } as const;
 
 export const LOG_EVENT_ROUTES = {
 	LIST: `${API_BASE_PATHS.LOG_EVENTS}`,

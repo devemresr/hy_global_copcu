@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useModalHotkeys } from '../../hooks/useModalHotkeys';
 
 type ConfirmDialogProps = {
+	danger?: boolean;
 	title: string;
 	message: ReactNode;
 	confirmLabel?: string;
@@ -16,6 +17,7 @@ type ConfirmDialogProps = {
 };
 
 export function ConfirmDialog({
+	danger = false,
 	title,
 	message,
 	confirmLabel = 'Onayla',
@@ -49,7 +51,7 @@ export function ConfirmDialog({
 					<button
 						type='button'
 						onClick={onConfirm}
-						className='rounded-xl bg-button-focus-bg px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
+						className={`rounded-xl px-3 py-1.5 text-sm font-medium ${danger ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-button-focus-bg hover:bg-button-hover-bg'}`}
 					>
 						{confirmLabel}
 					</button>

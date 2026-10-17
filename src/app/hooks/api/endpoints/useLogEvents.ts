@@ -8,7 +8,7 @@ export type LogEventFieldChange = {
 	newValue: string | number | boolean | null;
 };
 
-export type LogEntityType = 'item' | 'site_maintenance' | 'site_notice';
+export type LogEntityType = 'item' | 'item_rule' | 'site_maintenance' | 'site_notice';
 
 // Items and site settings write to the same log_events collection server
 // side (see the server's LogEvent model), so field names here aren't limited

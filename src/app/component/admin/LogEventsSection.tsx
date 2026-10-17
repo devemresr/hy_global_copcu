@@ -25,6 +25,9 @@ import { Pagination } from './Pagination';
 // LogEvent model comment), so this covers both action sets rather than
 // assuming every entry is an item edit.
 const ACTION_LABELS: Record<string, string> = {
+	'items:add_rule': 'Kural oluşturuldu',
+	'items:edit_rule': 'Kural güncellendi',
+	'items:delete_rule': 'Kural silindi',
 	'items:create': 'Ürün oluşturuldu',
 	'items:update': 'Ürün güncellendi',
 	'items:delete': 'Ürün silindi',
@@ -37,6 +40,9 @@ const ACTION_LABELS: Record<string, string> = {
 type ActionKind = 'create' | 'update' | 'delete' | 'maintenance' | 'notice';
 
 const ACTION_KIND: Record<string, ActionKind> = {
+	'items:add_rule': 'create',
+	'items:edit_rule': 'update',
+	'items:delete_rule': 'delete',
 	'items:create': 'create',
 	'items:update': 'update',
 	'items:delete': 'delete',
@@ -137,6 +143,7 @@ function actionLabel(event: LogEventDto): string {
 }
 
 const LOG_FILTERS: { types: LogEntityType[]; label: string }[] = [
+	{ types: ['item_rule'], label: 'Kurallar' },
 	{ types: ['item'], label: 'Ürünler' },
 	{ types: ['site_maintenance'], label: 'Bakım modu' },
 	{ types: ['site_notice'], label: 'Duyuru' },
