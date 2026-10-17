@@ -8,6 +8,7 @@ import {
 	ChevronRight,
 	Wrench,
 	Megaphone,
+	CaseSensitive,
 	type LucideIcon,
 } from 'lucide-react';
 import {
@@ -374,7 +375,11 @@ function BulkGroupCard({
 								/>
 								<span className='opacity-50'>→</span>
 								<DisplayValue
-									value={formatValue(e, e.fields[0].field, e.fields[0].newValue)}
+									value={formatValue(
+										e,
+										e.fields[0].field,
+										e.fields[0].newValue,
+									)}
 								/>
 							</li>
 						),
@@ -389,6 +394,9 @@ function BulkGroupCard({
 }
 
 export function LogEventsSection() {
+	const [modelDraft, setModelDraft] = useState('');
+	const [modelSearch, setModelSearch] = useState('');
+	const [caseSensitive, setCaseSensitive] = useState(false);
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(20);
 	// Which bulk groups (keyed by their first event's id) are expanded -
@@ -402,6 +410,8 @@ export function LogEventsSection() {
 		page,
 		pageSize,
 		types,
+		modelSearch,
+		caseSensitive,
 	);
 	const events = data?.events ?? [];
 	const totalPages = data?.totalPages ?? 1;
@@ -440,6 +450,49 @@ export function LogEventsSection() {
 	return (
 		<>
 			<h2 className='text-lg font-semibold mt-8 mb-2'>Değişiklik Geçmişi</h2>
+			<form
+				className='mb-3 flex flex-wrap items-center gap-2 text-sm'
+				onSubmit={(event) => {
+					event.preventDefault();
+					setModelSearch(modelDraft.trim());
+					setPage(1);
+					setExpandedGroups(new Set());
+				}}
+			>
+				<label className='flex flex-col gap-1'>
+					<span className='text-xs opacity-70'>Tam model adı</span>
+					<div className='flex gap-2'>
+						<input
+							type='search'
+							maxLength={500}
+							value={modelDraft}
+							onChange={(event) => setModelDraft(event.target.value)}
+							placeholder='Örn. KMQE6006M'
+							className='rounded-xl bg-button-bg px-3 py-1.5 outline-none'
+						/>
+						<button
+							type='button'
+							aria-label='Büyük/küçük harfe duyarlı'
+							title='Büyük/küçük harfe duyarlı'
+							aria-pressed={caseSensitive}
+							onClick={() => {
+								setCaseSensitive((value) => !value);
+								setPage(1);
+								setExpandedGroups(new Set());
+							}}
+							className={`rounded-xl p-2 ${caseSensitive ? 'bg-text text-bg' : 'bg-button-bg hover:bg-button-hover-bg'}`}
+						>
+							<CaseSensitive size={16} aria-hidden='true' />
+						</button>
+						<button
+							type='submit'
+							className='rounded-xl bg-button-bg px-3 py-1.5'
+						>
+							Ara
+						</button>
+					</div>
+				</label>
+			</form>
 
 			<div
 				className='mb-3 flex flex-wrap gap-2'

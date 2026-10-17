@@ -45,12 +45,14 @@ export function useGetLogEvents(
 	page: number,
 	pageSize: number,
 	types: LogEntityType[] = [],
+	model = '',
+	caseSensitive = false,
 ) {
 	const typesParam = [...types].sort().join(',');
 	return useApiQuery<LogEventsResponse>({
 		url: LOG_EVENT_ROUTES.LIST,
-		queryKey: ['logEvents', page, pageSize, typesParam],
-		params: { page, pageSize, ...(typesParam && { types: typesParam }) },
+		queryKey: ['logEvents', page, pageSize, typesParam, model, caseSensitive],
+		params: { page, pageSize, ...(typesParam && { types: typesParam }), ...(model && { model, caseSensitive }) },
 		// Keeps the current page's rows on screen while the next page loads,
 		// instead of the list flashing empty/loading on every page change.
 		queryOptions: { placeholderData: keepPreviousData },
