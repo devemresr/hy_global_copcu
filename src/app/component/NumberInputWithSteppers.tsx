@@ -22,6 +22,7 @@ const DEFAULT_STEPPERS: Steppers = [
 // input can match whatever controls sit next to it. Layout and the stepper
 // buttons' colors stay fixed in here.
 type Props = {
+	ariaLabel?: string;
 	storage?: boolean;
 	disabled?: boolean;
 	describedBy?: string;
@@ -51,6 +52,7 @@ export function NumberInputWithSteppers({ storage, ...props }: Props) {
 }
 
 function AdditiveNumberInput({
+	ariaLabel,
 	disabled = false,
 	describedBy,
 	value,
@@ -104,7 +106,7 @@ function AdditiveNumberInput({
 				return Math.max(0, Number(raw));
 			});
 		},
-		[value, onChange],
+		[onChange],
 	);
 
 	const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -120,6 +122,7 @@ function AdditiveNumberInput({
 	return (
 		<div className={`flex items-center justify-between gap-2 ${className}`}>
 			<input
+				aria-label={ariaLabel}
 				disabled={disabled}
 				aria-describedby={describedBy}
 				className='field-sizing-content min-w-10 bg-transparent outline-none [appearance:textfield]'

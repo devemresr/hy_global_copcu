@@ -6,6 +6,8 @@ import { BulkActionEditor } from '../app/component/admin/BulkActionEditor';
 import { BulkEditPanel } from '../app/component/admin/BulkEditPanel';
 import type { BulkAction } from '../app/helpers/adminPageHelpers/bulkEdit.helper';
 import { buildBulkFields } from '../app/helpers/adminPageHelpers/bulkEdit.helper';
+import { FilterConditionEditor } from '../app/component/admin/FilterConditionEditor';
+import type { FilterCondition } from '../app/helpers/adminPageHelpers/filterConditions.helper';
 
 describe('bulk changes', () => {
 	it('validates and preserves all selected fields, including units', () => {
@@ -45,6 +47,27 @@ function mount(initial: number | '') {
 	}
 	act(() => root!.render(createElement(Harness)));
 }
+
+describe('filter cross buttons', () => {
+	it('removes one row and clears the last remaining condition', () => {
+		container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
+		function Harness() {
+			const [conditions, onChange] = useState<FilterCondition[]>([
+				{ id: 'first', field: 'model', op: 'contains', value: 'PA' },
+				{ id: 'second', field: 'fiyat', op: 'exists', value: '' },
+			]);
+			return createElement(FilterConditionEditor, { conditions, onChange });
+		}
+		act(() => root!.render(createElement(Harness)));
+		expect(container.querySelectorAll('button[aria-label="Koşulu sil"]')).toHaveLength(2);
+		act(() => container.querySelector<HTMLButtonElement>('button[aria-label="Koşulu sil"]')!.click());
+		expect(container.querySelectorAll('button[aria-label="Koşulu sil"]')).toHaveLength(1);
+		expect(container.querySelector<HTMLSelectElement>('select[aria-label="Koşul alanı"]')!.value).toBe('fiyat');
+		act(() => container.querySelector<HTMLButtonElement>('button[aria-label="Koşulu sil"]')!.click());
+		expect(container.querySelector<HTMLSelectElement>('select[aria-label="Koşul işleci"]')!.value).toBe('equals');
+		expect(container.querySelector<HTMLInputElement>('input[aria-label="Koşul değeri"]')!.value).toBe('');
+	});
+});
 function click(title: string) {
 	act(() => container.querySelector<HTMLButtonElement>(`button[title="${title}"]`)!.click());
 }

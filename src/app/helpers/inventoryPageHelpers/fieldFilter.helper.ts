@@ -26,6 +26,7 @@ export type FieldFilterOp =
 	| 'notIn'
 	/** The field's value contains `value` as a substring (case-insensitive). */
 	| 'contains'
+	| 'notContains'
 	| 'lengthEquals'
 	| 'lengthGt'
 	| 'lengthGte'
@@ -123,12 +124,15 @@ export function matchesFieldFilter(
 			return filter.op === 'in' ? isMember : !isMember;
 		}
 		case 'contains':
-			return (
+		case 'notContains': {
+			const contains = (
 				hasValue &&
 				String(row[filter.field])
 					.toLowerCase()
 					.includes(String(filter.value).toLowerCase())
 			);
+			return filter.op === 'contains' ? contains : !contains;
+		}
 		case 'gt':
 		case 'gte':
 		case 'lt':

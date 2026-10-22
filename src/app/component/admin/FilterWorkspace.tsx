@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Bookmark, Copy, ClipboardPaste, X } from 'lucide-react';
+import { Bookmark, Copy, ClipboardPaste } from 'lucide-react';
+import { CrossButton } from '../CrossButton';
 import { useWindowSize } from '../../hooks/useWindowSize';
 import {
 	BOOKMARKS_KEY, parseSharedFilter, readFilterBookmarks, serializeFilter,
@@ -17,7 +18,7 @@ function FilterDialog({ title, onClose, children }: { title: string; onClose: ()
 		<dialog ref={dialogRef} aria-label={title} onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }} className='fixed inset-0 m-auto max-h-[85dvh] w-[calc(100%_-_2rem)] max-w-md overflow-y-auto rounded-xl bg-modal-bg p-4 text-text backdrop:bg-black/50'>
 			<div className='mb-3 flex items-center justify-between gap-2'>
 				<h3 className='font-semibold'>{title}</h3>
-				<button type='button' aria-label='Kapat' onClick={onClose}><X size={18} /></button>
+				<CrossButton label='Kapat' onClick={onClose} />
 			</div>
 			{children}
 		</dialog>
@@ -86,7 +87,7 @@ export function FilterWorkspace({ conditions, onLoad, children }: {
 				{bookmarks.map((bookmark) => (
 					<li key={bookmark.id} className='flex items-center justify-between gap-2 rounded-lg bg-button-focus-bg p-2'>
 						<button type='button' className='min-w-0 flex-1 break-words text-left text-xs' onClick={() => { onLoad(bookmark.conditions); setMessage(`${bookmark.name} filtresi yüklendi.`); setBookmarksOpen(false); }}>{bookmark.name}</button>
-						<button type='button' aria-label={`${bookmark.name} yer imini sil`} onClick={() => persist(bookmarks.filter((item) => item.id !== bookmark.id))}><X size={14} /></button>
+						<CrossButton label={`${bookmark.name} yer imini sil`} onClick={() => persist(bookmarks.filter((item) => item.id !== bookmark.id))} />
 					</li>
 				))}
 			</ul>
@@ -107,7 +108,7 @@ export function FilterWorkspace({ conditions, onLoad, children }: {
 			</div>
 			{bookmarksOpen && (desktop ? (
 				<aside aria-label='Filtre yer imleri' className='self-start rounded-xl border border-border p-3'>
-					<div className='mb-3 flex items-center justify-between'><h3 className='font-semibold'>Filtre yer imleri</h3><button type='button' aria-label='Yer imlerini kapat' onClick={() => setBookmarksOpen(false)}><X size={16} /></button></div>
+					<div className='mb-3 flex items-center justify-between'><h3 className='font-semibold'>Filtre yer imleri</h3><CrossButton label='Yer imlerini kapat' onClick={() => setBookmarksOpen(false)} /></div>
 					{bookmarkContent}
 				</aside>
 			) : <FilterDialog title='Filtre yer imleri' onClose={() => setBookmarksOpen(false)}>{bookmarkContent}</FilterDialog>)}

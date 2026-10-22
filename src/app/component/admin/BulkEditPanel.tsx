@@ -20,6 +20,8 @@ import { buildBulkFields, type BulkAction } from '../../helpers/adminPageHelpers
 import { FilterWorkspace } from './FilterWorkspace';
 import { conditionsToFilters, newFilterCondition as newCondition, type FilterCondition as Condition } from '../../helpers/adminPageHelpers/filterConditions.helper';
 import { FilterConditionEditor } from './FilterConditionEditor';
+import type { ItemRule } from '../../helpers/adminPageHelpers/itemRules.helper';
+import { ResolvedBulkChanges } from './ResolvedBulkChanges';
 
 const PREVIEW_FIELDS = new Set(['model', 'bellekTipi', 'depolama', 'fiyat', 'paraBirimi']);
 
@@ -98,6 +100,8 @@ function loadHintVisible(): boolean {
 }
 
 type BulkEditPanelProps = {
+	rules?: readonly ItemRule[];
+	disabled?: boolean;
 	onDelete?: (matched: ItemDto[]) => void | Promise<void>;
 	items: ItemDto[];
 	requireApproval: boolean;
@@ -106,7 +110,7 @@ type BulkEditPanelProps = {
 	onApply: (
 		matched: ItemDto[],
 		fields: Partial<EditableInventoryItem>,
-	) => void | Promise<void>;
+	) => void | number | Promise<void | number>;
 };
 
 // Rule-based bulk edit: build up filter conditions (field + operator + value,
@@ -114,6 +118,8 @@ type BulkEditPanelProps = {
 // apply several field changes to all of them at once - e.g. every item with
 // bellekTipi "EMMC" changed to "UFS" in one step instead of one row at a time.
 export function BulkEditPanel({
+	rules = [],
+	disabled = false,
 	items,
 	requireApproval,
 	enterEnabled,
@@ -130,13 +136,14 @@ export function BulkEditPanel({
 	function setConditions(update: SetStateAction<Condition[]>) {
 		setConditionState(update);
 		setExcludedIds(new Set());
+		setPreviewPage(1);
 	}
 	const [actions, setActions] = useState<BulkAction[]>([{ field: 'bellekTipi', value: '' }]);
 	const [pendingBulk, setPendingBulk] = useState<{ matched: ItemDto[]; fields: Partial<EditableInventoryItem> } | null>(null);
 	const [isApplying, setIsApplying] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [pendingDelete, setPendingDelete] = useState<ItemDto[] | null>(null);
-	const busy = isApplying || isDeleting;
+	const busy = isApplying || isDeleting || disabled;
 	const [error, setError] = useState<string | null>(null);
 	const [presetsOpen, setPresetsOpen] = useState(false);
 	const [presetMemoryType, setPresetMemoryType] =
@@ -144,11 +151,6 @@ export function BulkEditPanel({
 	const [previewPage, setPreviewPage] = useState(1);
 	const [previewPageSize, setPreviewPageSize] = useState(20);
 	const [showAllProperties, setShowAllProperties] = useState(false);
-
-	// A new condition set is a new result list - start it from its first page.
-	useEffect(() => {
-		setPreviewPage(1);
-	}, [conditions]);
 
 	useEffect(() => {
 		try {
@@ -166,6 +168,8 @@ export function BulkEditPanel({
 	const matched =
 		readyFilters.length > 0 ? filterRowsByFields(items, readyFilters) : [];
 	const selected = matched.filter((item) => !excludedIds.has(item._id));
+	let previewFields: Partial<EditableInventoryItem> | null = null;
+	try { previewFields = buildBulkFields(actions); } catch { /* Incomplete action. */ }
 	function toggleItem(id: string, checked: boolean) {
 		setExcludedIds((current) => {
 			const next = new Set(current);
@@ -212,6 +216,7 @@ export function BulkEditPanel({
 		try {
 			await onApply(target.matched, target.fields);
 		} catch (error) {
+			if (error instanceof DOMException && error.name === 'AbortError') return;
 			setError(error instanceof Error ? error.message : 'Güncelleme başarısız');
 		} finally {
 			setIsApplying(false);
@@ -413,7 +418,7 @@ export function BulkEditPanel({
 											<input type='checkbox' aria-label={`${row.model} seç`} disabled={busy} checked={!excludedIds.has(row._id)} onChange={(event) => toggleItem(row._id, event.target.checked)} />
 											<b><span className='mr-2 font-normal opacity-50'>{(currentPreviewPage - 1) * previewPageSize + index + 1}.</span>{row.model}</b>
 										</span>
-										{actions.filter((action) => PREVIEW_FIELDS.has(action.field)).map((action) => {
+										{previewFields ? <ResolvedBulkChanges item={row} fields={previewFields} rules={rules} highlighted={showAllProperties} /> : actions.filter((action) => PREVIEW_FIELDS.has(action.field)).map((action) => {
 											const paired = PAIRED_ENUM_FIELD[action.field];
 											const oldUnit = paired ? row[paired] : null;
 											const newUnit = paired ? actions.find((item) => item.field === paired)?.value ?? oldUnit : null;
@@ -459,9 +464,7 @@ export function BulkEditPanel({
 							message={
 								<div className='flex flex-col gap-1'>
 									<p><strong className='text-red-600 dark:text-red-400'>{pendingBulk.matched.length}</strong> öğe güncellenecek:</p>
-									{Object.entries(pendingBulk.fields).map(([field, value]) => (
-										<p key={field}>{fieldLabel(field as FieldKey)}: <DisplayValue value={value ?? null} /></p>
-									))}
+									<div className='max-h-72 overflow-y-auto'>{pendingBulk.matched.map((item) => <div key={item._id} className='mb-2'><b>{item.model}</b><ResolvedBulkChanges item={item} fields={pendingBulk.fields} rules={rules} /></div>)}</div>
 								</div>
 							}
 							onConfirm={() => {

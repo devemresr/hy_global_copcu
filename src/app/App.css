@@ -42,6 +42,31 @@ html {
 	background-color: var(--color-bg);
 }
 
+/* Keep single-choice dropdown arrows inset consistently across every page. */
+select:not([multiple]):not([size]),
+select:not([multiple])[size='1'] {
+	appearance: none;
+	padding-inline-end: 2.25rem;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+	background-position: right 0.625rem center;
+	background-repeat: no-repeat;
+	background-size: 1rem;
+}
+
+.dark select:not([multiple]):not([size]),
+.dark select:not([multiple])[size='1'] {
+	color-scheme: dark;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+@media (forced-colors: active) {
+	select:not([multiple]):not([size]),
+	select:not([multiple])[size='1'] {
+		appearance: auto;
+		background-image: none;
+	}
+}
+
 @keyframes float1 {
 	0% {
 		transform: translate(0px, 0px) scale(1);

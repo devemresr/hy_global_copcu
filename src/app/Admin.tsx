@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ComponentType } from 'react';
+import type { HighlightCellProps } from './component/HighlightCellRenderer';
 // import {  type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -14,8 +15,11 @@ import { ItemEditModal } from './component/admin/ItemEditModal';
 import { ConfirmDialog } from './component/admin/ConfirmDialog';
 // import { AdminFieldCell } from './component/admin/AdminFieldCell';
 import { BulkEditPanel } from './component/admin/BulkEditPanel';
+import { SideBySideEditor } from './component/admin/SideBySideEditor';
 import { ItemRulesPanel } from './component/admin/ItemRulesPanel';
 import { useItemRules } from './hooks/useItemRules';
+import { useBulkRuleApproval } from './hooks/useBulkRuleApproval';
+import { findBulkRuleConflicts } from './helpers/adminPageHelpers/itemRules.helper';
 import { useLogout } from './hooks/api/endpoints/useAuth';
 import { LogEventsSection } from './component/admin/LogEventsSection';
 import { MaintenanceSection } from './component/admin/MaintenanceSection';
@@ -72,12 +76,17 @@ function toEditable(record: ItemDto): EditableInventoryItem {
 
 // Replaces the Model column's renderer in the admin grid: the column's
 // original display (search highlighting) plus whole-row edit/delete icons.
-function ModelActionsCell(props: any) {
+function ModelActionsCell(props: Omit<HighlightCellProps, 'data'> & {
+	data: ItemDto & NonNullable<HighlightCellProps['data']>;
+	displayRenderer?: ComponentType<HighlightCellProps>;
+	onEdit: (id: string) => void;
+	onDelete: (item: ItemDto) => void;
+}) {
 	const { value, data, displayRenderer: Display, onEdit, onDelete } = props;
 	return (
 		<div className='flex h-full w-full items-center justify-between gap-1'>
 			<span className='truncate min-w-0'>
-				{Display ? <Display {...props} /> : value}
+				{Display ? <Display {...props} /> : String(value ?? '')}
 			</span>
 			<span className='flex shrink-0 gap-1'>
 				<button
@@ -125,7 +134,7 @@ function AdminPage() {
 
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [isCreatingItem, setIsCreatingItem] = useState(false);
-	const { rules: itemRules, saveRules, isLoading: rulesLoading, isSaving: rulesSaving, error: rulesError, refetch: refetchRules, legacyRules, importLegacyRules } = useItemRules();
+	const { rules: itemRules, revision: rulesRevision, saveRules, isLoading: rulesLoading, isSaving: rulesSaving, error: rulesError, refetch: refetchRules, legacyRules, importLegacyRules } = useItemRules();
 	const queryClient = useQueryClient();
 	const logout = useLogout();
 
@@ -150,6 +159,7 @@ function AdminPage() {
 		setEnterToConfirm,
 		setEscapeToCancel,
 	} = useAdminEditSettings();
+	const ruleApproval = useBulkRuleApproval(escapeToCancel);
 	// const updateAnyItemMutation = useUpdateAnyItem();
 	const deleteAnyItemMutation = useDeleteAnyItem();
 	const bulkUpdateItemsMutation = useBulkUpdateItems();
@@ -171,8 +181,10 @@ function AdminPage() {
 	// mutation here just needs to invalidate 'logEvents' alongside 'items' -
 	// no client-built log entry to construct or keep in sync with the server's.
 	function invalidateAfterMutation() {
-		queryClient.invalidateQueries({ queryKey: ['items'] });
-		queryClient.invalidateQueries({ queryKey: ['logEvents'] });
+		return Promise.all([
+			queryClient.invalidateQueries({ queryKey: ['items'] }),
+			queryClient.invalidateQueries({ queryKey: ['logEvents'] }),
+		]);
 	}
 
 	// `fields` can carry more than one key - depolama/fiyat edits also carry
@@ -197,21 +209,36 @@ function AdminPage() {
 	// 	);
 	// }
 
-	// One PATCH /items/bulk request setting all chosen fields on each matched row,
-	// instead of firing one PATCH per row - the server does it as a single
-	// updateMany (see items.controller.ts's bulkUpdateItems).
+	// Rule conflicts require their own approval even when ordinary confirmations are off.
 	async function commitBulkFieldChange(
 		matched: ItemDto[],
 		fields: Partial<EditableInventoryItem>,
 	) {
+		const conflictingItems = matched.map((item) => ({ item, conflicts: findBulkRuleConflicts(item, fields, itemRules) })).filter((entry) => entry.conflicts.length > 0);
+		const conflicts = conflictingItems.flatMap((entry) => entry.conflicts);
+		let targets = matched;
+		let ruleOverrideRevision: number | undefined;
+		if (conflicts.length > 0) {
+			const decision = await ruleApproval.requestApproval(conflicts);
+			if (decision === 'cancel') throw new DOMException('Değişiklik iptal edildi.', 'AbortError');
+			if (decision === 'exclude') {
+				const excludedIds = new Set(conflictingItems.map(({ item }) => item._id));
+				targets = matched.filter((item) => !excludedIds.has(item._id));
+				if (targets.length === 0) {
+					toast.info('Tüm seçili ürünler kuralla çeliştiği için atlandı. Hiçbir ürün değiştirilmedi.');
+					return 0;
+				}
+			} else ruleOverrideRevision = rulesRevision;
+		}
 		try {
 			const result = await bulkUpdateItemsMutation.mutateAsync({
-				ids: matched.map((row) => row._id),
+				ids: targets.map((row) => row._id),
 				fields,
+				ruleOverrideRevision,
 			});
-			invalidateAfterMutation();
+			await invalidateAfterMutation();
 
-			const missingCount = matched.length - result.matchedCount;
+			const missingCount = targets.length - result.matchedCount;
 			if (missingCount > 0) {
 				toast.warning(
 					`${result.matchedCount} öğe güncellendi, ${missingCount} öğe artık mevcut değil`,
@@ -219,10 +246,13 @@ function AdminPage() {
 			} else {
 				toast.success(`${result.matchedCount} öğe güncellendi`);
 			}
+			return result.matchedCount;
 		} catch (error) {
+			if ((error as ApiError).status === 409) void refetchRules();
 			toast.error('Toplu güncelleme başarısız', {
 				description: (error as ApiError).message,
 			});
+			throw error;
 		}
 	}
 
@@ -406,6 +436,8 @@ function AdminPage() {
 			</button>
 
 			<BulkEditPanel
+				rules={itemRules}
+				disabled={rulesLoading || Boolean(rulesError) || rulesSaving}
 				items={items}
 				requireApproval={confirmEdits}
 				enterEnabled={enterToConfirm}
@@ -454,7 +486,9 @@ function AdminPage() {
 				</label>
 			</div>
 
+			<SideBySideEditor items={items} rules={itemRules} disabled={rulesLoading || Boolean(rulesError) || rulesSaving} requireApproval={confirmEdits} enterEnabled={enterToConfirm} escapeEnabled={escapeToCancel} onApply={commitBulkFieldChange} />
 			<InventoryBrowser rows={rows} colDef={colDef} />
+			{ruleApproval.dialog}
 
 			{editingItem && (
 				<ItemEditModal

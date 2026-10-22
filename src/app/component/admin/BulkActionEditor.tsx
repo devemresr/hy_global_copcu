@@ -3,6 +3,9 @@ import { EDITABLE_FIELD_KEYS, fieldMeta } from '../../constants/fieldRegistry.co
 import type { BulkAction } from '../../helpers/adminPageHelpers/bulkEdit.helper';
 import type { EditableField } from '../../types';
 import { NumberInputWithSteppers } from '../NumberInputWithSteppers';
+import { CrossButton } from '../CrossButton';
+
+const controlClass = 'h-9 min-w-0 max-w-full rounded-lg bg-button-focus-bg px-2 py-1.5 text-sm';
 
 export function BulkActionEditor({ actions, onChange, idPrefix = 'bulk-action' }: {
 	actions: BulkAction[];
@@ -23,7 +26,7 @@ export function BulkActionEditor({ actions, onChange, idPrefix = 'bulk-action' }
 		{actions.map((action) => {
 			const meta = fieldMeta(action.field);
 			return <div key={action.field} className='flex flex-wrap items-center gap-2'>
-				<select aria-label='Değiştirilecek alan' value={action.field} className='rounded-xl bg-button-focus-bg px-2 py-1' onChange={(event) => {
+				<select aria-label='Değiştirilecek alan' value={action.field} className={controlClass} onChange={(event) => {
 					const field = event.target.value as EditableField;
 					onChange((current) => current.map((item) => item.field === action.field ? { field, value: fieldMeta(field).options?.[0]?.value ?? '' } : item));
 				}}>
@@ -31,7 +34,7 @@ export function BulkActionEditor({ actions, onChange, idPrefix = 'bulk-action' }
 				</select>
 				<label className='min-w-0'>
 					<span className='sr-only'>{meta.label}: Yeni değer</span>
-					{meta.options ? <select value={action.value} onChange={(event) => updateValue(action.field, event.target.value)} className='rounded-xl bg-button-focus-bg px-2 py-1'>
+					{meta.options ? <select value={action.value} onChange={(event) => updateValue(action.field, event.target.value)} className={controlClass}>
 						{meta.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
 					</select> : meta.kind === 'number' ? <NumberInputWithSteppers
 						id={`${idPrefix}-${action.field}`}
@@ -39,17 +42,17 @@ export function BulkActionEditor({ actions, onChange, idPrefix = 'bulk-action' }
 						value={action.value === '' ? '' : Number(action.value)}
 						steppers={meta.stepperValues}
 						onChange={(update) => updateValue(action.field, update)}
-						className='rounded-xl bg-button-focus-bg px-2 py-1'
-					/> : <input type='text' value={action.value} onChange={(event) => updateValue(action.field, event.target.value)} placeholder='Yeni değer' className='w-36 rounded-xl bg-button-focus-bg px-2 py-1' />}
+						className={controlClass}
+					/> : <input type='text' value={action.value} onChange={(event) => updateValue(action.field, event.target.value)} placeholder='Yeni değer' className={`w-36 ${controlClass}`} />}
 				</label>
-				<button type='button' disabled={actions.length === 1} onClick={() => onChange((current) => current.filter((item) => item.field !== action.field))} className='rounded-xl px-2 py-1 hover:bg-button-hover-bg disabled:opacity-30'>Alanı kaldır</button>
+				<CrossButton label={`${meta.label} alanını kaldır`} disabled={actions.length === 1} onClick={() => onChange((current) => current.filter((item) => item.field !== action.field))} />
 			</div>;
 		})}
 		{addingField ? (
 			<select
 				autoFocus
 				aria-label='Eklenecek alan'
-				className='self-start rounded-xl bg-button-focus-bg px-3 py-1'
+				className={`self-start ${controlClass}`}
 				value=''
 				onBlur={() => setAddingField(false)}
 				onKeyDown={(event) => {

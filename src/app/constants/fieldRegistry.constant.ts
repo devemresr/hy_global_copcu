@@ -112,6 +112,7 @@ export const OPS_BY_KIND: Record<FieldKind, FieldFilterOp[]> = {
 		'equals',
 		'notEquals',
 		'contains',
+		'notContains',
 		'in',
 		'notIn',
 		'exists',

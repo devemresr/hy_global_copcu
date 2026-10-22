@@ -44,7 +44,7 @@ export type RuleResolution = {
 
 /** One ordered pass. Higher rules win each field; lower rules see defaults
  * already supplied by earlier rules. No effects or recursive rule evaluation.
- * Used for creation drafts only, never for existing-item edits.
+ * Shared by creation drafts and post-edit bulk previews.
  */
 export function resolveItemRules(draft: EditableInventoryItem, rules: readonly ItemRule[], overrides: ReadonlySet<EditableField> = new Set()): RuleResolution {
 	const item = { ...draft };
@@ -60,4 +60,25 @@ export function resolveItemRules(draft: EditableInventoryItem, rules: readonly I
 		}
 	}
 	return { item, sources };
+}
+
+/** Resolve rule expectations for conflict detection without changing the submitted patch. */
+export function resolveBulkItemRules(item: Omit<EditableInventoryItem, 'depolama'> & { depolama?: number | null }, fields: Partial<EditableInventoryItem>, rules: readonly ItemRule[]): RuleResolution {
+	return resolveItemRules({ ...item, depolama: item.depolama ?? null, ...fields }, rules);
+}
+
+export type BulkRuleConflict = {
+	model: string;
+	field: EditableField;
+	ruleName: string;
+	ruleValue: string | number | null;
+	requestedValue: string | number | null;
+};
+
+export function findBulkRuleConflicts(item: Parameters<typeof resolveBulkItemRules>[0], fields: Partial<EditableInventoryItem>, rules: readonly ItemRule[]): BulkRuleConflict[] {
+	const resolved = resolveBulkItemRules(item, fields, rules);
+	return (Object.keys(fields) as EditableField[]).flatMap((field) => {
+		const rule = resolved.sources[field];
+		return rule && resolved.item[field] !== fields[field] ? [{ model: item.model, field, ruleName: rule.name, ruleValue: resolved.item[field] ?? null, requestedValue: fields[field] ?? null }] : [];
+	});
 }

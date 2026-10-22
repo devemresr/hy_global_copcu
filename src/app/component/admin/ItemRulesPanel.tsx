@@ -50,12 +50,12 @@ export function ItemRulesPanel({ rules, onChange, disabled = false }: { rules: I
 	return (
 		<section id='item-creation-rules' className='mb-3 flex flex-col gap-3 rounded-xl bg-button-bg p-3 text-sm'>
 			<button type='button' aria-expanded={open} onClick={() => setOpen((value) => !value)} className='flex items-center justify-between gap-2 text-left font-medium'>
-				<span>Yeni Ürün Kuralları <span className='text-xs opacity-60'>({rules.filter((rule) => rule.enabled).length} etkin)</span></span>
+				<span>Ürün Kuralları <span className='text-xs opacity-60'>({rules.filter((rule) => rule.enabled).length} etkin)</span></span>
 				{open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
 			</button>
 			{open && <fieldset disabled={saving || disabled} className='flex min-w-0 flex-col gap-3'>
-				<p className='text-xs opacity-70'>Yeni ürün oluştururken eşleşen alanlar otomatik doldurulur. Kurallar yukarıdan aşağıya uygulanır; aynı alan için ilk eşleşen kural geçerlidir. Mevcut ürünler değiştirilmez.</p>
-				<p className='text-xs opacity-60'>Kurallar sunucuda saklanır ve yeni ürün formunda uygulanır.</p>
+				<p className='text-xs opacity-70'>Kurallar yeni ürünlerde, toplu düzenlemede ve yan yana düzenlemede uygulanır. Kurallar yukarıdan aşağıya uygulanır; aynı alan için ilk eşleşen kural geçerlidir.</p>
+				<p className='text-xs opacity-60'>Toplu ve yan yana düzenlemede kurallar değişiklik sonrası değerlere göre kontrol edilir. Kuralla çelişen bir değeri kaydetmek için ayrı uyarıyı onaylamanız gerekir.</p>
 				<ol className='flex flex-col gap-2'>
 					{rules.map((rule, index) => <li key={rule.id} id={`item-rule-${rule.id}`} className='rounded-xl bg-button-focus-bg p-3'>
 						<div className='flex flex-wrap items-center gap-2'>
@@ -86,7 +86,7 @@ export function ItemRulesPanel({ rules, onChange, disabled = false }: { rules: I
 					</div>
 				</div>
 			</fieldset>}
-			{deleting && <ConfirmDialog title='Kuralı sil' message={`“${deleting.name}” kuralı silinecek. Yeni ürünler için artık uygulanmayacak.`} onCancel={() => setDeleting(null)} onConfirm={() => { const id = deleting.id; setDeleting(null); void persist(rules.filter((rule) => rule.id !== id)).then((success) => { if (success && editingId === id) reset(); }); }} />}
+			{deleting && <ConfirmDialog title='Kuralı sil' message={`“${deleting.name}” kuralı silinecek. Sonraki oluşturma ve düzenlemelerde artık uygulanmayacak.`} onCancel={() => setDeleting(null)} onConfirm={() => { const id = deleting.id; setDeleting(null); void persist(rules.filter((rule) => rule.id !== id)).then((success) => { if (success && editingId === id) reset(); }); }} />}
 		</section>
 	);
 }

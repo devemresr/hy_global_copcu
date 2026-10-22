@@ -43,6 +43,7 @@ export function useItemRules() {
 		setLegacyRules([]);
 	}
 	return {
+		revision: query.data?.revision ?? 0,
 		rules: query.data?.rules ?? [], saveRules, legacyRules, importLegacyRules,
 		isLoading: query.isPending, isSaving: mutation.isPending,
 		error: query.error, refetch: query.refetch,

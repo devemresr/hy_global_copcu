@@ -9,6 +9,7 @@ type ConfirmDialogProps = {
 	cancelLabel?: string;
 	onConfirm: () => void;
 	onCancel: () => void;
+	additionalAction?: { label: string; onClick: () => void };
 	// Optional so a caller that doesn't track the admin's hotkey settings
 	// (there's no other one today, but this is a generic dialog) still gets
 	// working Enter/Escape by default.
@@ -24,6 +25,7 @@ export function ConfirmDialog({
 	cancelLabel = 'Vazgeç',
 	onConfirm,
 	onCancel,
+	additionalAction,
 	enterEnabled = true,
 	escapeEnabled = true,
 }: ConfirmDialogProps) {
@@ -35,12 +37,15 @@ export function ConfirmDialog({
 			onClick={onCancel}
 		>
 			<div
+				role='dialog'
+				aria-modal='true'
+				aria-label={title}
 				className='w-full max-w-sm bg-modal-bg text-text rounded-xl p-4'
 				onClick={(e) => e.stopPropagation()}
 			>
 				<p className='text-sm font-semibold mb-2'>{title}</p>
 				<div className='text-sm opacity-90 mb-4'>{message}</div>
-				<div className='flex justify-end gap-2'>
+				<div className='flex flex-col justify-end gap-2 sm:flex-row sm:flex-wrap'>
 					<button
 						type='button'
 						onClick={onCancel}
@@ -48,6 +53,7 @@ export function ConfirmDialog({
 					>
 						{cancelLabel}
 					</button>
+					{additionalAction && <button type='button' onClick={additionalAction.onClick} className='rounded-xl border border-border bg-button-focus-bg px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'>{additionalAction.label}</button>}
 					<button
 						type='button'
 						onClick={onConfirm}

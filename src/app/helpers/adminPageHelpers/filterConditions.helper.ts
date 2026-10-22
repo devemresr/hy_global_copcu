@@ -8,6 +8,7 @@ export function newFilterCondition(): FilterCondition {
 }
 
 export const FILTER_OPERATORS: { value: FieldFilterOp; label: string; needsValue: boolean }[] = [
+	{ value: 'notContains', label: 'İçermez', needsValue: true },
 	{ value: 'equals', label: 'Eşittir', needsValue: true },
 	{ value: 'notEquals', label: 'Eşit değildir', needsValue: true },
 	{ value: 'contains', label: 'İçerir', needsValue: true },
