@@ -11,7 +11,7 @@ export function useInventoryRows(
 ) {
 	const rows = useMemo(() => {
 		if (bellekTipiIncluded) return items as ExcelRow[];
-		return items.map(({ bellekTipi, ...rest }) => rest) as ExcelRow[];
+		return items.map(({ bellekTipi: _bellekTipi, ...rest }) => rest) as ExcelRow[];
 	}, [items, bellekTipiIncluded]);
 
 	const colDef = useMemo(

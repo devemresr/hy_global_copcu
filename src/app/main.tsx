@@ -6,23 +6,11 @@ import { Layout } from './component/Layout.tsx';
 import { MaintenanceGate } from './component/MaintenanceGate.tsx';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
+import { ErrorBoundary } from 'react-error-boundary';
+import { RootFallback } from './component/RootFallback';
 import { Toaster } from 'sonner';
 import type { CSSProperties } from 'react';
 import { setupApiClient } from './config/apiClient.config';
-
-function RootFallback({ error }: FallbackProps) {
-	const message = error instanceof Error ? error.message : String(error);
-
-	return (
-		<div className='flex h-screen items-center justify-center'>
-			<div className='text-center'>
-				<h1 className='text-xl font-bold text-text'>App crashed</h1>
-				<p className='text-sm text-muted-foreground text-text'>{message}</p>
-			</div>
-		</div>
-	);
-}
 
 setupApiClient();
 

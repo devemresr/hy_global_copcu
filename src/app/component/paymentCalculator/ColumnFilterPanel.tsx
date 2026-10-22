@@ -29,7 +29,8 @@ export function ColumnFilterPanel({
 	const toggleValue = (value: string) => {
 		const norm = toKey(value);
 		const next = new Set(selectedValues);
-		next.has(norm) ? next.delete(norm) : next.add(norm);
+		if (next.has(norm)) next.delete(norm);
+		else next.add(norm);
 		onChange(next);
 	};
 

@@ -1,9 +1,16 @@
 import { highlightSegments } from '../helpers/inventoryPageHelpers/search.helpers';
+import type { FuseResultMatch } from 'fuse.js';
 
-export function HighlightCellRenderer({ value, data, colDef }: any) {
-	const key = colDef.field;
+export type HighlightCellProps = {
+	value?: unknown;
+	data?: { matches?: readonly FuseResultMatch[] };
+	colDef?: { field?: string };
+};
+
+export function HighlightCellRenderer({ value, data, colDef }: HighlightCellProps) {
+	const key = colDef?.field;
 	const text = String(value ?? '');
-	const fieldMatch = data?.matches?.find((m: any) => m.key === key);
+	const fieldMatch = data?.matches?.find((m) => m.key === key);
 
 	if (!fieldMatch || fieldMatch.indices.length === 0) {
 		return <>{text}</>;

@@ -9,7 +9,7 @@ import {
 	themeQuartz,
 	colorSchemeDark,
 } from 'ag-grid-community';
-import { useTheme } from './Layout';
+import { useTheme } from '../hooks/useTheme';
 import { useWindowSize } from '../hooks/useWindowSize';
 
 ModuleRegistry.registerModules([

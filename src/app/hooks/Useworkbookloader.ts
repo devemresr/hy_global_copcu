@@ -43,16 +43,16 @@ export function useWorkbookLoader() {
 		parseMethod: null,
 	});
 	const [wbState, dispatch] = useReducer(workbookReducer, initialWorkbookState);
-	const workerRef = useRef<Worker | null>(null);
+	const parsingTaskRef = useRef<{ cancel: (() => void) | null }>({ cancel: null });
 
 	const { workbook, sheetNames, selectedSheet, rows } = wbState;
 
-	// terminate possibly pending workers on unmount
+	// Cancel both pending file reads and workers, including uploads started
+	// after the effect mounted. This handle stays stable across state updates.
 	useEffect(() => {
+		const parsingTask = parsingTaskRef.current;
 		return () => {
-			if (workerRef.current) {
-				workerRef.current.terminate();
-			}
+			parsingTask.cancel?.();
 		};
 	}, []);
 
@@ -74,6 +74,8 @@ export function useWorkbookLoader() {
 	}, [workbook, selectedSheet]);
 
 	function handleFileChange(file: File) {
+		const parsingTask = parsingTaskRef.current;
+		parsingTask.cancel?.();
 		setParseState((prev) => ({
 			...prev,
 			status: 'parsing',
@@ -104,14 +106,14 @@ export function useWorkbookLoader() {
 				...prev,
 				parseMethod: 'worker',
 			}));
-			parseWithWorker(file, workerRef, onLoaded, handleError);
+			parsingTask.cancel = parseWithWorker(file, onLoaded, handleError);
 		} else {
 			logger.debug(`File is ${(file.size / 1024).toFixed(0)}KB parsing inline`);
 			setParseState((prev) => ({
 				...prev,
 				parseMethod: 'inline',
 			}));
-			parseInline(file, onLoaded, handleError);
+			parsingTask.cancel = parseInline(file, onLoaded, handleError);
 		}
 	}
 

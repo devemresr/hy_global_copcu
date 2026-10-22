@@ -2,24 +2,24 @@ import { useEffect, type ReactNode } from 'react';
 
 declare global {
 	interface Window {
-		__REACT_DEVTOOLS_GLOBAL_HOOK__?: Record<string, any>;
+		__REACT_DEVTOOLS_GLOBAL_HOOK__?: Record<string, unknown>;
 	}
 }
 
-export function isFunction(obj: unknown): obj is (...args: any[]) => any {
+function isFunction(obj: unknown): obj is (...args: unknown[]) => unknown {
 	return typeof obj === 'function';
 }
 
-export function isObject(obj: unknown): obj is object {
+function isObject(obj: unknown): obj is object {
 	const type = typeof obj;
 	return type === 'function' || (type === 'object' && !!obj);
 }
 
-export function hasWindowObject(): boolean {
+function hasWindowObject(): boolean {
 	return typeof window !== 'undefined' && !!window.document;
 }
 
-export function disableReactDevTools(): void {
+function disableReactDevTools(): void {
 	if (hasWindowObject()) {
 		if (!isObject(window.__REACT_DEVTOOLS_GLOBAL_HOOK__)) {
 			return;

@@ -1,19 +1,21 @@
 import type { ComponentType } from 'react';
 import type { EditableField } from '../../types';
 import { DisplayValue } from './DisplayValue';
+import type { ItemDto } from '../../hooks/api/endpoints/useItems';
+import type { HighlightCellProps } from '../HighlightCellRenderer';
 
 type AdminFieldCellProps = {
 	value: unknown;
-	data: Record<string, unknown> & { _id: string };
+	data: ItemDto & NonNullable<HighlightCellProps['data']>;
 	colDef: { field?: string; headerName?: string };
 	// The column's original cellRenderer (e.g. HighlightCellRenderer for
 	// Model's search-match highlighting), rendered in place of the raw value
 	// when one was set - this wrapper only adds the buttons around it.
-	displayRenderer?: ComponentType<any>;
-	onEdit: (row: any, field: EditableField, label: string) => void;
+	displayRenderer?: ComponentType<HighlightCellProps>;
+	onEdit: (row: ItemDto, field: EditableField, label: string) => void;
 	// Omitted by Admin.tsx for fields the schema requires (e.g. model) - a
 	// delete button that always fails validation doesn't make sense there.
-	onDelete?: (row: any, field: EditableField, label: string) => void;
+	onDelete?: (row: ItemDto, field: EditableField, label: string) => void;
 	// ag-grid computes this from the column's own valueFormatter regardless of
 	// the custom cellRenderer below, so the raw-value fallback can still show
 	// e.g. "128 GB" instead of the bare magnitude.

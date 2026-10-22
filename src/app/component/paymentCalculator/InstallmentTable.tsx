@@ -1,11 +1,10 @@
 import {
-	defaultRates,
-	TERM_DEPENDENT_RATES,
 	type Bank,
 	type LoanType,
 	type Rates,
 	type RatesByTerm,
 } from '../../PaymentCalculator';
+import { defaultRates, TERM_DEPENDENT_RATES } from '../../constants/paymentRates.constant';
 import InfoTooltip from './InfoToolTip';
 
 type Row = {

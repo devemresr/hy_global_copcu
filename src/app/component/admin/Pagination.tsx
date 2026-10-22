@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 // A "1 … 4 5 6 … 42"-style window instead of just Önceki/Sonraki - always
 // anchored on the first and last page, with a small run around the current

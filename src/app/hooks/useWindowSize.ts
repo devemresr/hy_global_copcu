@@ -26,8 +26,8 @@ export function useWindowSize(debounceMs = 100): WindowSize {
 	}, [debounceMs]);
 
 	useEffect(() => {
-		// set correct value on mount (in case SSR value was 0 or stale)
-		setSize({ width: window.innerWidth, height: window.innerHeight });
+		// Synchronize through the same scheduled callback used for resize events.
+		handleResize();
 
 		window.addEventListener('resize', handleResize);
 		return () => {

@@ -14,7 +14,7 @@ type MixedTextProps = {
 	className?: string;
 };
 
-export const termsAndConditions: TermsSection[] = [
+const termsAndConditions: TermsSection[] = [
 	{
 		title: '1. Kabul',
 		body: [

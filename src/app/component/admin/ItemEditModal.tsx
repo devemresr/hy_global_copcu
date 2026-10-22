@@ -1,4 +1,4 @@
-import { useEffect, useState, type SetStateAction } from 'react';
+import { useState, type SetStateAction } from 'react';
 import { X } from 'lucide-react';
 import type { EditableField, EditableInventoryItem } from '../../types';
 import { editableInventoryItemSchema } from '../../schemas/item.schema';
@@ -38,11 +38,13 @@ export function ItemEditModal({
 	const [draft, setDraft] = useState<EditableInventoryItem>({ ...item });
 	const [overrides, setOverrides] = useState<Set<EditableField>>(new Set());
 	const [error, setError] = useState<string | null>(null);
-	useEffect(() => {
+	const [previousItem, setPreviousItem] = useState(item);
+	if (item !== previousItem) {
+		setPreviousItem(item);
 		setDraft({ ...item });
 		setOverrides(new Set());
 		setError(null);
-	}, [item]);
+	}
 
 	// Keep manual values separate: removing a match restores the user's draft.
 	// Display and submission always use the same resolved item.

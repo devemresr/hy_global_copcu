@@ -70,12 +70,15 @@ function depolamaToGb(value: unknown, unit: unknown): number {
 	return unit === 'TB' ? value * 1024 : value;
 }
 
-export function depolamaValueFormatter(params: any): string {
+type InventoryValueParams = { value: unknown; data?: { depolamaBirimi?: string; paraBirimi?: string } };
+type InventoryNode = { data?: { depolamaBirimi?: string; paraBirimi?: string } } | null | undefined;
+
+export function depolamaValueFormatter(params: InventoryValueParams): string {
 	const { value, data } = params;
 	if (typeof value === 'number') {
 		return data?.depolamaBirimi ? `${value} ${data.depolamaBirimi}` : String(value);
 	}
-	return value ?? '';
+	return String(value ?? '');
 }
 
 function fiyatToNumber(value: unknown): number {
@@ -96,8 +99,8 @@ function currencyRank(currency: unknown): number {
 export function fiyatComparator(
 	valueA: unknown,
 	valueB: unknown,
-	nodeA: any,
-	nodeB: any,
+	nodeA: InventoryNode,
+	nodeB: InventoryNode,
 ) {
 	const a = fiyatToNumber(valueA);
 	const b = fiyatToNumber(valueB);
@@ -114,7 +117,7 @@ export function fiyatComparator(
 	return a - b;
 }
 
-export function fiyatValueFormatter(params: any): string {
+export function fiyatValueFormatter(params: InventoryValueParams): string {
 	const { value, data } = params;
 	if (value === null || value === undefined || value === '') return '';
 	return data?.paraBirimi ? `${value} ${data.paraBirimi}` : String(value);
@@ -123,8 +126,8 @@ export function fiyatValueFormatter(params: any): string {
 export function depolamaComparator(
 	valueA: unknown,
 	valueB: unknown,
-	nodeA: any,
-	nodeB: any,
+	nodeA: InventoryNode,
+	nodeB: InventoryNode,
 ) {
 	const a = depolamaToGb(valueA, nodeA?.data?.depolamaBirimi);
 	const b = depolamaToGb(valueB, nodeB?.data?.depolamaBirimi);

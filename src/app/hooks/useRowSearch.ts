@@ -53,7 +53,8 @@ export function useRowSearch(rows: ExcelRow[]) {
 	const [recentSearches, setRecentSearches] =
 		useState<RecentSearchEntry[]>(loadRecentSearches);
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const countedQueriesRef = useRef<Set<string>>(new Set());
+	const [countedQueries, setCountedQueries] = useState<ReadonlySet<string>>(() => new Set());
+	const [recordedSearch, setRecordedSearch] = useState({ query: '', wasMiss: false, strictMiss: false });
 
 	const handleQuery = (e: ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value;
@@ -100,39 +101,27 @@ export function useRowSearch(rows: ExcelRow[]) {
 	const noResults =
 		query.length > 0 && strictResults !== null && strictResults.length === 0;
 
-	// increments exactly once per *distinct* no-result query, regardless of re-renders
-	useEffect(() => {
-		if (noResults && !countedQueriesRef.current.has(query)) {
-			countedQueriesRef.current.add(query);
+	const wasMiss = searchResults !== null && searchResults.length === 0;
+	// Adjust history when the search outcome changes, before rendering children.
+	if (query !== recordedSearch.query || wasMiss !== recordedSearch.wasMiss || noResults !== recordedSearch.strictMiss) {
+		setRecordedSearch({ query, wasMiss, strictMiss: noResults });
+		if (noResults && !countedQueries.has(query)) {
+			setCountedQueries(new Set([...countedQueries, query]));
 			setNoResultCount((c) => c + 1);
 		}
-	}, [noResults, query]);
+		const trimmed = query.trim();
+		if (trimmed) setRecentSearches((prev) => [
+			{ term: trimmed, wasMiss },
+			...prev.filter((entry) => entry.term.toLowerCase() !== trimmed.toLowerCase()),
+		].slice(0, MAX_RECENT_SEARCHES));
+	}
 
 	const showExtendedToggle =
 		noResults && noResultCount >= SHOW_EXTENDED_SEARCH_THRESHOLD;
 
 	const toggleExtendedSearch = () => setIsLoose((prev) => !prev);
 
-	// records every committed (debounced) search term, most-recent-first,
-	// deduped case-insensitively and persisted so history survives a reload.
-	// Re-runs (and can flip wasMiss) whenever searchResults changes for the
-	// same term too, e.g. toggling extended search turns a miss into a hit.
-	useEffect(() => {
-		const trimmed = query.trim();
-		if (!trimmed) return;
-		const wasMiss = searchResults !== null && searchResults.length === 0;
-		setRecentSearches((prev) => {
-			const withoutDuplicate = prev.filter(
-				(s) => s.term.toLowerCase() !== trimmed.toLowerCase(),
-			);
-			const next = [{ term: trimmed, wasMiss }, ...withoutDuplicate].slice(
-				0,
-				MAX_RECENT_SEARCHES,
-			);
-			saveRecentSearches(next);
-			return next;
-		});
-	}, [query, searchResults]);
+	useEffect(() => { saveRecentSearches(recentSearches); }, [recentSearches]);
 
 	// re-runs a past search immediately, bypassing the debounce (it's already
 	// a complete term, not something the user is still typing)
@@ -144,7 +133,6 @@ export function useRowSearch(rows: ExcelRow[]) {
 	const removeRecentSearch = (value: string) => {
 		setRecentSearches((prev) => {
 			const next = prev.filter((s) => s.term !== value);
-			saveRecentSearches(next);
 			return next;
 		});
 	};

@@ -4,6 +4,7 @@ import {
 	useCallback,
 	useEffect,
 	useRef,
+	useState,
 	type Dispatch,
 	type RefObject,
 	type SetStateAction,
@@ -24,8 +25,7 @@ interface HeaderProps {
 	sidebarAnimationSrc: object;
 }
 
-import { useTheme } from './Layout';
-import type { Theme } from './Layout';
+import { useTheme, type Theme } from '../hooks/useTheme';
 import logger from '../util/logger';
 import { PAGE_PATHS } from '../constants/pagePaths.constant';
 const TARGET_DURATION_THEME_ANIMATION = 0.9;
@@ -49,6 +49,7 @@ export function Header({
 	sidebarAnimationSrc,
 }: HeaderProps) {
 	const { theme } = useTheme();
+	const [initialTheme] = useState(theme);
 	const { pathname } = useLocation();
 
 	const lottieThemeRef = useRef<LottieHandle>(null);
@@ -88,10 +89,14 @@ export function Header({
 				'[handleTheme] animation complete, resetting isAnimatingRef',
 			);
 			isAnimatingRef.current = false;
+			onCompleteRef.current?.();
+		};
+		// Keep cleanup bound to the animation that owns the listener. Lottie
+		// replaces its imperative handle when the animation finishes loading.
+		onCompleteRef.current = () => {
 			anim.removeEventListener('complete', onComplete);
 			onCompleteRef.current = null;
 		};
-		onCompleteRef.current = onComplete;
 		anim.addEventListener('complete', onComplete);
 
 		if (theme === 'dark') {
@@ -106,26 +111,18 @@ export function Header({
 	// Cleanup on unmount
 	useEffect(() => {
 		logger.debug('[cleanup effect] mounted');
-
 		return () => {
-			const anim = lottieThemeRef.current?.animationItem;
-			if (anim && onCompleteRef.current) {
-				logger.debug('[cleanup effect] listener removed');
-				anim.removeEventListener('complete', onCompleteRef.current);
-			} else {
-				logger.debug(
-					{ hasAnim: !!anim, hasHandler: !!onCompleteRef.current },
-					'[cleanup effect] nothing to remove',
-				);
-			}
+			onCompleteRef.current?.();
+			isAnimatingRef.current = false;
 		};
 	}, []);
 
 	useEffect(() => {
-		logger.debug({ theme }, '[setup effect] running');
+		logger.debug({ theme: initialTheme }, '[setup effect] running');
 
 		let cancelled = false;
-		let rafId: number;
+		let rafId: number | undefined;
+		let removeLoadedListener: (() => void) | undefined;
 
 		const trySetup = () => {
 			if (cancelled) return;
@@ -144,7 +141,9 @@ export function Header({
 			);
 
 			const doSetup = () => {
-				const frame = theme === 'dark' ? 90 : 0;
+				if (cancelled) return;
+				removeLoadedListener?.();
+				const frame = initialTheme === 'dark' ? 90 : 0;
 				logger.debug({ frame }, '[setup effect] goToAndStop');
 				anim.goToAndStop(frame, true);
 			};
@@ -153,6 +152,7 @@ export function Header({
 				doSetup();
 			} else {
 				logger.debug('[setup effect] totalFrames is 0, waiting for DOMLoaded');
+				removeLoadedListener = () => anim.removeEventListener('DOMLoaded', doSetup);
 				anim.addEventListener('DOMLoaded', doSetup);
 			}
 		};
@@ -162,9 +162,10 @@ export function Header({
 		return () => {
 			logger.debug('[setup effect] cleanup, cancelling rAF loop');
 			cancelled = true;
-			cancelAnimationFrame(rafId);
+			if (rafId !== undefined) cancelAnimationFrame(rafId);
+			removeLoadedListener?.();
 		};
-	}, []);
+	}, [initialTheme]);
 
 	return (
 		<header>

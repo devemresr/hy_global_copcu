@@ -5,7 +5,7 @@ type AboutSection = {
 	body: TextSegment[];
 };
 
-export const aboutContent: AboutSection[] = [
+const aboutContent: AboutSection[] = [
 	{
 		title: 'Biz Kimiz?',
 		body: [
