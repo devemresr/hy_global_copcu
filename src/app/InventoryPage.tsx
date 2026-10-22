@@ -1,8 +1,12 @@
 import './App.css';
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
+import { CustomerPriceEditor } from './component/CustomerPriceEditor';
 import { useInventoryRows } from './hooks/useInventoryRows';
-import { InventoryBrowser, type InventoryBrowserHandle } from './component/InventoryBrowser';
+import {
+	InventoryBrowser,
+	type InventoryBrowserHandle,
+} from './component/InventoryBrowser';
 import {
 	ArrowDown,
 	ArrowUp,
@@ -38,16 +42,21 @@ const STEP_LINK_CLASS =
 	'mt-1 inline-block cursor-pointer text-left underline underline-offset-2 font-medium hover:opacity-80 transition-opacity text-text text-sm';
 
 function SnapshotWarning({ exportedAt }: { exportedAt: string }) {
-	const date = new Date(exportedAt).toLocaleDateString('tr-TR', { dateStyle: 'long' });
+	const date = new Date(exportedAt).toLocaleDateString('tr-TR', {
+		dateStyle: 'long',
+	});
 	return (
 		<div
 			role='status'
 			className='mb-3 flex items-start gap-3 rounded-xl border border-border bg-button-bg p-4 text-sm text-text'
 		>
-			<TriangleAlert className='mt-0.5 h-4 w-4 shrink-0 text-amber-500' aria-hidden />
+			<TriangleAlert
+				className='mt-0.5 h-4 w-4 shrink-0 text-amber-500'
+				aria-hidden
+			/>
 			<p>
-				Sunucuya şu an ulaşılamıyor. Aşağıdaki liste {date} tarihli bir kopyadır;
-				ürünler ve fiyatlar güncel olmayabilir.
+				Sunucuya şu an ulaşılamıyor. Aşağıdaki liste {date} tarihli bir
+				kopyadır; ürünler ve fiyatlar güncel olmayabilir.
 			</p>
 		</div>
 	);
@@ -63,7 +72,8 @@ function InventoryPage() {
 	const showingSnapshot = !data && !!snapshot;
 	const items = data?.items ?? snapshot?.items;
 	const displayedItems = useMemo(
-		() => (items ?? []).filter((item) => isDisplayedBellekTipi(item.bellekTipi)),
+		() =>
+			(items ?? []).filter((item) => isDisplayedBellekTipi(item.bellekTipi)),
 		[items],
 	);
 	const { rows, colDef } = useInventoryRows(bellekTipiIncluded, displayedItems);
@@ -81,7 +91,9 @@ function InventoryPage() {
 				<h1 className='text-2xl font-bold text-heading-text md:text-3xl'>
 					{hero.heading}
 				</h1>
-				<p className='mt-3 max-w-3xl text-text opacity-80 md:text-lg'>{hero.body}</p>
+				<p className='mt-3 max-w-3xl text-text opacity-80 md:text-lg'>
+					{hero.body}
+				</p>
 				<div className='mt-5 flex flex-wrap gap-3'>
 					<a
 						href={hero.primaryCta.href}
@@ -102,12 +114,17 @@ function InventoryPage() {
 			{/* Steps sit below the grid on mobile, above it from sm up. */}
 			<div className='flex flex-col'>
 				<section className='order-last mt-6 sm:order-first sm:mt-0 sm:mb-6'>
-					<h2 className='mb-4 text-xl font-semibold text-heading-text sm:hidden'>{stepsHeading}</h2>
+					<h2 className='mb-4 text-xl font-semibold text-heading-text sm:hidden'>
+						{stepsHeading}
+					</h2>
 					<ol className='grid gap-3 sm:grid-cols-3'>
 						{steps.map((step, i) => {
 							const Icon = STEP_ICONS[i];
 							return (
-								<li key={step.title} className='flex gap-3 rounded-xl bg-button-bg p-4'>
+								<li
+									key={step.title}
+									className='flex gap-3 rounded-xl bg-button-bg p-4'
+								>
 									<span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-button-focus-bg text-text'>
 										<Icon className='h-4 w-4' aria-hidden />
 									</span>
@@ -117,11 +134,17 @@ function InventoryPage() {
 										</p>
 										{step.mobileText ? (
 											<>
-												<p className='text-sm text-text opacity-75 sm:hidden'>{step.mobileText}</p>
-												<p className='hidden text-sm text-text opacity-75 sm:block'>{step.text}</p>
+												<p className='text-sm text-text opacity-75 sm:hidden'>
+													{step.mobileText}
+												</p>
+												<p className='hidden text-sm text-text opacity-75 sm:block'>
+													{step.text}
+												</p>
 											</>
 										) : (
-											<p className='text-sm text-text opacity-75'>{step.text}</p>
+											<p className='text-sm text-text opacity-75'>
+												{step.text}
+											</p>
 										)}
 										{step.link.href ? (
 											<a href={step.link.href} className={STEP_LINK_CLASS}>
@@ -148,20 +171,30 @@ function InventoryPage() {
 				</section>
 
 				<div>
-					{showingSnapshot && <SnapshotWarning exportedAt={snapshot.exportedAt} />}
+					{showingSnapshot && (
+						<SnapshotWarning exportedAt={snapshot.exportedAt} />
+					)}
 					<InventoryBrowser ref={browserRef} rows={rows} colDef={colDef} />
+					<div className='mt-4 flex flex-wrap items-center gap-3 text-text'>
+						<CustomerPriceEditor items={displayedItems} />
+					</div>
 				</div>
 			</div>
 
 			<section className='mt-12'>
-				<h2 className='mb-4 text-xl font-semibold text-heading-text'>{whyUs.heading}</h2>
+				<h2 className='mb-4 text-xl font-semibold text-heading-text'>
+					{whyUs.heading}
+				</h2>
 				<div className='grid gap-3 sm:grid-cols-3'>
 					{whyUs.items.map((item, i) => {
 						const Icon = WHY_US_ICONS[i];
 						return (
 							<div key={item.title} className='rounded-xl bg-button-bg p-4'>
 								<div className='mb-1 flex items-center gap-2'>
-									<Icon className='h-5 w-5 shrink-0 text-text opacity-80' aria-hidden />
+									<Icon
+										className='h-5 w-5 shrink-0 text-text opacity-80'
+										aria-hidden
+									/>
 									<p className='font-semibold text-text'>{item.title}</p>
 								</div>
 								<p className='text-sm text-text opacity-75'>{item.text}</p>
@@ -173,7 +206,9 @@ function InventoryPage() {
 
 			<section className='mt-6 flex flex-col items-start gap-4 rounded-xl bg-button-bg p-4 sm:flex-row sm:items-center sm:justify-between'>
 				<div>
-					<h2 className='text-lg font-semibold text-heading-text'>{contact.heading}</h2>
+					<h2 className='text-lg font-semibold text-heading-text'>
+						{contact.heading}
+					</h2>
 					<p className='text-sm text-text opacity-75'>{contact.body}</p>
 				</div>
 				<a
