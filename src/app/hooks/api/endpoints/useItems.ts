@@ -6,6 +6,11 @@ import type { ApiError } from '../core/api-client';
 import { ITEM_ROUTES } from '../../../constants/routes.constant';
 import type { EditableInventoryItem, InventoryItemRecord } from '../../../types';
 import { useSiteStatus } from './useSiteStatus';
+import logger from '../../../util/logger';
+import env from '../../../config/env';
+
+const log = logger.child({ hook: 'useItems' });
+const cacheTimestamp = (timestamp: number | undefined) => timestamp ? new Date(timestamp).toISOString() : null;
 
 // _id isn't on InventoryItemRecord (that type also covers the static
 // snapshot, which has no DB row behind it) - items from this endpoint
@@ -73,32 +78,50 @@ export function useGetItems() {
 		queryKey: ITEMS_QUERY_KEY,
 		queryFn: async () => {
 			const cached = queryClient.getQueryData<ItemsData>(ITEMS_QUERY_KEY);
-			if (!cached) {
+			const cachedAt = queryClient.getQueryState(ITEMS_QUERY_KEY)?.dataUpdatedAt;
+			// Version zero can survive an out-of-process seed. An empty cache
+			// must recover through the full endpoint, not an empty since=0 delta.
+			if (!cached || cached.items.length === 0) {
+				log.info({ source: 'api-full-list', url: `${env.VITE_GATEWAY_URL}${ITEM_ROUTES.LIST}`, reason: cached ? 'empty-cache-recovery' : 'no-frontend-cache', previousCachedAt: cacheTimestamp(cachedAt) }, 'Fetching full item list');
 				const { version, items } = await apiFetch<ItemsData>(ITEM_ROUTES.LIST);
+				log.info({ source: 'api-full-list', version, count: items.length, receivedAt: new Date().toISOString() }, 'Full item list received');
+				if (items.length === 0) log.warn({ version, url: `${env.VITE_GATEWAY_URL}${ITEM_ROUTES.LIST}` }, 'API returned an empty item list; snapshot fallback is not used for successful empty responses');
 				return { version, items };
 			}
+			log.info({ source: 'api-delta', url: `${env.VITE_GATEWAY_URL}${ITEM_ROUTES.CHANGES}`, since: cached.version, cachedCount: cached.items.length, cachedAt: cacheTimestamp(cachedAt) }, 'Fetching item changes');
 			const changes = await apiFetch<ItemChangesResponse>(ITEM_ROUTES.CHANGES, {
 				params: { since: cached.version },
 			});
-			return applyItemChanges(cached, changes);
+			const next = applyItemChanges(cached, changes);
+			log.info({ source: changes.full ? 'api-full-reset' : 'api-delta-merge', version: next.version, count: next.items.length, ...(!changes.full ? { updated: changes.updated.length, deleted: changes.deleted.length } : {}) }, 'Item changes applied to frontend cache');
+			return next;
 		},
 		staleTime: Infinity,
 	});
 
 	const { data: status, dataUpdatedAt: statusUpdatedAt } = useSiteStatus();
 	const { data, dataUpdatedAt, errorUpdatedAt, isFetching, refetch } = query;
+	useEffect(() => {
+		if (!data) return;
+		log.info({ source: 'frontend-query-cache', count: data.items.length, version: data.version, cachedAt: cacheTimestamp(dataUpdatedAt), cacheAgeMs: Date.now() - dataUpdatedAt }, 'Serving items from React Query cache');
+	}, [data, dataUpdatedAt]);
+	useEffect(() => {
+		if (query.error) log.warn({ source: 'api-error', error: query.error, servingCachedItems: Boolean(data), cachedAt: cacheTimestamp(dataUpdatedAt) }, 'Item request failed');
+	}, [query.error, errorUpdatedAt, data, dataUpdatedAt]);
 
 	// Only reacts to a status newer than our last attempt, so a version that
 	// stays different (e.g. a write landed between poll and fetch) can't loop.
 	useEffect(() => {
 		if (!status || isFetching) return;
 		if (statusUpdatedAt <= Math.max(dataUpdatedAt, errorUpdatedAt)) return;
-		if (data?.version === status.version) return;
+		if (data?.version === status.version && data.items.length > 0) return;
+		log.info({ source: 'site-status-poll', cachedVersion: data?.version, serverVersion: status.version, cachedCount: data?.items.length ?? 0, reason: data?.items.length === 0 ? 'empty-cache-recovery' : 'version-changed' }, 'Refreshing item data');
 		void refetch();
 	}, [
 		status,
 		statusUpdatedAt,
 		data?.version,
+		data?.items.length,
 		dataUpdatedAt,
 		errorUpdatedAt,
 		isFetching,
@@ -114,18 +137,28 @@ export function useGetItems() {
  * Fetched only when `enabled`, so a healthy visit never downloads it.
  */
 export function useItemsSnapshot(enabled: boolean) {
-	return useQuery<ItemsSnapshot>({
+	const query = useQuery<ItemsSnapshot>({
 		queryKey: ['itemsSnapshot'],
 		queryFn: async () => {
+			log.warn({ source: 'static-snapshot', url: ITEMS_SNAPSHOT_URL }, 'Loading snapshot fallback after live item request failure');
 			const response = await fetch(ITEMS_SNAPSHOT_URL);
 			if (!response.ok) {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
-			return response.json();
+			const snapshot = await response.json() as ItemsSnapshot;
+			log.info({ source: 'static-snapshot', count: snapshot.items.length, exportedAt: snapshot.exportedAt, receivedAt: new Date().toISOString() }, 'Snapshot fallback received');
+			return snapshot;
 		},
 		enabled,
 		staleTime: Infinity,
 	});
+	useEffect(() => {
+		if (enabled && query.data) log.warn({ source: 'snapshot-query-cache', count: query.data.items.length, exportedAt: query.data.exportedAt, cachedAt: cacheTimestamp(query.dataUpdatedAt) }, 'Serving cached snapshot fallback');
+	}, [enabled, query.data, query.dataUpdatedAt]);
+	useEffect(() => {
+		if (enabled && query.error) log.error({ source: 'static-snapshot', err: query.error }, 'Snapshot fallback request failed');
+	}, [enabled, query.error]);
+	return query;
 }
 
 export function useCreateItem() {
@@ -207,12 +240,12 @@ export function useBulkUpdateItems() {
 	return useMutation<
 		BulkUpdateItemsResponse,
 		ApiError,
-		{ ids: string[]; fields: Partial<EditableInventoryItem> }
+		{ ids: string[]; fields: Partial<EditableInventoryItem>; ruleOverrideRevision?: number }
 	>({
-		mutationFn: ({ ids, fields }) =>
+		mutationFn: ({ ids, fields, ruleOverrideRevision }) =>
 			apiFetch<BulkUpdateItemsResponse>(ITEM_ROUTES.BULK_UPDATE, {
 				method: 'PATCH',
-				body: { ids, fields },
+				body: { ids, fields, ruleOverrideRevision },
 			}),
 	});
 }
