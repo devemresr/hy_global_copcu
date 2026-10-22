@@ -20,6 +20,10 @@ import { SITE_ROUTES } from '../../../constants/routes.constant';
 export const SITE_STATUS_POLL_MS = 30_000;
 export const SITE_STATUS_QUERY_KEY = ['siteStatus'] as const;
 
+// Shared by every observer of a query; discarded when the query is collected.
+// Query's own failure count resets at the start of each polling request.
+const consecutiveFailures = new WeakMap<object, number>();
+
 // `enabled` arms a setting; it's only in effect inside [from, until).
 // ISO timestamps, null meaning "from now" / "until turned off".
 export type ScheduleDto = {
@@ -90,8 +94,8 @@ export function useScheduleClock(...schedules: (ScheduleDto | undefined)[]): num
 	return now;
 }
 
-async function fetchSiteStatus(): Promise<SiteStatus> {
-	const response = await fetch(`${env.VITE_GATEWAY_URL}${SITE_ROUTES.STATUS}`);
+async function fetchSiteStatus(signal: AbortSignal): Promise<SiteStatus> {
+	const response = await fetch(`${env.VITE_GATEWAY_URL}${SITE_ROUTES.STATUS}`, { signal });
 	if (!response.ok) {
 		throw new Error(`HTTP error! status: ${response.status}`);
 	}
@@ -99,10 +103,32 @@ async function fetchSiteStatus(): Promise<SiteStatus> {
 }
 
 export function useSiteStatus() {
+	const queryClient = useQueryClient();
 	return useQuery<SiteStatus>({
 		queryKey: SITE_STATUS_QUERY_KEY,
-		queryFn: fetchSiteStatus,
-		refetchInterval: SITE_STATUS_POLL_MS,
+		queryFn: async ({ signal }) => {
+			const query = queryClient.getQueryCache().find({ queryKey: SITE_STATUS_QUERY_KEY, exact: true })!;
+			try {
+				const status = await fetchSiteStatus(signal);
+				consecutiveFailures.delete(query);
+				return status;
+			} catch (cause) {
+				if (!signal.aborted) consecutiveFailures.set(query, (consecutiveFailures.get(query) ?? 0) + 1);
+				throw cause;
+			}
+		},
+		retry: false,
+		// refetchOnMount alone does not cover failed queries without data:
+		// Query treats those as initial loads unless retryOnMount is disabled.
+		retryOnMount: false,
+		refetchInterval: (query) => {
+			const failures = consecutiveFailures.get(query) ?? 0;
+			return SITE_STATUS_POLL_MS * 2 ** Math.min(Math.max(failures - 1, 0), 2);
+		},
+		refetchIntervalInBackground: false,
+		// Mounting inventory after a failed status check must not restart it.
+		refetchOnMount: (query) => query.state.status !== 'error',
+		refetchOnWindowFocus: (query) => query.state.status !== 'error',
 		// Overrides main.tsx's 1 min default so a refocused tab checks at once.
 		staleTime: 0,
 	});

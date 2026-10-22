@@ -19,18 +19,25 @@ const DEFAULT_MESSAGE = 'Hizmetimiz geçici olarak kullanılamıyor.';
 /**
  * Shows the holding page in place of every public route while maintenance
  * is in its scheduled window. The URL is left alone, so visitors land back
- * on the page they were on once it ends. Nothing renders until the first
- * status check answers, so the site never flashes before the holding page;
- * a failed check fails open.
+ * on the page they were on once it ends. Show a loading message during the
+ * first status check to avoid flashing the site before the holding page.
+ * Fail open after the first failure or when offline, so retries cannot
+ * prevent public pages from loading their own fallback data.
  */
 export function MaintenanceGate({ children }: { children: React.ReactNode }) {
 	const { pathname } = useLocation();
-	const { data, isPending } = useSiteStatus();
+	const { data, isPending, failureCount, fetchStatus, errorUpdatedAt } = useSiteStatus();
 	const now = useScheduleClock(data?.maintenance, data?.notice);
 
 	const exempt = EXEMPT_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 	if (exempt) return <>{children}</>;
-	if (isPending) return null;
+	if (isPending && !errorUpdatedAt && failureCount === 0 && fetchStatus === 'fetching') {
+		return (
+			<main className='flex min-h-screen items-center justify-center bg-bg px-4 text-text'>
+				<p role='status'>Sayfa yükleniyor...</p>
+			</main>
+		);
+	}
 	if (data && isScheduleActive(data.maintenance, now)) {
 		return <HoldingPage maintenance={data.maintenance} />;
 	}
