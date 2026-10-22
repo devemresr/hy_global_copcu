@@ -176,7 +176,7 @@ function InventoryPage() {
 					)}
 					<InventoryBrowser ref={browserRef} rows={rows} colDef={colDef} />
 					<div className='mt-4 flex flex-wrap items-center gap-3 text-text'>
-						<CustomerPriceEditor items={displayedItems} />
+						<CustomerPriceEditor items={displayedItems} disabled={showingSnapshot} />
 					</div>
 				</div>
 			</div>

@@ -19,8 +19,10 @@ import { useCustomerPriceRules } from '../hooks/useCustomerPriceRules';
 
 export function CustomerPriceEditor({
 	items,
+	disabled = false,
 }: {
 	items: InventoryItemRecord[];
+	disabled?: boolean;
 }) {
 	const [open, setOpen] = useState(false);
 	const [includePrices, setIncludePrices] = useState(false);
@@ -61,6 +63,7 @@ export function CustomerPriceEditor({
 	}, [open]);
 
 	function openEditor() {
+		if (disabled) return;
 		setDrafts({});
 		setExportPrices({});
 		setIncludePrices(false);
@@ -96,7 +99,7 @@ export function CustomerPriceEditor({
 		}
 	}
 	async function download() {
-		if (exporting || !eligibleItems.length) return;
+		if (disabled || exporting || !eligibleItems.length) return;
 		setExporting(true);
 		setError('');
 		try {
@@ -126,7 +129,7 @@ export function CustomerPriceEditor({
 				type='button'
 				aria-haspopup='dialog'
 				aria-expanded={open}
-				disabled={!eligibleItems.length}
+				disabled={disabled || !eligibleItems.length}
 				onClick={openEditor}
 				className='rounded-xl bg-button-bg px-4 py-2 text-sm font-medium hover:bg-button-hover-bg disabled:opacity-40'
 			>
@@ -207,7 +210,7 @@ export function CustomerPriceEditor({
 										</select>
 									</label>
 								)}
-								<div className='space-y-1.5 border-t border-border pt-2 sm:space-y-2 sm:pt-4'>
+								<div className='space-y-1.5 border-t border-border pt-2 sm:space-y-2 sm:pt-4 [&_[role=switch][aria-checked=false]]:bg-neutral-400 dark:[&_[role=switch][aria-checked=false]]:bg-neutral-500'>
 									<Switch
 										checked={includePrices}
 										onChange={(checked) => {
@@ -437,6 +440,7 @@ export function CustomerPriceEditor({
 							<button
 								type='button'
 								disabled={
+									disabled ||
 									exporting ||
 									!eligibleItems.length ||
 									(includePrices && priceRules.isFetching)

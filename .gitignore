@@ -29,3 +29,6 @@ dist-ssr
 *.sln
 *.sw?
 src/app/temp.ts
+
+# Generated inventory fallback, deployed separately from source control
+/public/items-snapshot.json
