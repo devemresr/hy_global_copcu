@@ -16,6 +16,7 @@ import env from '../../../config/env';
 import { apiFetch } from '../core/api-client';
 import type { ApiError } from '../core/api-client';
 import { SITE_ROUTES } from '../../../constants/routes.constant';
+import type { PromotionSettings } from '../../../constants/promotion.constant';
 
 export const SITE_STATUS_POLL_MS = 30_000;
 export const SITE_STATUS_QUERY_KEY = ['siteStatus'] as const;
@@ -47,6 +48,7 @@ export type NoticeDto = ScheduleDto & {
 };
 
 export type SiteStatus = {
+	promotion?: PromotionSettings;
 	version: number;
 	maintenance: MaintenanceDto;
 	notice: NoticeDto;
@@ -171,5 +173,16 @@ export function useUpdateNotice() {
 		mutationFn: (body) => apiFetch(SITE_ROUTES.NOTICE, { method: 'PUT', body }),
 		onSuccess: () =>
 			queryClient.invalidateQueries({ queryKey: SITE_STATUS_QUERY_KEY }),
+	});
+}
+
+export function useUpdatePromotion() {
+	const queryClient = useQueryClient();
+	return useMutation<unknown, ApiError, PromotionSettings>({
+		mutationFn: (body) => apiFetch(SITE_ROUTES.PROMOTION, { method: 'PUT', body }),
+		onSuccess: () => Promise.all([
+			queryClient.invalidateQueries({ queryKey: SITE_STATUS_QUERY_KEY }),
+			queryClient.invalidateQueries({ queryKey: ['logEvents'] }),
+		]),
 	});
 }

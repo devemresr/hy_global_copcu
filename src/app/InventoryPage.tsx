@@ -1,4 +1,5 @@
 import './App.css';
+import { HomepagePromotion } from './component/PromotionPopup';
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { CustomerPriceEditor } from './component/CustomerPriceEditor';
@@ -87,6 +88,7 @@ function InventoryPage() {
 
 	return (
 		<div className=' mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 '>
+			<HomepagePromotion />
 			<section className='pt-8 pb-6 md:pt-12'>
 				<h1 className='text-2xl font-bold text-heading-text md:text-3xl'>
 					{hero.heading}

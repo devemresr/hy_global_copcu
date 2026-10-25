@@ -34,6 +34,7 @@ const ACTION_LABELS: Record<string, string> = {
 	'items:delete': 'Ürün silindi',
 	'site:maintenance_update': 'Bakım modu güncellendi',
 	'site:notice_update': 'Duyuru güncellendi',
+	'site:promotion_update': 'Tanıtım güncellendi',
 };
 
 // Site-settings changes get their own kinds (and colors) so they stand out
@@ -49,6 +50,7 @@ const ACTION_KIND: Record<string, ActionKind> = {
 	'items:delete': 'delete',
 	'site:maintenance_update': 'maintenance',
 	'site:notice_update': 'notice',
+	'site:promotion_update': 'notice',
 };
 
 const ACTION_STYLE: Record<ActionKind, { icon: LucideIcon; badge: string }> = {
@@ -74,9 +76,14 @@ const ACTION_STYLE: Record<ActionKind, { icon: LucideIcon; badge: string }> = {
 	},
 };
 
-const SITE_ENTITY_TYPES: LogEntityType[] = ['site_maintenance', 'site_notice'];
+const SITE_ENTITY_TYPES: LogEntityType[] = ['site_maintenance', 'site_notice', 'site_promotion'];
 
 const SITE_FIELD_LABELS: Record<string, string> = {
+	brandLabel: 'Üst marka yazısı',
+	title: 'Başlık',
+	tagline: 'Kısa tanıtım yazısı',
+	description: 'Açıklama',
+	showEveryVisit: 'Her ziyarette göster',
 	enabled: 'Durum',
 	message: 'Mesaj',
 	from: 'Başlangıç',
@@ -148,6 +155,7 @@ const LOG_FILTERS: { types: LogEntityType[]; label: string }[] = [
 	{ types: ['item'], label: 'Ürünler' },
 	{ types: ['site_maintenance'], label: 'Bakım modu' },
 	{ types: ['site_notice'], label: 'Duyuru' },
+	{ types: ['site_promotion'], label: 'Tanıtım' },
 ];
 
 // A field outside FIELD_REGISTRY (none currently, but any future one) falls

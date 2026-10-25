@@ -1,4 +1,5 @@
 import { useMemo, useState, type ComponentType } from 'react';
+import { PromotionSection } from './component/admin/PromotionSection';
 import type { HighlightCellProps } from './component/HighlightCellRenderer';
 // import {  type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -425,6 +426,7 @@ function AdminPage() {
 			</div>
 
 			<MaintenanceSection />
+			<PromotionSection />
 
 			<button
 				type='button'

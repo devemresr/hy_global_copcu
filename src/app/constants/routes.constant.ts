@@ -6,6 +6,7 @@ export const API_BASE_PATHS = {
 } as const;
 
 export const SITE_ROUTES = {
+	PROMOTION: `${API_BASE_PATHS.SITE}/promotion`,
 	STATUS: `${API_BASE_PATHS.SITE}/status`,
 	MAINTENANCE: `${API_BASE_PATHS.SITE}/maintenance`,
 	NOTICE: `${API_BASE_PATHS.SITE}/notice`,
