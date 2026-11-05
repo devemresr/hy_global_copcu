@@ -23,6 +23,7 @@ export function configureApiClient(config: ApiClientConfig) {
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
 export type ApiError = {
+	details?: unknown;
 	message: string;
 	status: number;
 	statusText: string;
@@ -57,7 +58,7 @@ export async function apiFetch<TData>(
 			new URLSearchParams(
 				Object.entries(options.params).reduce(
 					(acc, [k, v]) => {
-						acc[k] = String(v);
+						if (v !== undefined && v !== null) acc[k] = String(v);
 						return acc;
 					},
 					{} as Record<string, string>,
@@ -102,6 +103,7 @@ export async function apiFetch<TData>(
 
 		const body = await response.json().catch(() => null);
 		const error: ApiError = {
+			...(body?.details === undefined ? {} : { details: body.details }),
 			message:
 				body?.error ||
 				body?.message ||

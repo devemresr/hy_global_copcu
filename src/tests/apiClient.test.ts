@@ -36,15 +36,41 @@ afterEach(() => {
 });
 
 describe('request basics', () => {
+	it('omits unset query filters while preserving zero, false and empty strings', async () => {
+		const fetchMock = mockFetch({ [ITEMS]: () => jsonResponse(200, {}) });
+		const { apiFetch } = await loadClient();
+		await apiFetch(ITEMS, {
+			params: {
+				movementType: 'restock',
+				bayiName: undefined,
+				productType: undefined,
+				memoryGb: null,
+				minTotal: 0,
+				enabled: false,
+				q: '',
+			},
+		});
+		const params = new URL(fetchMock.mock.calls[0]![0]).searchParams;
+		expect(Object.fromEntries(params)).toEqual({
+			movementType: 'restock',
+			minTotal: '0',
+			enabled: 'false',
+			q: '',
+		});
+	});
 	it('sends the stored access token as a Bearer header', async () => {
-		const fetchMock = mockFetch({ [ITEMS]: () => jsonResponse(200, { items: [] }) });
+		const fetchMock = mockFetch({
+			[ITEMS]: () => jsonResponse(200, { items: [] }),
+		});
 		const { apiFetch, setAccessToken } = await loadClient();
 		const token = fakeJwt(ACCESS_TTL);
 		setAccessToken(token);
 
 		await apiFetch(ITEMS);
 		expect(authHeaderOf(fetchMock.mock.calls[0]![1])).toBe(`Bearer ${token}`);
-		expect(fetchMock.mock.calls[0]![1]).toMatchObject({ credentials: 'include' });
+		expect(fetchMock.mock.calls[0]![1]).toMatchObject({
+			credentials: 'include',
+		});
 	});
 
 	it('sends no Authorization header without a token', async () => {
@@ -59,7 +85,11 @@ describe('request basics', () => {
 		const fetchMock = mockFetch({ [ITEMS]: () => jsonResponse(200, {}) });
 		const { apiFetch } = await loadClient();
 
-		await apiFetch(ITEMS, { method: 'POST', params: { page: 2, q: 'a b' }, body: { x: 1 } });
+		await apiFetch(ITEMS, {
+			method: 'POST',
+			params: { page: 2, q: 'a b' },
+			body: { x: 1 },
+		});
 		const [url, init] = fetchMock.mock.calls[0]!;
 		expect(new URL(url).searchParams.get('page')).toBe('2');
 		expect(new URL(url).searchParams.get('q')).toBe('a b');
@@ -68,7 +98,9 @@ describe('request basics', () => {
 
 	it('stores an accessToken found in a response body (login)', async () => {
 		const token = fakeJwt(ACCESS_TTL);
-		mockFetch({ [AUTH_ROUTES.LOGIN]: () => jsonResponse(200, { accessToken: token }) });
+		mockFetch({
+			[AUTH_ROUTES.LOGIN]: () => jsonResponse(200, { accessToken: token }),
+		});
 		const { apiFetch, getAccessToken } = await loadClient();
 
 		await apiFetch(AUTH_ROUTES.LOGIN, { method: 'POST', body: {} });
@@ -76,17 +108,27 @@ describe('request basics', () => {
 	});
 
 	it('returns an empty object for a non-JSON response (204)', async () => {
-		mockFetch({ [AUTH_ROUTES.LOGOUT]: () => new Response(null, { status: 204 }) });
+		mockFetch({
+			[AUTH_ROUTES.LOGOUT]: () => new Response(null, { status: 204 }),
+		});
 		const { apiFetch } = await loadClient();
 
-		await expect(apiFetch(AUTH_ROUTES.LOGOUT, { method: 'POST' })).resolves.toEqual({});
+		await expect(
+			apiFetch(AUTH_ROUTES.LOGOUT, { method: 'POST' }),
+		).resolves.toEqual({});
 	});
 
 	it('throws an ApiError carrying the server message on a non-401 failure', async () => {
-		mockFetch({ [ITEMS]: () => jsonResponse(403, { success: false, message: 'Forbidden' }) });
+		mockFetch({
+			[ITEMS]: () =>
+				jsonResponse(403, { success: false, message: 'Forbidden' }),
+		});
 		const { apiFetch } = await loadClient();
 
-		await expect(apiFetch(ITEMS)).rejects.toMatchObject({ status: 403, message: 'Forbidden' });
+		await expect(apiFetch(ITEMS)).rejects.toMatchObject({
+			status: 403,
+			message: 'Forbidden',
+		});
 	});
 });
 
@@ -95,7 +137,10 @@ describe('401 - refresh and retry once', () => {
 		const stale = fakeJwt(ACCESS_TTL);
 		const fresh = fakeJwt(ACCESS_TTL, { jti: 'fresh' });
 		const fetchMock = mockFetch({
-			[ITEMS]: [() => jsonResponse(401, {}), () => jsonResponse(200, { items: [1] })],
+			[ITEMS]: [
+				() => jsonResponse(401, {}),
+				() => jsonResponse(200, { items: [1] }),
+			],
 			[AUTH_ROUTES.REFRESH]: () => jsonResponse(200, { accessToken: fresh }),
 		});
 		const { apiFetch, setAccessToken } = await loadClient();
@@ -110,7 +155,10 @@ describe('401 - refresh and retry once', () => {
 	it('works with no token at all (e.g. localStorage cleared, cookie still alive)', async () => {
 		const fresh = fakeJwt(ACCESS_TTL);
 		mockFetch({
-			[ITEMS]: [() => jsonResponse(401, {}), () => jsonResponse(200, { ok: true })],
+			[ITEMS]: [
+				() => jsonResponse(401, {}),
+				() => jsonResponse(200, { ok: true }),
+			],
 			[AUTH_ROUTES.REFRESH]: () => jsonResponse(200, { accessToken: fresh }),
 		});
 		const { apiFetch } = await loadClient();
@@ -121,7 +169,8 @@ describe('401 - refresh and retry once', () => {
 	it('does not refresh a second time when the retry is also 401', async () => {
 		const fetchMock = mockFetch({
 			[ITEMS]: () => jsonResponse(401, { message: 'Access token expired' }),
-			[AUTH_ROUTES.REFRESH]: () => jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
+			[AUTH_ROUTES.REFRESH]: () =>
+				jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
 		});
 		const { apiFetch } = await loadClient();
 
@@ -132,11 +181,14 @@ describe('401 - refresh and retry once', () => {
 
 	it('a 401 from login is wrong credentials - no refresh attempted', async () => {
 		const fetchMock = mockFetch({
-			[AUTH_ROUTES.LOGIN]: () => jsonResponse(401, { message: 'Invalid credentials' }),
+			[AUTH_ROUTES.LOGIN]: () =>
+				jsonResponse(401, { message: 'Invalid credentials' }),
 		});
 		const { apiFetch } = await loadClient();
 
-		await expect(apiFetch(AUTH_ROUTES.LOGIN, { method: 'POST', body: {} })).rejects.toMatchObject({
+		await expect(
+			apiFetch(AUTH_ROUTES.LOGIN, { method: 'POST', body: {} }),
+		).rejects.toMatchObject({
 			status: 401,
 			message: 'Invalid credentials',
 		});
@@ -147,12 +199,20 @@ describe('401 - refresh and retry once', () => {
 		let itemCalls = 0;
 		const fetchMock = mockFetch({
 			// First three calls (the originals) 401, the retries succeed.
-			[ITEMS]: () => (++itemCalls <= 3 ? jsonResponse(401, {}) : jsonResponse(200, { ok: true })),
-			[AUTH_ROUTES.REFRESH]: () => jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
+			[ITEMS]: () =>
+				++itemCalls <= 3
+					? jsonResponse(401, {})
+					: jsonResponse(200, { ok: true }),
+			[AUTH_ROUTES.REFRESH]: () =>
+				jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
 		});
 		const { apiFetch } = await loadClient();
 
-		const results = await Promise.all([apiFetch(ITEMS), apiFetch(ITEMS), apiFetch(ITEMS)]);
+		const results = await Promise.all([
+			apiFetch(ITEMS),
+			apiFetch(ITEMS),
+			apiFetch(ITEMS),
+		]);
 		expect(results).toHaveLength(3);
 		expect(callsTo(fetchMock, AUTH_ROUTES.REFRESH)).toHaveLength(1);
 	});
@@ -162,14 +222,19 @@ describe('onSessionExpired', () => {
 	it('runs once when the server rejects the refresh, and the original 401 surfaces', async () => {
 		mockFetch({
 			[ITEMS]: () => jsonResponse(401, { message: 'Access token expired' }),
-			[AUTH_ROUTES.REFRESH]: () => jsonResponse(401, { message: 'Session has been revoked' }),
+			[AUTH_ROUTES.REFRESH]: () =>
+				jsonResponse(401, { message: 'Session has been revoked' }),
 		});
-		const { apiFetch, configureApiClient, setAccessToken, getAccessToken } = await loadClient();
+		const { apiFetch, configureApiClient, setAccessToken, getAccessToken } =
+			await loadClient();
 		const onSessionExpired = vi.fn();
 		configureApiClient({ onSessionExpired });
 		setAccessToken(fakeJwt(ACCESS_TTL));
 
-		await expect(apiFetch(ITEMS)).rejects.toMatchObject({ status: 401, message: 'Access token expired' });
+		await expect(apiFetch(ITEMS)).rejects.toMatchObject({
+			status: 401,
+			message: 'Access token expired',
+		});
 		expect(onSessionExpired).toHaveBeenCalledTimes(1);
 		expect(getAccessToken()).toBeNull();
 	});
@@ -179,7 +244,8 @@ describe('onSessionExpired', () => {
 			[ITEMS]: () => jsonResponse(401, {}),
 			[AUTH_ROUTES.REFRESH]: networkError,
 		});
-		const { apiFetch, configureApiClient, setAccessToken, getAccessToken } = await loadClient();
+		const { apiFetch, configureApiClient, setAccessToken, getAccessToken } =
+			await loadClient();
 		const onSessionExpired = vi.fn();
 		configureApiClient({ onSessionExpired });
 		const token = fakeJwt(ACCESS_TTL);
