@@ -8,7 +8,15 @@ export type LogEventFieldChange = {
 	newValue: string | number | boolean | null;
 };
 
-export type LogEntityType = 'item' | 'item_rule' | 'site_maintenance' | 'site_notice' | 'site_promotion';
+export type LogEntityType =
+	| 'item'
+	| 'item_rule'
+	| 'site_maintenance'
+	| 'site_notice'
+	| 'site_promotion'
+	| 'stock_restock'
+	| 'stock_price'
+	| 'stock_purchase';
 
 // Items and site settings write to the same log_events collection server
 // side (see the server's LogEvent model), so field names here aren't limited
@@ -52,7 +60,12 @@ export function useGetLogEvents(
 	return useApiQuery<LogEventsResponse>({
 		url: LOG_EVENT_ROUTES.LIST,
 		queryKey: ['logEvents', page, pageSize, typesParam, model, caseSensitive],
-		params: { page, pageSize, ...(typesParam && { types: typesParam }), ...(model && { model, caseSensitive }) },
+		params: {
+			page,
+			pageSize,
+			...(typesParam && { types: typesParam }),
+			...(model && { model, caseSensitive }),
+		},
 		// Keeps the current page's rows on screen while the next page loads,
 		// instead of the list flashing empty/loading on every page change.
 		queryOptions: { placeholderData: keepPreviousData },

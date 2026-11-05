@@ -1,11 +1,10 @@
+import { AdminCollapseButton } from './AdminCollapseHeading';
 import { useState } from 'react';
 import {
 	Plus,
 	Pencil,
 	Trash2,
 	Layers,
-	ChevronDown,
-	ChevronRight,
 	Wrench,
 	Megaphone,
 	CaseSensitive,
@@ -26,6 +25,10 @@ import { Pagination } from './Pagination';
 // LogEvent model comment), so this covers both action sets rather than
 // assuming every entry is an item edit.
 const ACTION_LABELS: Record<string, string> = {
+	'stock:purchase_create': 'Alım / stok girişi kaydedildi',
+	'stock:restock_complete': 'Tam stok yenileme kaydedildi',
+	'stock:restock_partial': 'Kısmi stok yenileme kaydedildi',
+	'stock:price_update': 'Satış fiyatı güncellendi',
 	'items:add_rule': 'Kural oluşturuldu',
 	'items:edit_rule': 'Kural güncellendi',
 	'items:delete_rule': 'Kural silindi',
@@ -42,6 +45,10 @@ const ACTION_LABELS: Record<string, string> = {
 type ActionKind = 'create' | 'update' | 'delete' | 'maintenance' | 'notice';
 
 const ACTION_KIND: Record<string, ActionKind> = {
+	'stock:purchase_create': 'create',
+	'stock:restock_complete': 'create',
+	'stock:restock_partial': 'create',
+	'stock:price_update': 'update',
 	'items:add_rule': 'create',
 	'items:edit_rule': 'update',
 	'items:delete_rule': 'delete',
@@ -76,7 +83,11 @@ const ACTION_STYLE: Record<ActionKind, { icon: LucideIcon; badge: string }> = {
 	},
 };
 
-const SITE_ENTITY_TYPES: LogEntityType[] = ['site_maintenance', 'site_notice', 'site_promotion'];
+const SITE_ENTITY_TYPES: LogEntityType[] = [
+	'site_maintenance',
+	'site_notice',
+	'site_promotion',
+];
 
 const SITE_FIELD_LABELS: Record<string, string> = {
 	brandLabel: 'Üst marka yazısı',
@@ -151,6 +162,10 @@ function actionLabel(event: LogEventDto): string {
 }
 
 const LOG_FILTERS: { types: LogEntityType[]; label: string }[] = [
+	{
+		types: ['stock_restock', 'stock_price', 'stock_purchase'],
+		label: 'Stok işlemleri',
+	},
 	{ types: ['item_rule'], label: 'Kurallar' },
 	{ types: ['item'], label: 'Ürünler' },
 	{ types: ['site_maintenance'], label: 'Bakım modu' },
@@ -161,6 +176,23 @@ const LOG_FILTERS: { types: LogEntityType[]; label: string }[] = [
 // A field outside FIELD_REGISTRY (none currently, but any future one) falls
 // back to its raw name instead of throwing.
 function fieldLabel(field: string, entityType?: LogEntityType): string {
+	if (
+		entityType === 'stock_restock' ||
+		entityType === 'stock_price' ||
+		entityType === 'stock_purchase'
+	)
+		return (
+			(
+				{
+					bayiName: 'Bayi',
+					totalPurchaseCost: 'Toplam alış maliyeti (TL)',
+					operationId: 'İşlem kimliği',
+					totalRevenue: 'Toplam satış geliri (TL)',
+					costOfGoods: 'Satılan ürün maliyeti (TL)',
+					sellingPrice: 'Satış fiyatı (TL)',
+				} as Record<string, string>
+			)[field] ?? field
+		);
 	if (entityType && SITE_ENTITY_TYPES.includes(entityType)) {
 		return SITE_FIELD_LABELS[field] ?? field;
 	}
@@ -323,11 +355,7 @@ function BulkGroupCard({
 
 	return (
 		<div className='flex flex-col gap-2 rounded-xl bg-button-bg px-3 py-2.5'>
-			<button
-				type='button'
-				onClick={onToggle}
-				className='flex w-full flex-wrap items-center gap-2 text-left'
-			>
+			<AdminCollapseButton expanded={expanded} onClick={onToggle}>
 				<span
 					className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
 						isRowSnapshot
@@ -356,13 +384,8 @@ function BulkGroupCard({
 				<span className='opacity-60'>· {first.adminUsername}</span>
 				<span className='ml-auto flex items-center gap-1 text-xs opacity-50'>
 					{new Date(latestCreatedAt).toLocaleString('tr-TR')}
-					{expanded ? (
-						<ChevronDown className='h-3.5 w-3.5' />
-					) : (
-						<ChevronRight className='h-3.5 w-3.5' />
-					)}
 				</span>
-			</button>
+			</AdminCollapseButton>
 
 			{expanded && (
 				<ul className='flex flex-col gap-1 pl-1 text-xs'>
@@ -413,18 +436,21 @@ export function LogEventsSection() {
 
 	// Empty means every type ("Tümü").
 	const [types, setTypes] = useState<LogEntityType[]>([]);
+	const showModelSearch = types.length === 1 && types[0] === 'item';
 
 	const { data, status, isPlaceholderData } = useGetLogEvents(
 		page,
 		pageSize,
 		types,
-		modelSearch,
+		showModelSearch ? modelSearch : '',
 		caseSensitive,
 	);
 	const events = data?.events ?? [];
 	const totalPages = data?.totalPages ?? 1;
 
 	function toggleFilter(filterTypes: LogEntityType[]) {
+		setModelDraft('');
+		setModelSearch('');
 		setTypes((current) => {
 			const isOn = filterTypes.every((t) => current.includes(t));
 			const next = isOn
@@ -458,49 +484,53 @@ export function LogEventsSection() {
 	return (
 		<>
 			<h2 className='text-lg font-semibold mt-8 mb-2'>Değişiklik Geçmişi</h2>
-			<form
-				className='mb-3 flex flex-wrap items-center gap-2 text-sm'
-				onSubmit={(event) => {
-					event.preventDefault();
-					setModelSearch(modelDraft.trim());
-					setPage(1);
-					setExpandedGroups(new Set());
-				}}
-			>
-				<label className='flex flex-col gap-1'>
-					<span className='text-xs opacity-70'>Tam model adı</span>
-					<div className='flex gap-2'>
-						<input
-							type='search'
-							maxLength={500}
-							value={modelDraft}
-							onChange={(event) => setModelDraft(event.target.value)}
-							placeholder='Örn. KMQE6006M'
-							className='rounded-xl bg-button-bg px-3 py-1.5 outline-none'
-						/>
-						<button
-							type='button'
-							aria-label='Büyük/küçük harfe duyarlı'
-							title='Büyük/küçük harfe duyarlı'
-							aria-pressed={caseSensitive}
-							onClick={() => {
-								setCaseSensitive((value) => !value);
-								setPage(1);
-								setExpandedGroups(new Set());
-							}}
-							className={`rounded-xl p-2 ${caseSensitive ? 'bg-text text-bg' : 'bg-button-bg hover:bg-button-hover-bg'}`}
-						>
-							<CaseSensitive size={16} aria-hidden='true' />
-						</button>
-						<button
-							type='submit'
-							className='rounded-xl bg-button-bg px-3 py-1.5'
-						>
-							Ara
-						</button>
-					</div>
-				</label>
-			</form>
+			{showModelSearch && (
+				<form
+					className='mb-3 flex flex-wrap items-center gap-2 text-sm'
+					onSubmit={(event) => {
+						event.preventDefault();
+						setModelSearch(modelDraft.trim());
+						setPage(1);
+						setExpandedGroups(new Set());
+					}}
+				>
+					<label className='flex flex-col gap-1'>
+						<span className='text-xs opacity-70'>
+							Ürün modeli ara · Yalnızca ürün kayıtları
+						</span>
+						<div className='flex gap-2'>
+							<input
+								type='search'
+								maxLength={500}
+								value={modelDraft}
+								onChange={(event) => setModelDraft(event.target.value)}
+								placeholder='Model adı (örn. KMQE6006M)'
+								className='rounded-xl bg-button-bg px-3 py-1.5 outline-none'
+							/>
+							<button
+								type='button'
+								aria-label='Büyük/küçük harfe duyarlı'
+								title='Büyük/küçük harfe duyarlı'
+								aria-pressed={caseSensitive}
+								onClick={() => {
+									setCaseSensitive((value) => !value);
+									setPage(1);
+									setExpandedGroups(new Set());
+								}}
+								className={`rounded-xl p-2 ${caseSensitive ? 'bg-text text-bg' : 'bg-button-bg hover:bg-button-hover-bg'}`}
+							>
+								<CaseSensitive size={16} aria-hidden='true' />
+							</button>
+							<button
+								type='submit'
+								className='rounded-xl bg-button-bg px-3 py-1.5'
+							>
+								Ara
+							</button>
+						</div>
+					</label>
+				</form>
+			)}
 
 			<div
 				className='mb-3 flex flex-wrap gap-2'

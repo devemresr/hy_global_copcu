@@ -22,6 +22,8 @@ import { useItemRules } from './hooks/useItemRules';
 import { useBulkRuleApproval } from './hooks/useBulkRuleApproval';
 import { findBulkRuleConflicts } from './helpers/adminPageHelpers/itemRules.helper';
 import { useLogout } from './hooks/api/endpoints/useAuth';
+import { Link } from 'react-router';
+import { PAGE_PATHS } from './constants/pagePaths.constant';
 import { LogEventsSection } from './component/admin/LogEventsSection';
 import { MaintenanceSection } from './component/admin/MaintenanceSection';
 import { InventoryBrowser } from './component/InventoryBrowser';
@@ -77,12 +79,14 @@ function toEditable(record: ItemDto): EditableInventoryItem {
 
 // Replaces the Model column's renderer in the admin grid: the column's
 // original display (search highlighting) plus whole-row edit/delete icons.
-function ModelActionsCell(props: Omit<HighlightCellProps, 'data'> & {
-	data: ItemDto & NonNullable<HighlightCellProps['data']>;
-	displayRenderer?: ComponentType<HighlightCellProps>;
-	onEdit: (id: string) => void;
-	onDelete: (item: ItemDto) => void;
-}) {
+function ModelActionsCell(
+	props: Omit<HighlightCellProps, 'data'> & {
+		data: ItemDto & NonNullable<HighlightCellProps['data']>;
+		displayRenderer?: ComponentType<HighlightCellProps>;
+		onEdit: (id: string) => void;
+		onDelete: (item: ItemDto) => void;
+	},
+) {
 	const { value, data, displayRenderer: Display, onEdit, onDelete } = props;
 	return (
 		<div className='flex h-full w-full items-center justify-between gap-1'>
@@ -135,7 +139,17 @@ function AdminPage() {
 
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [isCreatingItem, setIsCreatingItem] = useState(false);
-	const { rules: itemRules, revision: rulesRevision, saveRules, isLoading: rulesLoading, isSaving: rulesSaving, error: rulesError, refetch: refetchRules, legacyRules, importLegacyRules } = useItemRules();
+	const {
+		rules: itemRules,
+		revision: rulesRevision,
+		saveRules,
+		isLoading: rulesLoading,
+		isSaving: rulesSaving,
+		error: rulesError,
+		refetch: refetchRules,
+		legacyRules,
+		importLegacyRules,
+	} = useItemRules();
 	const queryClient = useQueryClient();
 	const logout = useLogout();
 
@@ -184,6 +198,8 @@ function AdminPage() {
 	function invalidateAfterMutation() {
 		return Promise.all([
 			queryClient.invalidateQueries({ queryKey: ['items'] }),
+			queryClient.invalidateQueries({ queryKey: ['stock'] }),
+			queryClient.invalidateQueries({ queryKey: ['orderPricing'] }),
 			queryClient.invalidateQueries({ queryKey: ['logEvents'] }),
 		]);
 	}
@@ -215,18 +231,28 @@ function AdminPage() {
 		matched: ItemDto[],
 		fields: Partial<EditableInventoryItem>,
 	) {
-		const conflictingItems = matched.map((item) => ({ item, conflicts: findBulkRuleConflicts(item, fields, itemRules) })).filter((entry) => entry.conflicts.length > 0);
+		const conflictingItems = matched
+			.map((item) => ({
+				item,
+				conflicts: findBulkRuleConflicts(item, fields, itemRules),
+			}))
+			.filter((entry) => entry.conflicts.length > 0);
 		const conflicts = conflictingItems.flatMap((entry) => entry.conflicts);
 		let targets = matched;
 		let ruleOverrideRevision: number | undefined;
 		if (conflicts.length > 0) {
 			const decision = await ruleApproval.requestApproval(conflicts);
-			if (decision === 'cancel') throw new DOMException('Değişiklik iptal edildi.', 'AbortError');
+			if (decision === 'cancel')
+				throw new DOMException('Değişiklik iptal edildi.', 'AbortError');
 			if (decision === 'exclude') {
-				const excludedIds = new Set(conflictingItems.map(({ item }) => item._id));
+				const excludedIds = new Set(
+					conflictingItems.map(({ item }) => item._id),
+				);
 				targets = matched.filter((item) => !excludedIds.has(item._id));
 				if (targets.length === 0) {
-					toast.info('Tüm seçili ürünler kuralla çeliştiği için atlandı. Hiçbir ürün değiştirilmedi.');
+					toast.info(
+						'Tüm seçili ürünler kuralla çeliştiği için atlandı. Hiçbir ürün değiştirilmedi.',
+					);
 					return 0;
 				}
 			} else ruleOverrideRevision = rulesRevision;
@@ -259,14 +285,21 @@ function AdminPage() {
 
 	async function commitBulkDelete(matched: ItemDto[]) {
 		try {
-			const result = await bulkDeleteItemsMutation.mutateAsync({ ids: matched.map((row) => row._id) });
+			const result = await bulkDeleteItemsMutation.mutateAsync({
+				ids: matched.map((row) => row._id),
+			});
 			invalidateAfterMutation();
 			const skipped = matched.length - result.deletedCount;
-			if (skipped > 0) toast.warning(`${result.deletedCount} öğe silindi, ${skipped} öğe artık mevcut değil`);
+			if (skipped > 0)
+				toast.warning(
+					`${result.deletedCount} öğe silindi, ${skipped} öğe artık mevcut değil`,
+				);
 			else toast.success(`${result.deletedCount} öğe silindi`);
 		} catch (error) {
 			invalidateAfterMutation();
-			toast.error('Toplu silme başarısız', { description: (error as ApiError).message });
+			toast.error('Toplu silme başarısız', {
+				description: (error as ApiError).message,
+			});
 			throw error;
 		}
 	}
@@ -414,7 +447,19 @@ function AdminPage() {
 				<p className='text-sm text-red-500'>Ürünler yüklenemedi</p>
 			)} */}
 
-			<div className='mb-3 flex justify-end'>
+			<div className='mb-3 flex flex-wrap justify-end gap-2'>
+				<Link
+					to={PAGE_PATHS.STOCK}
+					className='rounded-xl border-2 border-border px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
+				>
+					Stok
+				</Link>
+				<Link
+					to={PAGE_PATHS.ORDERS}
+					className='mr-3 rounded-xl border-2 border-border px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
+				>
+					Alışlar
+				</Link>
 				<button
 					type='button'
 					onClick={() => logout.mutate()}
@@ -428,15 +473,6 @@ function AdminPage() {
 			<MaintenanceSection />
 			<PromotionSection />
 
-			<button
-				type='button'
-				onClick={() => setIsCreatingItem(true)}
-				disabled={rulesLoading || Boolean(rulesError) || rulesSaving}
-				className='mb-3 rounded-xl bg-button-focus-bg px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
-			>
-				+ Yeni Ürün Ekle
-			</button>
-
 			<BulkEditPanel
 				rules={itemRules}
 				disabled={rulesLoading || Boolean(rulesError) || rulesSaving}
@@ -447,11 +483,46 @@ function AdminPage() {
 				onApply={commitBulkFieldChange}
 				onDelete={commitBulkDelete}
 			/>
-			{rulesLoading && <p className='mb-3 text-sm opacity-70'>Kurallar yükleniyor...</p>}
-			{rulesError && <div className='mb-3 text-sm text-red-600 dark:text-red-400'>Kurallar yüklenemedi: {rulesError.message} <button type='button' className='underline' onClick={() => void refetchRules()}>Tekrar dene</button></div>}
-			{legacyRules.length > 0 && <button type='button' disabled={rulesLoading || Boolean(rulesError) || rulesSaving} className='mb-3 rounded-xl bg-button-focus-bg px-3 py-1.5 text-sm disabled:opacity-40' onClick={() => void importLegacyRules().catch(() => {})}>Bu tarayıcıdaki {legacyRules.length} kuralı sunucuya aktar</button>}
-			<ItemRulesPanel rules={itemRules} onChange={saveRules} disabled={rulesLoading || Boolean(rulesError) || rulesSaving} />
+			{rulesLoading && (
+				<p className='mb-3 text-sm opacity-70'>Kurallar yükleniyor...</p>
+			)}
+			{rulesError && (
+				<div className='mb-3 text-sm text-red-600 dark:text-red-400'>
+					Kurallar yüklenemedi: {rulesError.message}{' '}
+					<button
+						type='button'
+						className='underline'
+						onClick={() => void refetchRules()}
+					>
+						Tekrar dene
+					</button>
+				</div>
+			)}
+			{legacyRules.length > 0 && (
+				<button
+					type='button'
+					disabled={rulesLoading || Boolean(rulesError) || rulesSaving}
+					className='mb-3 rounded-xl bg-button-focus-bg px-3 py-1.5 text-sm disabled:opacity-40'
+					onClick={() => void importLegacyRules().catch(() => {})}
+				>
+					Bu tarayıcıdaki {legacyRules.length} kuralı sunucuya aktar
+				</button>
+			)}
+			<ItemRulesPanel
+				rules={itemRules}
+				onChange={saveRules}
+				disabled={rulesLoading || Boolean(rulesError) || rulesSaving}
+			/>
 
+			<SideBySideEditor
+				items={items}
+				rules={itemRules}
+				disabled={rulesLoading || Boolean(rulesError) || rulesSaving}
+				requireApproval={confirmEdits}
+				enterEnabled={enterToConfirm}
+				escapeEnabled={escapeToCancel}
+				onApply={commitBulkFieldChange}
+			/>
 			<div className='mb-3 flex flex-col gap-1 rounded-xl bg-button-bg p-3 text-sm'>
 				<span className='font-medium'>Alan düzenleme ayarları</span>
 				<label className='flex items-center gap-2'>
@@ -488,8 +559,15 @@ function AdminPage() {
 				</label>
 			</div>
 
-			<SideBySideEditor items={items} rules={itemRules} disabled={rulesLoading || Boolean(rulesError) || rulesSaving} requireApproval={confirmEdits} enterEnabled={enterToConfirm} escapeEnabled={escapeToCancel} onApply={commitBulkFieldChange} />
-			<InventoryBrowser rows={rows} colDef={colDef} />
+			<button
+				type='button'
+				onClick={() => setIsCreatingItem(true)}
+				disabled={rulesLoading || Boolean(rulesError) || rulesSaving}
+				className='mb-3 rounded-xl bg-button-focus-bg px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
+			>
+				+ Yeni Ürün Ekle
+			</button>
+			<InventoryBrowser rows={rows} colDef={colDef} autoFocusSearch={false} />
 			{ruleApproval.dialog}
 
 			{editingItem && (
@@ -510,7 +588,12 @@ function AdminPage() {
 					item={EMPTY_ITEM}
 					onClose={() => setIsCreatingItem(false)}
 					onSave={handleCreateItem}
-					isSaving={createItemMutation.isPending || rulesLoading || Boolean(rulesError) || rulesSaving}
+					isSaving={
+						createItemMutation.isPending ||
+						rulesLoading ||
+						Boolean(rulesError) ||
+						rulesSaving
+					}
 					enterEnabled={enterToConfirm}
 					escapeEnabled={escapeToCancel}
 				/>

@@ -3,6 +3,14 @@ export const API_BASE_PATHS = {
 	ITEMS: '/items',
 	LOG_EVENTS: '/log-events',
 	SITE: '/site',
+	ORDERS: '/orders',
+	BAYILER: '/bayiler',
+} as const;
+
+export const STOCK_ROUTES = {
+	LIST: '/stock',
+	SALES: '/stock/sales',
+	WARNINGS: '/stock/purchase-warnings',
 } as const;
 
 export const SITE_ROUTES = {
@@ -29,8 +37,24 @@ export const ITEM_ROUTES = {
 	CHANGES: `${API_BASE_PATHS.ITEMS}/changes`,
 } as const;
 
-export const ITEM_RULE_ROUTES = { LIST: '/item-rules', SAVE: '/item-rules' } as const;
+export const ITEM_RULE_ROUTES = {
+	LIST: '/item-rules',
+	SAVE: '/item-rules',
+} as const;
 
 export const LOG_EVENT_ROUTES = {
 	LIST: `${API_BASE_PATHS.LOG_EVENTS}`,
+} as const;
+
+export const ORDER_ROUTES = {
+	REPORT: `${API_BASE_PATHS.ORDERS}/report`,
+	LIST: API_BASE_PATHS.ORDERS,
+	CREATE: API_BASE_PATHS.ORDERS,
+	PRICING: `${API_BASE_PATHS.ORDERS}/pricing`,
+} as const;
+
+export const BAYI_ROUTES = {
+	LIST: API_BASE_PATHS.BAYILER,
+	CREATE: API_BASE_PATHS.BAYILER,
+	UPDATE: (id: string) => `${API_BASE_PATHS.BAYILER}/${encodeURIComponent(id)}`,
 } as const;

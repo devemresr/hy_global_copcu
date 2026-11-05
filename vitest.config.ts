@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 // React/Tailwind/SVG plugins.
 export default defineConfig({
 	test: {
-		include: ['src/**/*.test.ts'],
+		include: ['src/**/*.test.{ts,tsx}'],
 		environment: 'jsdom',
 		setupFiles: ['src/tests/setup.ts'],
 		env: {
