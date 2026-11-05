@@ -7,7 +7,11 @@ export type HighlightCellProps = {
 	colDef?: { field?: string };
 };
 
-export function HighlightCellRenderer({ value, data, colDef }: HighlightCellProps) {
+export function HighlightCellRenderer({
+	value,
+	data,
+	colDef,
+}: HighlightCellProps) {
 	const key = colDef?.field;
 	const text = String(value ?? '');
 	const fieldMatch = data?.matches?.find((m) => m.key === key);

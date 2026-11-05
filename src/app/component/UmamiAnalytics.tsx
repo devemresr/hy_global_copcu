@@ -23,7 +23,10 @@ type UmamiPayload = { url?: string };
 
 declare global {
 	interface Window {
-		[BEFORE_SEND_HOOK]?: (type: string, payload: UmamiPayload) => UmamiPayload | null;
+		[BEFORE_SEND_HOOK]?: (
+			type: string,
+			payload: UmamiPayload,
+		) => UmamiPayload | null;
 	}
 }
 

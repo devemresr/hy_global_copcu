@@ -102,7 +102,8 @@ export function useInventoryColumnFilter(
 		if (!hasColumn) return counts;
 		for (const row of rows) {
 			const value = getValue(row);
-			const key = value === null ? emptyValueLabel.toLowerCase() : value.toLowerCase();
+			const key =
+				value === null ? emptyValueLabel.toLowerCase() : value.toLowerCase();
 			if (value !== null && excludedValues.has(key)) continue;
 			counts.set(key, (counts.get(key) ?? 0) + 1);
 		}

@@ -83,9 +83,18 @@ export function matchesFieldFilter(
 		case 'lengthGte':
 		case 'lengthLt':
 		case 'lengthLte': {
-			if (filter.field !== 'model' || !hasValue || typeof row.model !== 'string') return false;
+			if (
+				filter.field !== 'model' ||
+				!hasValue ||
+				typeof row.model !== 'string'
+			)
+				return false;
 			const raw = filter.value;
-			if (typeof raw !== 'number' && (typeof raw !== 'string' || !/^\d+$/.test(raw.trim()))) return false;
+			if (
+				typeof raw !== 'number' &&
+				(typeof raw !== 'string' || !/^\d+$/.test(raw.trim()))
+			)
+				return false;
 			const target = Number(raw);
 			if (!Number.isSafeInteger(target) || target < 0) return false;
 			const length = Array.from(row.model.trim()).length;
@@ -125,12 +134,11 @@ export function matchesFieldFilter(
 		}
 		case 'contains':
 		case 'notContains': {
-			const contains = (
+			const contains =
 				hasValue &&
 				String(row[filter.field])
 					.toLowerCase()
-					.includes(String(filter.value).toLowerCase())
-			);
+					.includes(String(filter.value).toLowerCase());
 			return filter.op === 'contains' ? contains : !contains;
 		}
 		case 'gt':

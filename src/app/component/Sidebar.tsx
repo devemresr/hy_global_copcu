@@ -20,7 +20,10 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
           ${isOpen ? 'w-64' : 'w-0'}`}
 			>
 				<div className='flex w-64 justify-between p-4 items-center'>
-					<a className='text-heading-text font-bold block whitespace-nowrap' href={PAGE_PATHS.HOME}>
+					<a
+						className='text-heading-text font-bold block whitespace-nowrap'
+						href={PAGE_PATHS.HOME}
+					>
 						GLOBAL ÇÖPÇÜ
 					</a>
 					<button className='text-text h-8 w-8 ' onClick={onClose}>
@@ -50,7 +53,10 @@ export function Sidebar({ isOpen, mode, onClose }: SidebarProps) {
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
 			>
 				<div className='flex justify-between p-4 items-center'>
-					<a className='text-heading-text font-bold block whitespace-nowrap' href={PAGE_PATHS.HOME}>
+					<a
+						className='text-heading-text font-bold block whitespace-nowrap'
+						href={PAGE_PATHS.HOME}
+					>
 						GLOBAL ÇÖPÇÜ
 					</a>
 					<button className='text-text h-8 w-8' onClick={onClose}>

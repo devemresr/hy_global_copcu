@@ -50,7 +50,9 @@ export function Pricing() {
 					<h1 className='font-[Big_Shoulders_Display] text-2xl md:text-3xl text-white tracking-tight'>
 						Hurda Telefon Anakartı Alım Listesi
 					</h1>
-					<p className='text-white mt-2'>{currentMonthTr()} ayı güncel fiyatlarımız</p>
+					<p className='text-white mt-2'>
+						{currentMonthTr()} ayı güncel fiyatlarımız
+					</p>
 				</header>
 
 				<HeroCarousel />

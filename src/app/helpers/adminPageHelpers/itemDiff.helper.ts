@@ -7,11 +7,9 @@ export function diffEditableItem(
 ): FieldChange[] {
 	return EDITABLE_FIELD_KEYS.filter(
 		(field) => previous[field] !== next[field],
-	).map(
-		(field) => ({
-			field,
-			previousValue: previous[field] ?? null,
-			newValue: next[field] ?? null,
-		}),
-	);
+	).map((field) => ({
+		field,
+		previousValue: previous[field] ?? null,
+		newValue: next[field] ?? null,
+	}));
 }

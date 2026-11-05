@@ -1,4 +1,7 @@
-import { defaultRates, TERM_DEPENDENT_RATES } from './constants/paymentRates.constant';
+import {
+	defaultRates,
+	TERM_DEPENDENT_RATES,
+} from './constants/paymentRates.constant';
 import { useState } from 'react';
 import { collabButtons } from './component/paymentCalculator/collabButtons.tsx';
 import BankSelect from './component/paymentCalculator/BankSelect.tsx';

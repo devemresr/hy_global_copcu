@@ -103,7 +103,12 @@ export function usePinchZoom<T extends HTMLElement>() {
 			const [a, b] = pts;
 			const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 			const dist = Math.hypot(a.x - b.x, a.y - b.y);
-			zoomAt(start.t, (start.t.scale * dist) / (start.dist || 1), mid, start.mid);
+			zoomAt(
+				start.t,
+				(start.t.scale * dist) / (start.dist || 1),
+				mid,
+				start.mid,
+			);
 		} else if (start.t.scale > 1) {
 			apply({
 				scale: start.t.scale,

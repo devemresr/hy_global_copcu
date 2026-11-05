@@ -54,7 +54,8 @@ describe('token storage', () => {
 describe('proactive refresh', () => {
 	it('refreshes one buffer before expiry, as a credentialed POST to the refresh route', async () => {
 		const fetchMock = mockFetch({
-			[AUTH_ROUTES.REFRESH]: () => jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
+			[AUTH_ROUTES.REFRESH]: () =>
+				jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
 		});
 		const tm = await loadTokenManager();
 		tm.setAccessToken(fakeJwt(ACCESS_TTL));
@@ -72,7 +73,8 @@ describe('proactive refresh', () => {
 	it('stores the refreshed token and schedules the next refresh from it', async () => {
 		const refreshed = fakeJwt(ACCESS_TTL + ACCESS_TTL - BUFFER); // minted at first refresh time
 		const fetchMock = mockFetch({
-			[AUTH_ROUTES.REFRESH]: () => jsonResponse(200, { accessToken: refreshed }),
+			[AUTH_ROUTES.REFRESH]: () =>
+				jsonResponse(200, { accessToken: refreshed }),
 		});
 		const tm = await loadTokenManager();
 		tm.setAccessToken(fakeJwt(ACCESS_TTL));
@@ -86,7 +88,8 @@ describe('proactive refresh', () => {
 
 	it('a token already inside the buffer waits the 5s floor instead of firing at once', async () => {
 		const fetchMock = mockFetch({
-			[AUTH_ROUTES.REFRESH]: () => jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
+			[AUTH_ROUTES.REFRESH]: () =>
+				jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
 		});
 		const tm = await loadTokenManager();
 		tm.setAccessToken(fakeJwt(30_000));
@@ -115,7 +118,8 @@ describe('proactive refresh', () => {
 		expect(token.split('.')[1]).toMatch(/[-_]/); // precondition: payload uses base64url-only chars
 
 		const fetchMock = mockFetch({
-			[AUTH_ROUTES.REFRESH]: () => jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
+			[AUTH_ROUTES.REFRESH]: () =>
+				jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
 		});
 		const tm = await loadTokenManager();
 		tm.setAccessToken(token);
@@ -136,7 +140,8 @@ describe('proactive refresh', () => {
 
 	it('setting a new token replaces the previous schedule rather than adding one', async () => {
 		const fetchMock = mockFetch({
-			[AUTH_ROUTES.REFRESH]: () => jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
+			[AUTH_ROUTES.REFRESH]: () =>
+				jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
 		});
 		const tm = await loadTokenManager();
 		tm.setAccessToken(fakeJwt(ACCESS_TTL));
@@ -149,7 +154,8 @@ describe('proactive refresh', () => {
 	it('on page load, a token already in localStorage gets a refresh scheduled', async () => {
 		localStorage.setItem('accessToken', fakeJwt(ACCESS_TTL));
 		const fetchMock = mockFetch({
-			[AUTH_ROUTES.REFRESH]: () => jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
+			[AUTH_ROUTES.REFRESH]: () =>
+				jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
 		});
 		await loadTokenManager();
 
@@ -161,7 +167,8 @@ describe('proactive refresh', () => {
 describe('refresh failures', () => {
 	it('a server rejection clears the token and is not retried', async () => {
 		const fetchMock = mockFetch({
-			[AUTH_ROUTES.REFRESH]: () => jsonResponse(401, { message: 'Session has been revoked' }),
+			[AUTH_ROUTES.REFRESH]: () =>
+				jsonResponse(401, { message: 'Session has been revoked' }),
 		});
 		const tm = await loadTokenManager();
 		tm.setAccessToken(fakeJwt(ACCESS_TTL));
@@ -176,7 +183,9 @@ describe('refresh failures', () => {
 	it('refreshAccessToken rejects with RefreshRejectedError on a server rejection', async () => {
 		mockFetch({ [AUTH_ROUTES.REFRESH]: () => jsonResponse(401, {}) });
 		const tm = await loadTokenManager();
-		await expect(tm.refreshAccessToken()).rejects.toBeInstanceOf(tm.RefreshRejectedError);
+		await expect(tm.refreshAccessToken()).rejects.toBeInstanceOf(
+			tm.RefreshRejectedError,
+		);
 	});
 
 	it('a network failure retries with exponential backoff and gives up before expiry', async () => {
@@ -203,7 +212,10 @@ describe('refresh failures', () => {
 	it('recovers when the network comes back during the backoff', async () => {
 		const refreshed = fakeJwt(2 * ACCESS_TTL);
 		const fetchMock = mockFetch({
-			[AUTH_ROUTES.REFRESH]: [networkError, () => jsonResponse(200, { accessToken: refreshed })],
+			[AUTH_ROUTES.REFRESH]: [
+				networkError,
+				() => jsonResponse(200, { accessToken: refreshed }),
+			],
 		});
 		const tm = await loadTokenManager();
 		tm.setAccessToken(fakeJwt(ACCESS_TTL));
@@ -219,21 +231,31 @@ describe('in-flight deduplication', () => {
 		let release!: (response: Response) => void;
 		const refreshed = fakeJwt(ACCESS_TTL);
 		const fetchMock = mockFetch({
-			[AUTH_ROUTES.REFRESH]: () => new Promise<Response>((resolve) => (release = resolve)),
+			[AUTH_ROUTES.REFRESH]: () =>
+				new Promise<Response>((resolve) => (release = resolve)),
 		});
 		const tm = await loadTokenManager();
 
-		const calls = [tm.refreshAccessToken(), tm.refreshAccessToken(), tm.refreshAccessToken()];
+		const calls = [
+			tm.refreshAccessToken(),
+			tm.refreshAccessToken(),
+			tm.refreshAccessToken(),
+		];
 		await vi.advanceTimersByTimeAsync(0);
 		expect(callsTo(fetchMock, AUTH_ROUTES.REFRESH)).toHaveLength(1);
 
 		release(jsonResponse(200, { accessToken: refreshed }));
-		await expect(Promise.all(calls)).resolves.toEqual([refreshed, refreshed, refreshed]);
+		await expect(Promise.all(calls)).resolves.toEqual([
+			refreshed,
+			refreshed,
+			refreshed,
+		]);
 	});
 
 	it('a new refresh after the previous one settled sends a new request', async () => {
 		const fetchMock = mockFetch({
-			[AUTH_ROUTES.REFRESH]: () => jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
+			[AUTH_ROUTES.REFRESH]: () =>
+				jsonResponse(200, { accessToken: fakeJwt(ACCESS_TTL) }),
 		});
 		const tm = await loadTokenManager();
 

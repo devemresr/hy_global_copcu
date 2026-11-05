@@ -23,7 +23,8 @@ export const inventoryPageContent = {
 			title: 'Listede arayın',
 			text: 'Kodu aşağıdaki arama alanına yazın, eşleşen kayıtları görün.',
 			// On mobile the search box is above the steps.
-			mobileText: 'Kodu yukarıdaki arama alanına yazın, eşleşen kayıtları görün.',
+			mobileText:
+				'Kodu yukarıdaki arama alanına yazın, eşleşen kayıtları görün.',
 			link: { label: 'Aramaya başla' },
 		},
 		{

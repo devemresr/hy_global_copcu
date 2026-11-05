@@ -10,7 +10,9 @@ let search: ReturnType<typeof useRowSearch>;
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 function Harness({ rows }: { rows: ExcelRow[] }) {
 	const result = useRowSearch(rows);
-	useEffect(() => { search = result; }, [result]);
+	useEffect(() => {
+		search = result;
+	}, [result]);
 	return null;
 }
 function render(rows: ExcelRow[] = [{ model: 'ABC123' }]) {
@@ -22,7 +24,11 @@ beforeEach(() => {
 	document.body.appendChild(container);
 	root = createRoot(container);
 });
-afterEach(() => { act(() => root.unmount()); container.remove(); localStorage.clear(); });
+afterEach(() => {
+	act(() => root.unmount());
+	container.remove();
+	localStorage.clear();
+});
 
 describe('inventory search history', () => {
 	it('deduplicates committed searches and persists their latest spelling', () => {
@@ -30,10 +36,14 @@ describe('inventory search history', () => {
 		act(() => search.selectRecentSearch('ABC123'));
 		act(() => search.selectRecentSearch('abc123'));
 		expect(search.recentSearches).toEqual([{ term: 'abc123', wasMiss: false }]);
-		expect(JSON.parse(localStorage.getItem('recentInventorySearches')!)).toEqual(search.recentSearches);
+		expect(
+			JSON.parse(localStorage.getItem('recentInventorySearches')!),
+		).toEqual(search.recentSearches);
 		act(() => search.removeRecentSearch('abc123'));
 		expect(search.recentSearches).toEqual([]);
-		expect(JSON.parse(localStorage.getItem('recentInventorySearches')!)).toEqual([]);
+		expect(
+			JSON.parse(localStorage.getItem('recentInventorySearches')!),
+		).toEqual([]);
 	});
 	it('updates a recorded miss when refreshed inventory supplies a match', () => {
 		render();
@@ -45,7 +55,8 @@ describe('inventory search history', () => {
 	});
 	it('offers extended search after three distinct misses, without counting repeated misses', () => {
 		render();
-		for (const term of ['ZZZZZZ', 'YYYYYY', 'ZZZZZZ']) act(() => search.selectRecentSearch(term));
+		for (const term of ['ZZZZZZ', 'YYYYYY', 'ZZZZZZ'])
+			act(() => search.selectRecentSearch(term));
 		expect(search.showExtendedToggle).toBe(false);
 		act(() => search.selectRecentSearch('XXXXXX'));
 		expect(search.showExtendedToggle).toBe(true);

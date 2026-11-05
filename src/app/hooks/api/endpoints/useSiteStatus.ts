@@ -61,8 +61,10 @@ export function getSchedulePhase(
 	now = Date.now(),
 ): SchedulePhase {
 	if (!schedule?.enabled) return 'off';
-	if (schedule.from && new Date(schedule.from).getTime() > now) return 'scheduled';
-	if (schedule.until && new Date(schedule.until).getTime() <= now) return 'ended';
+	if (schedule.from && new Date(schedule.from).getTime() > now)
+		return 'scheduled';
+	if (schedule.until && new Date(schedule.until).getTime() <= now)
+		return 'ended';
 	return 'active';
 }
 
@@ -77,7 +79,9 @@ export function isScheduleActive(
  * Current time that re-renders the caller when the next from/until boundary
  * passes, so a schedule flips on time instead of on the next poll.
  */
-export function useScheduleClock(...schedules: (ScheduleDto | undefined)[]): number {
+export function useScheduleClock(
+	...schedules: (ScheduleDto | undefined)[]
+): number {
 	const [now, setNow] = useState(() => Date.now());
 	const nextBoundary = schedules
 		.flatMap((s) => (s?.enabled ? [s.from, s.until] : []))
@@ -97,7 +101,9 @@ export function useScheduleClock(...schedules: (ScheduleDto | undefined)[]): num
 }
 
 async function fetchSiteStatus(signal: AbortSignal): Promise<SiteStatus> {
-	const response = await fetch(`${env.VITE_GATEWAY_URL}${SITE_ROUTES.STATUS}`, { signal });
+	const response = await fetch(`${env.VITE_GATEWAY_URL}${SITE_ROUTES.STATUS}`, {
+		signal,
+	});
 	if (!response.ok) {
 		throw new Error(`HTTP error! status: ${response.status}`);
 	}
@@ -109,13 +115,19 @@ export function useSiteStatus() {
 	return useQuery<SiteStatus>({
 		queryKey: SITE_STATUS_QUERY_KEY,
 		queryFn: async ({ signal }) => {
-			const query = queryClient.getQueryCache().find({ queryKey: SITE_STATUS_QUERY_KEY, exact: true })!;
+			const query = queryClient
+				.getQueryCache()
+				.find({ queryKey: SITE_STATUS_QUERY_KEY, exact: true })!;
 			try {
 				const status = await fetchSiteStatus(signal);
 				consecutiveFailures.delete(query);
 				return status;
 			} catch (cause) {
-				if (!signal.aborted) consecutiveFailures.set(query, (consecutiveFailures.get(query) ?? 0) + 1);
+				if (!signal.aborted)
+					consecutiveFailures.set(
+						query,
+						(consecutiveFailures.get(query) ?? 0) + 1,
+					);
 				throw cause;
 			}
 		},
@@ -179,10 +191,12 @@ export function useUpdateNotice() {
 export function useUpdatePromotion() {
 	const queryClient = useQueryClient();
 	return useMutation<unknown, ApiError, PromotionSettings>({
-		mutationFn: (body) => apiFetch(SITE_ROUTES.PROMOTION, { method: 'PUT', body }),
-		onSuccess: () => Promise.all([
-			queryClient.invalidateQueries({ queryKey: SITE_STATUS_QUERY_KEY }),
-			queryClient.invalidateQueries({ queryKey: ['logEvents'] }),
-		]),
+		mutationFn: (body) =>
+			apiFetch(SITE_ROUTES.PROMOTION, { method: 'PUT', body }),
+		onSuccess: () =>
+			Promise.all([
+				queryClient.invalidateQueries({ queryKey: SITE_STATUS_QUERY_KEY }),
+				queryClient.invalidateQueries({ queryKey: ['logEvents'] }),
+			]),
 	});
 }

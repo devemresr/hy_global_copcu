@@ -26,12 +26,20 @@ const DEFAULT_MESSAGE = 'Hizmetimiz geçici olarak kullanılamıyor.';
  */
 export function MaintenanceGate({ children }: { children: React.ReactNode }) {
 	const { pathname } = useLocation();
-	const { data, isPending, failureCount, fetchStatus, errorUpdatedAt } = useSiteStatus();
+	const { data, isPending, failureCount, fetchStatus, errorUpdatedAt } =
+		useSiteStatus();
 	const now = useScheduleClock(data?.maintenance, data?.notice);
 
-	const exempt = EXEMPT_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+	const exempt = EXEMPT_PATH_PREFIXES.some((prefix) =>
+		pathname.startsWith(prefix),
+	);
 	if (exempt) return <>{children}</>;
-	if (isPending && !errorUpdatedAt && failureCount === 0 && fetchStatus === 'fetching') {
+	if (
+		isPending &&
+		!errorUpdatedAt &&
+		failureCount === 0 &&
+		fetchStatus === 'fetching'
+	) {
 		return (
 			<main className='flex min-h-screen items-center justify-center bg-bg px-4 text-text'>
 				<p role='status'>Sayfa yükleniyor...</p>
@@ -44,7 +52,9 @@ export function MaintenanceGate({ children }: { children: React.ReactNode }) {
 	return (
 		<>
 			{children}
-			{data && <SiteNotice notice={data.notice} pathname={pathname} now={now} />}
+			{data && (
+				<SiteNotice notice={data.notice} pathname={pathname} now={now} />
+			)}
 		</>
 	);
 }

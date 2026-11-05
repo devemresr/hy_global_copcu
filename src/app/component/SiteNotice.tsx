@@ -48,7 +48,12 @@ export function SiteNotice({
 	pathname: string;
 	now: number;
 }) {
-	const contentKey = JSON.stringify([notice.message, notice.type, notice.from, notice.until]);
+	const contentKey = JSON.stringify([
+		notice.message,
+		notice.type,
+		notice.from,
+		notice.until,
+	]);
 	const [dismissedKey, setDismissedKey] = useState(readDismissed);
 	const toastIdRef = useRef<string | null>(null);
 
@@ -77,7 +82,9 @@ export function SiteNotice({
 			: null;
 		// Same id updates the visible toast in place when the notice is edited.
 		toast.custom(
-			() => <NoticeToast type={notice.type} message={message} onClose={onClose} />,
+			() => (
+				<NoticeToast type={notice.type} message={message} onClose={onClose} />
+			),
 			{ id, duration: Infinity, dismissible: false },
 		);
 	}, [show, notice.message, notice.type, notice.dismissible, contentKey]);

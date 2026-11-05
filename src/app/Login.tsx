@@ -55,9 +55,7 @@ export function LoginPage() {
 				</label>
 
 				{(formError || error) && (
-					<p className='text-sm text-red-500'>
-						{formError ?? error?.message}
-					</p>
+					<p className='text-sm text-red-500'>{formError ?? error?.message}</p>
 				)}
 
 				<button

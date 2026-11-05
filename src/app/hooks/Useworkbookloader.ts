@@ -7,11 +7,7 @@ import {
 } from 'react';
 import * as XLSX from 'xlsx';
 import logger from '../util/logger';
-import type {
-	ParseStatus,
-	ParseMethod,
-	OnErrorCallback,
-} from '../types';
+import type { ParseStatus, ParseMethod, OnErrorCallback } from '../types';
 import {
 	parseInline,
 	parseWithWorker,
@@ -43,7 +39,9 @@ export function useWorkbookLoader() {
 		parseMethod: null,
 	});
 	const [wbState, dispatch] = useReducer(workbookReducer, initialWorkbookState);
-	const parsingTaskRef = useRef<{ cancel: (() => void) | null }>({ cancel: null });
+	const parsingTaskRef = useRef<{ cancel: (() => void) | null }>({
+		cancel: null,
+	});
 
 	const { workbook, sheetNames, selectedSheet, rows } = wbState;
 

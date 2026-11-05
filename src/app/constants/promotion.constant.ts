@@ -13,5 +13,6 @@ export const DEFAULT_PROMOTION: PromotionSettings = {
 	brandLabel: 'HY GLOBAL ÇÖPÇÜ',
 	title: 'Hurda telefon anakartlarınızı değerlendiriyoruz!',
 	tagline: 'Atıklar değere dönüşür',
-	description: 'Tüm marka telefon anakartlarınız için hafıza ve işlemci bazlı alım. Fiyat listemizi inceleyin, ürünleriniz için bizimle iletişime geçin.',
+	description:
+		'Tüm marka telefon anakartlarınız için hafıza ve işlemci bazlı alım. Fiyat listemizi inceleyin, ürünleriniz için bizimle iletişime geçin.',
 };

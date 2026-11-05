@@ -3,7 +3,11 @@ import type { EditableField, EditableInventoryItem } from '../../types';
 import { EDITABLE_FIELD_KEYS } from '../../constants/fieldRegistry.constant';
 import { buildBulkFields, type BulkAction } from './bulkEdit.helper';
 import { conditionsToFilters } from './filterConditions.helper';
-import { parseSharedFilter, serializeFilter, type SavedCondition } from './savedFilters.helper';
+import {
+	parseSharedFilter,
+	serializeFilter,
+	type SavedCondition,
+} from './savedFilters.helper';
 import { matchesFieldFilter } from '../inventoryPageHelpers/fieldFilter.helper';
 
 export type ItemRule = {
@@ -19,22 +23,41 @@ const storedRuleSchema = z.object({
 	id: z.string().min(1),
 	name: z.string().trim().min(1).max(100),
 	enabled: z.boolean(),
-	conditions: z.array(z.object({ field: z.string(), op: z.string(), value: z.string() })),
-	actions: z.array(z.object({ field: z.string().refine((field) => EDITABLE_FIELD_KEYS.includes(field as EditableField)), value: z.string() })).min(1),
+	conditions: z.array(
+		z.object({ field: z.string(), op: z.string(), value: z.string() }),
+	),
+	actions: z
+		.array(
+			z.object({
+				field: z
+					.string()
+					.refine((field) =>
+						EDITABLE_FIELD_KEYS.includes(field as EditableField),
+					),
+				value: z.string(),
+			}),
+		)
+		.min(1),
 });
 
 export function validateItemRule(input: unknown): ItemRule {
 	const parsed = storedRuleSchema.parse(input);
-	const conditions = parseSharedFilter(serializeFilter(parsed.conditions as SavedCondition[]));
+	const conditions = parseSharedFilter(
+		serializeFilter(parsed.conditions as SavedCondition[]),
+	);
 	buildBulkFields(parsed.actions as BulkAction[]);
 	return { ...parsed, conditions, actions: parsed.actions as BulkAction[] };
 }
 
 export function loadItemRules(): ItemRule[] {
 	try {
-		const stored: unknown = JSON.parse(localStorage.getItem(ITEM_RULES_KEY) ?? '[]');
+		const stored: unknown = JSON.parse(
+			localStorage.getItem(ITEM_RULES_KEY) ?? '[]',
+		);
 		return z.array(z.unknown()).parse(stored).map(validateItemRule);
-	} catch { return []; }
+	} catch {
+		return [];
+	}
 }
 
 export type RuleResolution = {
@@ -46,25 +69,42 @@ export type RuleResolution = {
  * already supplied by earlier rules. No effects or recursive rule evaluation.
  * Shared by creation drafts and post-edit bulk previews.
  */
-export function resolveItemRules(draft: EditableInventoryItem, rules: readonly ItemRule[], overrides: ReadonlySet<EditableField> = new Set()): RuleResolution {
+export function resolveItemRules(
+	draft: EditableInventoryItem,
+	rules: readonly ItemRule[],
+	overrides: ReadonlySet<EditableField> = new Set(),
+): RuleResolution {
 	const item = { ...draft };
 	const sources: RuleResolution['sources'] = {};
 	for (const rule of rules) {
 		if (!rule.enabled || !rule.conditions.length) continue;
-		if (!conditionsToFilters(rule.conditions).every((filter) => matchesFieldFilter(item, filter))) continue;
+		if (
+			!conditionsToFilters(rule.conditions).every((filter) =>
+				matchesFieldFilter(item, filter),
+			)
+		)
+			continue;
 		const fields = buildBulkFields(rule.actions);
 		for (const field of Object.keys(fields) as EditableField[]) {
 			if (sources[field]) continue;
 			sources[field] = rule;
-			if (!overrides.has(field)) Object.assign(item, { [field]: fields[field] });
+			if (!overrides.has(field))
+				Object.assign(item, { [field]: fields[field] });
 		}
 	}
 	return { item, sources };
 }
 
 /** Resolve rule expectations for conflict detection without changing the submitted patch. */
-export function resolveBulkItemRules(item: Omit<EditableInventoryItem, 'depolama'> & { depolama?: number | null }, fields: Partial<EditableInventoryItem>, rules: readonly ItemRule[]): RuleResolution {
-	return resolveItemRules({ ...item, depolama: item.depolama ?? null, ...fields }, rules);
+export function resolveBulkItemRules(
+	item: Omit<EditableInventoryItem, 'depolama'> & { depolama?: number | null },
+	fields: Partial<EditableInventoryItem>,
+	rules: readonly ItemRule[],
+): RuleResolution {
+	return resolveItemRules(
+		{ ...item, depolama: item.depolama ?? null, ...fields },
+		rules,
+	);
 }
 
 export type BulkRuleConflict = {
@@ -75,10 +115,24 @@ export type BulkRuleConflict = {
 	requestedValue: string | number | null;
 };
 
-export function findBulkRuleConflicts(item: Parameters<typeof resolveBulkItemRules>[0], fields: Partial<EditableInventoryItem>, rules: readonly ItemRule[]): BulkRuleConflict[] {
+export function findBulkRuleConflicts(
+	item: Parameters<typeof resolveBulkItemRules>[0],
+	fields: Partial<EditableInventoryItem>,
+	rules: readonly ItemRule[],
+): BulkRuleConflict[] {
 	const resolved = resolveBulkItemRules(item, fields, rules);
 	return (Object.keys(fields) as EditableField[]).flatMap((field) => {
 		const rule = resolved.sources[field];
-		return rule && resolved.item[field] !== fields[field] ? [{ model: item.model, field, ruleName: rule.name, ruleValue: resolved.item[field] ?? null, requestedValue: fields[field] ?? null }] : [];
+		return rule && resolved.item[field] !== fields[field]
+			? [
+					{
+						model: item.model,
+						field,
+						ruleName: rule.name,
+						ruleValue: resolved.item[field] ?? null,
+						requestedValue: fields[field] ?? null,
+					},
+				]
+			: [];
 	});
 }

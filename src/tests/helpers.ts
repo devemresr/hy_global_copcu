@@ -31,7 +31,8 @@ export const jsonResponse = (status: number, body: unknown) =>
 		headers: { 'Content-Type': 'application/json' },
 	});
 
-export const networkError = () => Promise.reject(new TypeError('Failed to fetch'));
+export const networkError = () =>
+	Promise.reject(new TypeError('Failed to fetch'));
 
 type Handler = (init: RequestInit) => Response | Promise<Response>;
 
@@ -52,7 +53,9 @@ export function mockFetch(routes: Record<string, Handler | Handler[]>) {
 		counters[pathname] = callIndex + 1;
 		// Turns a runaway refresh/retry loop into a test failure instead of an OOM crash.
 		if (callIndex >= MAX_CALLS_PER_ROUTE) {
-			throw new Error(`More than ${MAX_CALLS_PER_ROUTE} fetches to ${pathname} - retry loop?`);
+			throw new Error(
+				`More than ${MAX_CALLS_PER_ROUTE} fetches to ${pathname} - retry loop?`,
+			);
 		}
 
 		if (!Array.isArray(route)) return route(init);
@@ -62,8 +65,10 @@ export function mockFetch(routes: Record<string, Handler | Handler[]>) {
 	return fetchMock;
 }
 
-export const callsTo = (fetchMock: ReturnType<typeof mockFetch>, pathname: string) =>
-	fetchMock.mock.calls.filter(([url]) => new URL(url).pathname === pathname);
+export const callsTo = (
+	fetchMock: ReturnType<typeof mockFetch>,
+	pathname: string,
+) => fetchMock.mock.calls.filter(([url]) => new URL(url).pathname === pathname);
 
 export const authHeaderOf = (init: RequestInit | undefined) =>
 	(init?.headers as Record<string, string> | undefined)?.Authorization;

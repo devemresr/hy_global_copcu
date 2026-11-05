@@ -125,7 +125,16 @@ export function ColumnFilterPanel({
 								onChange={toggleAll}
 							/>
 							<span className='opacity-60'>(Hepsini Seç)</span>
-							{valueCounts && <span className='text-[0.8em] italic opacity-60'>({[...valueCounts.values()].reduce((sum, count) => sum + count, 0)})</span>}
+							{valueCounts && (
+								<span className='text-[0.8em] italic opacity-60'>
+									(
+									{[...valueCounts.values()].reduce(
+										(sum, count) => sum + count,
+										0,
+									)}
+									)
+								</span>
+							)}
 						</label>
 					</li>
 					{uniqueValues.map((value, i) => (
@@ -141,7 +150,11 @@ export function ColumnFilterPanel({
 									onChange={() => toggleValue(value)}
 								/>
 								{value}
-								{valueCounts && <span className='text-[0.8em] italic opacity-60'>({valueCounts.get(toKey(value)) ?? 0})</span>}
+								{valueCounts && (
+									<span className='text-[0.8em] italic opacity-60'>
+										({valueCounts.get(toKey(value)) ?? 0})
+									</span>
+								)}
 							</label>
 						</li>
 					))}

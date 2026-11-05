@@ -74,10 +74,9 @@ export function parseWithWorker(
 		file,
 		(arrayBuffer) => {
 			if (cancelled) return;
-			worker = new Worker(
-				new URL('./excelParser.worker.ts', import.meta.url),
-				{ type: 'module' },
-			);
+			worker = new Worker(new URL('./excelParser.worker.ts', import.meta.url), {
+				type: 'module',
+			});
 
 			worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
 				if (cancelled) return;
@@ -104,5 +103,9 @@ export function parseWithWorker(
 		},
 		onError,
 	);
-	return () => { cancelled = true; cancelRead(); stopWorker(); };
+	return () => {
+		cancelled = true;
+		cancelRead();
+		stopWorker();
+	};
 }

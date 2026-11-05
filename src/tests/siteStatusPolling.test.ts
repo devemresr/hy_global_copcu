@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, createElement, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+	focusManager,
+	QueryClient,
+	QueryClientProvider,
+} from '@tanstack/react-query';
 import { useSiteStatus } from '../app/hooks/api/endpoints/useSiteStatus';
 import { MemoryRouter } from 'react-router-dom';
 import { MaintenanceGate } from '../app/component/MaintenanceGate';
@@ -13,7 +17,15 @@ let client: QueryClient;
 const status = {
 	version: 1,
 	maintenance: { enabled: false, from: null, until: null, message: null },
-	notice: { enabled: false, from: null, until: null, message: null, type: 'info', pages: [], dismissible: true },
+	notice: {
+		enabled: false,
+		from: null,
+		until: null,
+		message: null,
+		type: 'info',
+		pages: [],
+		dismissible: true,
+	},
 };
 
 beforeEach(() => {
@@ -35,13 +47,20 @@ afterEach(() => {
 });
 
 async function advance(ms: number) {
-	await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+	await act(async () => {
+		await vi.advanceTimersByTimeAsync(ms);
+	});
 }
 
 async function mount() {
-	function Harness() { useSiteStatus(); return null; }
+	function Harness() {
+		useSiteStatus();
+		return null;
+	}
 	await act(async () => {
-		root.render(createElement(QueryClientProvider, { client }, createElement(Harness)));
+		root.render(
+			createElement(QueryClientProvider, { client }, createElement(Harness)),
+		);
 	});
 	await advance(1);
 }
@@ -49,21 +68,39 @@ async function mount() {
 describe('site status polling', () => {
 	it('keeps inventory mounted during an outage poll and recovers without a request loop', async () => {
 		let resolvePoll: (response: Response) => void = () => {};
-		const fetcher = vi.fn()
+		const fetcher = vi
+			.fn()
 			.mockRejectedValueOnce(new TypeError('Failed to fetch'))
-			.mockImplementationOnce(() => new Promise<Response>((resolve) => { resolvePoll = resolve; }))
+			.mockImplementationOnce(
+				() =>
+					new Promise<Response>((resolve) => {
+						resolvePoll = resolve;
+					}),
+			)
 			.mockImplementation(() => Promise.resolve(Response.json(status)));
 		vi.stubGlobal('fetch', fetcher);
 		let mounts = 0;
 		function Inventory() {
 			useSiteStatus();
-			useEffect(() => { mounts++; }, []);
+			useEffect(() => {
+				mounts++;
+			}, []);
 			return createElement('p', null, 'Inventory fallback');
 		}
 		await act(async () => {
-			root.render(createElement(QueryClientProvider, { client },
-				createElement(MemoryRouter, null,
-					createElement(MaintenanceGate, { children: createElement(Inventory) }))));
+			root.render(
+				createElement(
+					QueryClientProvider,
+					{ client },
+					createElement(
+						MemoryRouter,
+						null,
+						createElement(MaintenanceGate, {
+							children: createElement(Inventory),
+						}),
+					),
+				),
+			);
 		});
 		await advance(10);
 		expect(fetcher).toHaveBeenCalledTimes(1);
@@ -71,7 +108,9 @@ describe('site status polling', () => {
 		await advance(30_000);
 		expect(fetcher).toHaveBeenCalledTimes(2);
 		expect(container.textContent).toBe('Inventory fallback');
-		await act(async () => { resolvePoll(Response.json(status)); });
+		await act(async () => {
+			resolvePoll(Response.json(status));
+		});
 		await advance(10);
 		expect(mounts).toBe(1);
 		expect(fetcher).toHaveBeenCalledTimes(2);

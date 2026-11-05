@@ -17,7 +17,9 @@ export const BELLEK_TIPI_EXCLUDED_VALUES = [
 // a missing/blank type is shown too. The admin grid still lists everything.
 export const BELLEK_TIPI_DISPLAYED_VALUES = ['EMMC', 'EMCP'];
 
-export function isDisplayedBellekTipi(value: string | null | undefined): boolean {
+export function isDisplayedBellekTipi(
+	value: string | null | undefined,
+): boolean {
 	const type = value?.trim().toUpperCase();
 	return !type || BELLEK_TIPI_DISPLAYED_VALUES.includes(type);
 }

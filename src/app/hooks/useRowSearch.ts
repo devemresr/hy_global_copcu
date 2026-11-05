@@ -53,8 +53,14 @@ export function useRowSearch(rows: ExcelRow[]) {
 	const [recentSearches, setRecentSearches] =
 		useState<RecentSearchEntry[]>(loadRecentSearches);
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const [countedQueries, setCountedQueries] = useState<ReadonlySet<string>>(() => new Set());
-	const [recordedSearch, setRecordedSearch] = useState({ query: '', wasMiss: false, strictMiss: false });
+	const [countedQueries, setCountedQueries] = useState<ReadonlySet<string>>(
+		() => new Set(),
+	);
+	const [recordedSearch, setRecordedSearch] = useState({
+		query: '',
+		wasMiss: false,
+		strictMiss: false,
+	});
 
 	const handleQuery = (e: ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value;
@@ -103,17 +109,26 @@ export function useRowSearch(rows: ExcelRow[]) {
 
 	const wasMiss = searchResults !== null && searchResults.length === 0;
 	// Adjust history when the search outcome changes, before rendering children.
-	if (query !== recordedSearch.query || wasMiss !== recordedSearch.wasMiss || noResults !== recordedSearch.strictMiss) {
+	if (
+		query !== recordedSearch.query ||
+		wasMiss !== recordedSearch.wasMiss ||
+		noResults !== recordedSearch.strictMiss
+	) {
 		setRecordedSearch({ query, wasMiss, strictMiss: noResults });
 		if (noResults && !countedQueries.has(query)) {
 			setCountedQueries(new Set([...countedQueries, query]));
 			setNoResultCount((c) => c + 1);
 		}
 		const trimmed = query.trim();
-		if (trimmed) setRecentSearches((prev) => [
-			{ term: trimmed, wasMiss },
-			...prev.filter((entry) => entry.term.toLowerCase() !== trimmed.toLowerCase()),
-		].slice(0, MAX_RECENT_SEARCHES));
+		if (trimmed)
+			setRecentSearches((prev) =>
+				[
+					{ term: trimmed, wasMiss },
+					...prev.filter(
+						(entry) => entry.term.toLowerCase() !== trimmed.toLowerCase(),
+					),
+				].slice(0, MAX_RECENT_SEARCHES),
+			);
 	}
 
 	const showExtendedToggle =
@@ -121,7 +136,9 @@ export function useRowSearch(rows: ExcelRow[]) {
 
 	const toggleExtendedSearch = () => setIsLoose((prev) => !prev);
 
-	useEffect(() => { saveRecentSearches(recentSearches); }, [recentSearches]);
+	useEffect(() => {
+		saveRecentSearches(recentSearches);
+	}, [recentSearches]);
 
 	// re-runs a past search immediately, bypassing the debounce (it's already
 	// a complete term, not something the user is still typing)
