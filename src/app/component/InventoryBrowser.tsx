@@ -32,6 +32,7 @@ type InventoryBrowserProps = {
 	rows: ExcelRow[];
 	colDef: ColDef[];
 	ref?: Ref<InventoryBrowserHandle>;
+	autoFocusSearch?: boolean;
 };
 
 // Bundles the whole inventory-browsing UI - the Fuse search box, the
@@ -39,7 +40,12 @@ type InventoryBrowserProps = {
 // AG Grid itself - so both the public inventory page and the admin item list
 // can render the same search+filter+grid experience over their own
 // rows/columnDefs instead of duplicating this layout.
-export function InventoryBrowser({ rows, colDef, ref }: InventoryBrowserProps) {
+export function InventoryBrowser({
+	rows,
+	colDef,
+	ref,
+	autoFocusSearch = true,
+}: InventoryBrowserProps) {
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const gridRef = useRef<AgGridReact>(null);
 	const fuseSearchRef = useRef<FuseSearchBoxHandle>(null);
@@ -47,7 +53,10 @@ export function InventoryBrowser({ rows, colDef, ref }: InventoryBrowserProps) {
 
 	useImperativeHandle(ref, () => ({
 		focusSearch: () => {
-			searchAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			searchAreaRef.current?.scrollIntoView({
+				behavior: 'smooth',
+				block: 'center',
+			});
 			// preventScroll, or focus() jumps there instantly and cancels the smooth scroll
 			fuseSearchRef.current?.focus({ preventScroll: true });
 		},
@@ -104,10 +113,10 @@ export function InventoryBrowser({ rows, colDef, ref }: InventoryBrowserProps) {
 	// usinglayouteffect to ensure DOM is painted
 	useLayoutEffect(() => {
 		// Focus once the data (and therefore the search input) is rendered
-		if (isReady) {
+		if (isReady && autoFocusSearch) {
 			fuseSearchRef.current?.focus();
 		}
-	}, [isReady]);
+	}, [isReady, autoFocusSearch]);
 
 	return (
 		<>
@@ -154,7 +163,7 @@ export function InventoryBrowser({ rows, colDef, ref }: InventoryBrowserProps) {
 											key={f.field}
 											uniqueValues={f.uniqueValues}
 											selectedValues={f.selectedValues}
-												valueCounts={f.valueCounts}
+											valueCounts={f.valueCounts}
 											onChange={f.setSelectedValues}
 										/>
 									))}

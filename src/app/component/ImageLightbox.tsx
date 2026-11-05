@@ -1,5 +1,6 @@
+import { ModalCloseButton } from './ModalCloseButton';
 import { useEffect } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePinchZoom } from '../hooks/usePinchZoom';
 import { useModalHotkeys } from '../hooks/useModalHotkeys';
 
@@ -53,13 +54,12 @@ export function ImageLightbox({ src, alt, onClose, onPrev, onNext }: Props) {
 				/>
 			</div>
 
-			<button
+			<ModalCloseButton
+				label='Close'
 				onClick={onClose}
-				aria-label='Close'
-				className='absolute top-3 right-3 p-2 rounded-sm bg-black/60 text-neutral-300 hover:text-amber-500 transition-colors'
-			>
-				<X size={22} strokeWidth={1.5} />
-			</button>
+				appearance='promotion'
+				className='absolute right-3 top-3'
+			/>
 
 			{!isZoomed && onPrev && (
 				<button

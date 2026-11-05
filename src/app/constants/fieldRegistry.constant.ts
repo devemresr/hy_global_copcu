@@ -48,7 +48,7 @@ export const FIELD_REGISTRY = {
 	},
 	// ram: { label: 'RAM', kind: 'string' },
 	fiyat: {
-		label: 'Fiyat',
+		label: 'Liste alış fiyatı',
 		kind: 'number',
 		stepperValues: [
 			{ amount: 10, label: '+10' },
@@ -136,6 +136,13 @@ export const OPS_BY_KIND: Record<FieldKind, FieldFilterOp[]> = {
 export function filterOpsForField(field: FieldKey): FieldFilterOp[] {
 	const operators = OPS_BY_KIND[fieldMeta(field).kind];
 	return field === 'model'
-		? [...operators, 'lengthEquals', 'lengthGt', 'lengthGte', 'lengthLt', 'lengthLte']
+		? [
+				...operators,
+				'lengthEquals',
+				'lengthGt',
+				'lengthGte',
+				'lengthLt',
+				'lengthLte',
+			]
 		: operators;
 }

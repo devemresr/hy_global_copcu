@@ -55,11 +55,11 @@ export const columnDefsBySheet: ColDef[] = [
 	},
 	{
 		field: FIELD_NAMES.FIYAT,
-		headerName: 'Fiyat',
+		headerName: 'Liste alış fiyatı',
 		sortable: true,
 		valueFormatter: fiyatValueFormatter,
-		width: 95,
-		minWidth: 90,
+		width: 140,
+		minWidth: 110,
 		comparator: fiyatComparator,
 	},
 ];
@@ -70,13 +70,21 @@ function depolamaToGb(value: unknown, unit: unknown): number {
 	return unit === 'TB' ? value * 1024 : value;
 }
 
-type InventoryValueParams = { value: unknown; data?: { depolamaBirimi?: string; paraBirimi?: string } };
-type InventoryNode = { data?: { depolamaBirimi?: string; paraBirimi?: string } } | null | undefined;
+type InventoryValueParams = {
+	value: unknown;
+	data?: { depolamaBirimi?: string; paraBirimi?: string };
+};
+type InventoryNode =
+	| { data?: { depolamaBirimi?: string; paraBirimi?: string } }
+	| null
+	| undefined;
 
 export function depolamaValueFormatter(params: InventoryValueParams): string {
 	const { value, data } = params;
 	if (typeof value === 'number') {
-		return data?.depolamaBirimi ? `${value} ${data.depolamaBirimi}` : String(value);
+		return data?.depolamaBirimi
+			? `${value} ${data.depolamaBirimi}`
+			: String(value);
 	}
 	return String(value ?? '');
 }

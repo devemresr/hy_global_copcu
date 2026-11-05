@@ -31,7 +31,8 @@ import { PAGE_PATHS } from '../constants/pagePaths.constant';
 const TARGET_DURATION_THEME_ANIMATION = 0.9;
 
 // Shared by the nav links and the WhatsApp link so they read as one row.
-const HEADER_LINK_TEXT = 'whitespace-nowrap text-text lg:text-lg';
+const HEADER_LINK_TEXT =
+	'whitespace-nowrap text-sm text-text sm:text-base lg:text-lg';
 
 const NAV_LINKS = [
 	{ href: '/', label: 'Ürünler' },
@@ -152,7 +153,8 @@ export function Header({
 				doSetup();
 			} else {
 				logger.debug('[setup effect] totalFrames is 0, waiting for DOMLoaded');
-				removeLoadedListener = () => anim.removeEventListener('DOMLoaded', doSetup);
+				removeLoadedListener = () =>
+					anim.removeEventListener('DOMLoaded', doSetup);
 				anim.addEventListener('DOMLoaded', doSetup);
 			}
 		};
@@ -168,7 +170,7 @@ export function Header({
 	}, [initialTheme]);
 
 	return (
-		<header>
+		<header className='w-full min-w-0'>
 			<div className='h-15 top-0 px-4 sm:px-6 lg:h-20 lg:px-8 bg-header-bg flex items-center justify-between w-full border-b-2 border-border'>
 				<div className='flex min-w-0 items-center gap-3 lg:gap-4 xl:gap-6'>
 					<button
@@ -193,7 +195,11 @@ export function Header({
 							isOpen ? 'lg:hidden' : ''
 						}`}
 					>
-						<img src={LOGO.url} alt='GLOBAL ÇÖPÇÜ' className='h-7 w-7 lg:h-9 lg:w-9' />
+						<img
+							src={LOGO.url}
+							alt='GLOBAL ÇÖPÇÜ'
+							className='h-7 w-7 lg:h-9 lg:w-9'
+						/>
 						{/* Logo only from lg to xl, where the nav links need the room. */}
 						<span className='lg:hidden xl:inline'>GLOBAL ÇÖPÇÜ</span>
 					</a>
@@ -206,7 +212,9 @@ export function Header({
 								href={link.href}
 								aria-current={pathname === link.href ? 'page' : undefined}
 								className={`${HEADER_LINK_TEXT} rounded-xl px-3 py-1.5 transition-colors hover:bg-button-hover-bg dark:hover:bg-button-bg ${
-									pathname === link.href ? 'bg-button-bg font-medium' : 'opacity-80'
+									pathname === link.href
+										? 'bg-button-bg font-medium'
+										: 'opacity-80'
 								}`}
 							>
 								{link.label}
@@ -214,8 +222,12 @@ export function Header({
 						))}
 					</nav>
 				</div>
-				<div className='flex items-center gap-1 md:gap-2 '>
-					<button onClick={handleTheme}>
+				<div className='flex min-w-0 items-center gap-1 md:gap-2'>
+					<button
+						onClick={handleTheme}
+						className='flex h-11 w-14 shrink-0 items-center justify-center sm:w-16'
+						aria-label='Temayı değiştir'
+					>
 						<Lottie
 							src={toggleThemeAnimation}
 							loop={false}
@@ -230,9 +242,7 @@ export function Header({
 						data-umami-event='whatsapp-click'
 						data-umami-event-location='header'
 					>
-						<span className={HEADER_LINK_TEXT}>
-							Bizimle İletişime geçin!
-						</span>
+						<span className={HEADER_LINK_TEXT}>Bizimle İletişime geçin!</span>
 						<div className='w-7 h-7 lg:h-12 lg:w-12'>
 							<WhatsappIcon className='w-full h-full  shrink-0' />
 						</div>

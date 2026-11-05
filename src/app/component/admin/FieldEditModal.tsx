@@ -1,3 +1,5 @@
+import { ModalCloseButton } from '../ModalCloseButton';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useState, type SetStateAction } from 'react';
 import type { EditableField, EditableInventoryItem } from '../../types';
 import type { ItemDto } from '../../hooks/api/endpoints/useItems';
@@ -8,7 +10,7 @@ import {
 } from '../../constants/fieldRegistry.constant';
 import { useModalHotkeys } from '../../hooks/useModalHotkeys';
 import { NumberInputWithSteppers } from '../NumberInputWithSteppers';
-import CancelIcon from '../../assets/icons/icons8-cancel.svg?react';
+
 import { ConfirmDialog } from './ConfirmDialog';
 import { DisplayValue } from './DisplayValue';
 
@@ -20,6 +22,7 @@ type FieldEditModalProps = {
 	enterEnabled: boolean;
 	escapeEnabled: boolean;
 	onClose: () => void;
+	closeOnOutsideClick?: boolean;
 	onConfirm: (changes: Partial<EditableInventoryItem>) => void;
 };
 
@@ -35,6 +38,7 @@ export function FieldEditModal({
 	enterEnabled,
 	escapeEnabled,
 	onClose,
+	closeOnOutsideClick = true,
 	onConfirm,
 }: FieldEditModalProps) {
 	const currentValue = row[field] ?? null;
@@ -139,6 +143,10 @@ export function FieldEditModal({
 		enterEnabled: enterEnabled && !awaitingApproval,
 		escapeEnabled: escapeEnabled && !awaitingApproval,
 	});
+	const dismiss = useModalDismiss(onClose, {
+		closeOnOutsideClick,
+		escapeEnabled,
+	});
 
 	if (awaitingApproval) {
 		return (
@@ -165,6 +173,7 @@ export function FieldEditModal({
 				onCancel={onClose}
 				enterEnabled={enterEnabled}
 				escapeEnabled={escapeEnabled}
+				closeOnOutsideClick={closeOnOutsideClick}
 			/>
 		);
 	}
@@ -172,7 +181,7 @@ export function FieldEditModal({
 	return (
 		<div
 			className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4'
-			onClick={onClose}
+			{...dismiss}
 		>
 			<div
 				className='w-full max-w-sm bg-modal-bg text-text rounded-xl p-4'
@@ -180,14 +189,7 @@ export function FieldEditModal({
 			>
 				<div className='flex items-center justify-between mb-4'>
 					<span className='text-sm font-semibold'>{label} düzenle</span>
-					<button
-						type='button'
-						className='h-7 w-7 shrink-0'
-						onClick={onClose}
-						aria-label='Kapat'
-					>
-						<CancelIcon className='w-full h-full icon' />
-					</button>
+					<ModalCloseButton onClick={onClose} />
 				</div>
 
 				<div className='flex gap-2'>
@@ -254,13 +256,6 @@ export function FieldEditModal({
 				{error && <p className='text-red-500 text-sm mt-2'>{error}</p>}
 
 				<div className='mt-5 flex justify-end gap-2'>
-					<button
-						type='button'
-						onClick={onClose}
-						className='rounded-xl bg-button-bg px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
-					>
-						Vazgeç
-					</button>
 					<button
 						type='button'
 						onClick={handleSaveClick}

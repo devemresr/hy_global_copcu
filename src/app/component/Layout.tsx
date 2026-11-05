@@ -70,7 +70,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	}
 
 	return (
-		<div className='flex min-h-screen'>
+		<div className='flex min-h-screen w-full min-w-0'>
 			<ThemeContext.Provider value={{ theme }}>
 				<Sidebar
 					isOpen={isOpenSidebar}
@@ -78,7 +78,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 					onClose={handleCloseSidebar}
 				/>
 
-				<div className='flex flex-col flex-1 min-w-0'>
+				<div className='flex w-0 min-w-0 flex-1 flex-col'>
 					<ErrorBoundary FallbackComponent={SmallFallback}>
 						<Header
 							isOpen={isOpenSidebar}
@@ -89,7 +89,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 						/>
 					</ErrorBoundary>
 
-					<main className='flex-1 min-w-0'>
+					<main className='w-full min-w-0 flex-1'>
 						<RouteErrorBoundary>{children}</RouteErrorBoundary>
 					</main>
 					<ErrorBoundary FallbackComponent={SmallFallback}>

@@ -1,5 +1,7 @@
+import { ModalCloseButton } from '../ModalCloseButton';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useState, type SetStateAction } from 'react';
-import { X } from 'lucide-react';
+
 import type { EditableField, EditableInventoryItem } from '../../types';
 import { editableInventoryItemSchema } from '../../schemas/item.schema';
 import {
@@ -17,6 +19,7 @@ import { NumberInputWithSteppers } from '../NumberInputWithSteppers';
 type ItemEditModalProps = {
 	item: EditableInventoryItem;
 	onClose: () => void;
+	closeOnOutsideClick?: boolean;
 	onSave: (updated: EditableInventoryItem) => void;
 	isSaving?: boolean;
 	enterEnabled: boolean;
@@ -28,6 +31,7 @@ type ItemEditModalProps = {
 export function ItemEditModal({
 	item,
 	onClose,
+	closeOnOutsideClick = true,
 	onSave,
 	isSaving = false,
 	enterEnabled,
@@ -88,12 +92,23 @@ export function ItemEditModal({
 		setError(null);
 		onSave(parsed.data);
 	}
-	useModalHotkeys(handleSave, onClose, { enterEnabled, escapeEnabled });
+	useModalHotkeys(
+		handleSave,
+		() => {
+			if (!isSaving) onClose();
+		},
+		{ enterEnabled, escapeEnabled },
+	);
+	const dismiss = useModalDismiss(onClose, {
+		closeOnOutsideClick,
+		disabled: isSaving,
+		escapeEnabled,
+	});
 
 	return (
 		<div
 			className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4'
-			onClick={onClose}
+			{...dismiss}
 		>
 			<div
 				role='dialog'
@@ -106,14 +121,7 @@ export function ItemEditModal({
 					<h2 className='text-sm font-semibold'>
 						{mode === 'create' ? 'Yeni Ürün Ekle' : 'Ürünü Düzenle'}
 					</h2>
-					<button
-						type='button'
-						aria-label='Kapat'
-						className='h-7 w-7'
-						onClick={onClose}
-					>
-						<X className='h-full w-full' />
-					</button>
+					<ModalCloseButton onClick={onClose} disabled={isSaving} />
 				</div>
 				<div className='flex flex-col gap-3 text-sm'>
 					{EDITABLE_FIELD_KEYS.map((field) => {
@@ -214,13 +222,6 @@ export function ItemEditModal({
 					)}
 				</div>
 				<div className='mt-5 flex justify-end gap-2'>
-					<button
-						type='button'
-						onClick={onClose}
-						className='rounded-xl bg-button-bg px-3 py-1.5 text-sm'
-					>
-						Vazgeç
-					</button>
 					<button
 						type='button'
 						onClick={handleSave}

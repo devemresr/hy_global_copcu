@@ -1,3 +1,5 @@
+import { ModalCloseButton } from './ModalCloseButton';
+import { useModalDismiss } from '../hooks/useModalDismiss';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { InventoryItemRecord } from '../types';
 import {
@@ -33,6 +35,9 @@ export function CustomerPriceEditor({
 	const [error, setError] = useState('');
 	const [message, setMessage] = useState('');
 	const [exporting, setExporting] = useState(false);
+	const dismiss = useModalDismiss(() => setOpen(false), {
+		disabled: exporting,
+	});
 	const dialogRef = useRef<HTMLDialogElement>(null);
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const priceRules = useCustomerPriceRules(open && includePrices);
@@ -139,14 +144,7 @@ export function CustomerPriceEditor({
 				<dialog
 					ref={dialogRef}
 					aria-labelledby='customer-price-title'
-					onCancel={(event) => {
-						event.preventDefault();
-						if (!exporting) setOpen(false);
-					}}
-					onClick={(event) => {
-						if (event.target === event.currentTarget && !exporting)
-							setOpen(false);
-					}}
+					{...dismiss}
 					className={`fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_1rem)] overflow-hidden rounded-xl bg-modal-bg p-0 text-text backdrop:bg-black/50 sm:w-[calc(100%_-_2rem)] sm:rounded-2xl ${includePrices ? 'max-w-6xl' : 'max-w-lg'}`}
 				>
 					<div className='flex max-h-[90dvh] min-h-0 flex-col'>
@@ -157,15 +155,11 @@ export function CustomerPriceEditor({
 							>
 								Envanteri indir
 							</h2>
-							<button
-								type='button'
-								aria-label='Fiyat düzenleyiciyi kapat'
+							<ModalCloseButton
+								label='Fiyat düzenleyiciyi kapat'
 								disabled={exporting}
 								onClick={() => setOpen(false)}
-								className='rounded-lg bg-button-bg px-2 py-1.5 text-sm disabled:opacity-40 sm:px-3 sm:py-2'
-							>
-								Kapat
-							</button>
+							/>
 						</header>
 						<div className='min-h-0 space-y-3 overflow-y-auto p-2 sm:space-y-5 sm:p-6'>
 							<section

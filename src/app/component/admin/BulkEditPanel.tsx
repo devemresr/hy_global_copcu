@@ -1,5 +1,6 @@
+import { AdminCollapseButton, AdminCollapseIcon } from './AdminCollapseHeading';
 import { useEffect, useState, type SetStateAction } from 'react';
-import { ChevronDown, ChevronRight, Lightbulb } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 import type { EditableInventoryItem } from '../../types';
 import type { ItemDto } from '../../hooks/api/endpoints/useItems';
 import {
@@ -16,22 +17,37 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { DisplayValue } from './DisplayValue';
 import { Pagination } from './Pagination';
 import { BulkActionEditor } from './BulkActionEditor';
-import { buildBulkFields, type BulkAction } from '../../helpers/adminPageHelpers/bulkEdit.helper';
+import {
+	buildBulkFields,
+	type BulkAction,
+} from '../../helpers/adminPageHelpers/bulkEdit.helper';
 import { FilterWorkspace } from './FilterWorkspace';
-import { conditionsToFilters, newFilterCondition as newCondition, type FilterCondition as Condition } from '../../helpers/adminPageHelpers/filterConditions.helper';
+import {
+	conditionsToFilters,
+	newFilterCondition as newCondition,
+	type FilterCondition as Condition,
+} from '../../helpers/adminPageHelpers/filterConditions.helper';
 import { FilterConditionEditor } from './FilterConditionEditor';
 import type { ItemRule } from '../../helpers/adminPageHelpers/itemRules.helper';
 import { ResolvedBulkChanges } from './ResolvedBulkChanges';
 
-const PREVIEW_FIELDS = new Set(['model', 'bellekTipi', 'depolama', 'fiyat', 'paraBirimi']);
+const PREVIEW_FIELDS = new Set([
+	'model',
+	'bellekTipi',
+	'depolama',
+	'fiyat',
+	'paraBirimi',
+]);
 
 // Only conditions with everything they need to actually filter make it into
 // the real FieldFilter list - a half-filled row (op picked, value still
 // blank) is just in-progress typing, not "match nothing".
 function toFieldFilters(conditions: Condition[]): FieldFilter[] {
-	return conditionsToFilters(conditions.filter(
+	return conditionsToFilters(
+		conditions.filter(
 			(c) => c.op === 'exists' || c.op === 'notExists' || c.value.trim() !== '',
-		));
+		),
+	);
 }
 
 // "Hazır değişiklikler": one click fills the conditions for a bellekTipi +
@@ -57,7 +73,15 @@ function presetConditions(
 	size: PresetSize,
 ): Condition[] {
 	return [
-		...(memoryType === 'all' ? [] : [{ ...newCondition(), field: 'bellekTipi' as const, value: memoryType }]),
+		...(memoryType === 'all'
+			? []
+			: [
+					{
+						...newCondition(),
+						field: 'bellekTipi' as const,
+						value: memoryType,
+					},
+				]),
 		{ ...newCondition(), field: 'depolama', value: String(size.depolama) },
 		{ ...newCondition(), field: 'depolamaBirimi', value: size.birim },
 	];
@@ -131,15 +155,22 @@ export function BulkEditPanel({
 	// carry the same visual weight as a single field/row edit.
 	const [isOpen, setIsOpen] = useState(false);
 	const [hintVisible, setHintVisible] = useState(loadHintVisible);
-	const [conditions, setConditionState] = useState<Condition[]>([newCondition()]);
+	const [conditions, setConditionState] = useState<Condition[]>([
+		newCondition(),
+	]);
 	const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
 	function setConditions(update: SetStateAction<Condition[]>) {
 		setConditionState(update);
 		setExcludedIds(new Set());
 		setPreviewPage(1);
 	}
-	const [actions, setActions] = useState<BulkAction[]>([{ field: 'bellekTipi', value: '' }]);
-	const [pendingBulk, setPendingBulk] = useState<{ matched: ItemDto[]; fields: Partial<EditableInventoryItem> } | null>(null);
+	const [actions, setActions] = useState<BulkAction[]>([
+		{ field: 'bellekTipi', value: '' },
+	]);
+	const [pendingBulk, setPendingBulk] = useState<{
+		matched: ItemDto[];
+		fields: Partial<EditableInventoryItem>;
+	} | null>(null);
 	const [isApplying, setIsApplying] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [pendingDelete, setPendingDelete] = useState<ItemDto[] | null>(null);
@@ -169,11 +200,16 @@ export function BulkEditPanel({
 		readyFilters.length > 0 ? filterRowsByFields(items, readyFilters) : [];
 	const selected = matched.filter((item) => !excludedIds.has(item._id));
 	let previewFields: Partial<EditableInventoryItem> | null = null;
-	try { previewFields = buildBulkFields(actions); } catch { /* Incomplete action. */ }
+	try {
+		previewFields = buildBulkFields(actions);
+	} catch {
+		/* Incomplete action. */
+	}
 	function toggleItem(id: string, checked: boolean) {
 		setExcludedIds((current) => {
 			const next = new Set(current);
-			if (checked) next.delete(id); else next.add(id);
+			if (checked) next.delete(id);
+			else next.add(id);
 			return next;
 		});
 	}
@@ -194,7 +230,12 @@ export function BulkEditPanel({
 		setConditions(presetConditions(memoryType, size));
 		setActions((current) => {
 			if (current.some((action) => action.field === 'fiyat')) return current;
-			if (current.length === 1 && current[0].field === 'bellekTipi' && current[0].value === '') return [{ field: 'fiyat', value: '' }];
+			if (
+				current.length === 1 &&
+				current[0].field === 'bellekTipi' &&
+				current[0].value === ''
+			)
+				return [{ field: 'fiyat', value: '' }];
 			return [...current, { field: 'fiyat', value: '' }];
 		});
 		setError(null);
@@ -210,7 +251,10 @@ export function BulkEditPanel({
 		if (activePresetSize) applyPreset(memoryType, activePresetSize);
 	}
 
-	async function applyChange(target: { matched: ItemDto[]; fields: Partial<EditableInventoryItem> }) {
+	async function applyChange(target: {
+		matched: ItemDto[];
+		fields: Partial<EditableInventoryItem>;
+	}) {
 		if (busy) return;
 		setIsApplying(true);
 		try {
@@ -226,7 +270,10 @@ export function BulkEditPanel({
 	function handleApplyClick() {
 		if (selected.length === 0 || selected.length > 1000 || busy) return;
 		try {
-			const target = { matched: [...selected], fields: buildBulkFields(actions) };
+			const target = {
+				matched: [...selected],
+				fields: buildBulkFields(actions),
+			};
 			setError(null);
 			if (requireApproval) setPendingBulk(target);
 			else void applyChange(target);
@@ -239,17 +286,23 @@ export function BulkEditPanel({
 		if (!onDelete || busy) return;
 		setIsDeleting(true);
 		setError(null);
-		try { await onDelete(target); }
-		catch (error) { setError(error instanceof Error ? error.message : 'Toplu silme başarısız'); }
-		finally { setIsDeleting(false); }
+		try {
+			await onDelete(target);
+		} catch (error) {
+			setError(
+				error instanceof Error ? error.message : 'Toplu silme başarısız',
+			);
+		} finally {
+			setIsDeleting(false);
+		}
 	}
 
 	return (
 		<div className='mb-3 flex flex-col gap-3 rounded-xl bg-button-bg p-3 text-sm'>
-			<button
-				type='button'
+			<AdminCollapseButton
+				expanded={isOpen}
+				index={3}
 				onClick={() => setIsOpen((o) => !o)}
-				className='flex items-center justify-between gap-2 text-left font-medium'
 			>
 				<span className='flex items-center gap-2'>
 					Toplu Düzenleme
@@ -259,18 +312,20 @@ export function BulkEditPanel({
 						</span>
 					)}
 				</span>
-				{isOpen ? (
-					<ChevronDown className='h-4 w-4 shrink-0' />
-				) : (
-					<ChevronRight className='h-4 w-4 shrink-0' />
-				)}
-			</button>
+			</AdminCollapseButton>
 
 			{isOpen && (
 				<FilterWorkspace
-					conditions={conditions.filter((condition) => condition.op === 'exists' || condition.op === 'notExists' || condition.value.trim() !== '')}
+					conditions={conditions.filter(
+						(condition) =>
+							condition.op === 'exists' ||
+							condition.op === 'notExists' ||
+							condition.value.trim() !== '',
+					)}
 					onLoad={(saved) => {
-						setConditions(saved.map((condition) => ({ ...newCondition(), ...condition })));
+						setConditions(
+							saved.map((condition) => ({ ...newCondition(), ...condition })),
+						);
 						setError(null);
 					}}
 				>
@@ -318,11 +373,7 @@ export function BulkEditPanel({
 							onClick={() => setPresetsOpen((o) => !o)}
 							className='flex items-center gap-1 self-start rounded-xl bg-button-focus-bg px-2 py-1 text-xs font-medium hover:bg-button-hover-bg'
 						>
-							{presetsOpen ? (
-								<ChevronDown className='h-3.5 w-3.5' />
-							) : (
-								<ChevronRight className='h-3.5 w-3.5' />
-							)}
+							<AdminCollapseIcon expanded={presetsOpen} />
 							Hazır Değişiklikler
 						</button>
 						{presetsOpen && (
@@ -365,77 +416,220 @@ export function BulkEditPanel({
 						)}
 					</div>
 
-					<FilterConditionEditor conditions={conditions} onChange={setConditions} />
-					<fieldset disabled={busy} className='flex flex-col gap-2 border-t border-border pt-3'>
+					<FilterConditionEditor
+						conditions={conditions}
+						onChange={setConditions}
+					/>
+					<fieldset
+						disabled={busy}
+						className='flex flex-col gap-2 border-t border-border pt-3'
+					>
 						<legend>Değiştirilecek alanlar</legend>
-						<BulkActionEditor actions={actions} onChange={(update) => {
-							setActions(update);
-							setError(null);
-						}} />
+						<BulkActionEditor
+							actions={actions}
+							onChange={(update) => {
+								setActions(update);
+								setError(null);
+							}}
+						/>
 						<button
 							type='button'
 							onClick={handleApplyClick}
 							disabled={selected.length === 0 || selected.length > 1000 || busy}
 							className='self-start rounded-xl bg-button-focus-bg px-3 py-1.5 disabled:opacity-40'
 						>
-							{isApplying ? 'Güncelleniyor...' : <>Seçili <strong className='text-red-600 dark:text-red-400'>{selected.length}</strong> öğeyi güncelle</>}
+							{isApplying ? (
+								'Güncelleniyor...'
+							) : (
+								<>
+									Seçili{' '}
+									<strong className='text-red-600 dark:text-red-400'>
+										{selected.length}
+									</strong>{' '}
+									öğeyi güncelle
+								</>
+							)}
 						</button>
 					</fieldset>
-					{selected.length > 1000 && <p className='text-xs text-amber-700 dark:text-amber-300'>Tek seferde en fazla 1000 öğe değiştirilebilir. Seçimi azaltın veya filtrenizi daraltın.</p>}
-					{onDelete && <div className='flex flex-col items-start gap-1 border-t border-border pt-3'>
-						<button
-							type='button'
-							disabled={selected.length === 0 || selected.length > 1000 || busy}
-							onClick={() => { setError(null); setPendingDelete([...selected]); }}
-							className='rounded-xl border border-red-500/50 bg-red-500/10 px-3 py-1.5 font-medium text-red-600 hover:bg-red-500/20 disabled:opacity-40 dark:text-red-400'
-						>
-							{isDeleting ? 'Siliniyor...' : `Seçili ${selected.length} öğeyi sil`}
-						</button>
-					</div>}
+					{selected.length > 1000 && (
+						<p className='text-xs text-amber-700 dark:text-amber-300'>
+							Tek seferde en fazla 1000 öğe değiştirilebilir. Seçimi azaltın
+							veya filtrenizi daraltın.
+						</p>
+					)}
+					{onDelete && (
+						<div className='flex flex-col items-start gap-1 border-t border-border pt-3'>
+							<button
+								type='button'
+								disabled={
+									selected.length === 0 || selected.length > 1000 || busy
+								}
+								onClick={() => {
+									setError(null);
+									setPendingDelete([...selected]);
+								}}
+								className='rounded-xl border border-red-500/50 bg-red-500/10 px-3 py-1.5 font-medium text-red-600 hover:bg-red-500/20 disabled:opacity-40 dark:text-red-400'
+							>
+								{isDeleting
+									? 'Siliniyor...'
+									: `Seçili ${selected.length} öğeyi sil`}
+							</button>
+						</div>
+					)}
 					<div className='flex flex-col gap-1 border-t border-border pt-3'>
 						<div className='flex flex-wrap items-center justify-between gap-2'>
 							<span>
-								Etkilenecek <strong className='text-red-600 dark:text-red-400'>{selected.length}</strong> öğe <span className='text-xs opacity-60'>({matched.length} eşleşen)</span>:
+								Etkilenecek{' '}
+								<strong className='text-red-600 dark:text-red-400'>
+									{selected.length}
+								</strong>{' '}
+								öğe{' '}
+								<span className='text-xs opacity-60'>
+									({matched.length} eşleşen)
+								</span>
+								:
 							</span>
 							<label className='flex cursor-pointer items-center gap-2 text-xs'>
-								<input type='checkbox' aria-label='Tüm özellikleri göster' checked={showAllProperties} onChange={(event) => setShowAllProperties(event.target.checked)} />
+								<input
+									type='checkbox'
+									aria-label='Tüm özellikleri göster'
+									checked={showAllProperties}
+									onChange={(event) =>
+										setShowAllProperties(event.target.checked)
+									}
+								/>
 								Tüm özellikleri göster
 							</label>
 						</div>
-						{matched.length > 0 && <label className='flex items-center gap-2 text-xs'>
-							<input type='checkbox' aria-label='Tüm eşleşenleri seç' disabled={busy} checked={selected.length === matched.length} ref={(input) => { if (input) input.indeterminate = selected.length > 0 && selected.length < matched.length; }} onChange={(event) => setExcludedIds(event.target.checked ? new Set() : new Set(matched.map((item) => item._id)))} />
-							Tüm eşleşenleri seç (tüm sayfalar)
-						</label>}
-						{showAllProperties && <p className='text-xs text-amber-700 dark:text-amber-300'>Vurgulanan alanlar değiştirilecek; diğer özellikler mevcut değerlerdir.</p>}
+						{matched.length > 0 && (
+							<label className='flex items-center gap-2 text-xs'>
+								<input
+									type='checkbox'
+									aria-label='Tüm eşleşenleri seç'
+									disabled={busy}
+									checked={selected.length === matched.length}
+									ref={(input) => {
+										if (input)
+											input.indeterminate =
+												selected.length > 0 && selected.length < matched.length;
+									}}
+									onChange={(event) =>
+										setExcludedIds(
+											event.target.checked
+												? new Set()
+												: new Set(matched.map((item) => item._id)),
+										)
+									}
+								/>
+								Tüm eşleşenleri seç (tüm sayfalar)
+							</label>
+						)}
+						{showAllProperties && (
+							<p className='text-xs text-amber-700 dark:text-amber-300'>
+								Vurgulanan alanlar değiştirilecek; diğer özellikler mevcut
+								değerlerdir.
+							</p>
+						)}
 						{matched.length === 0 ? (
 							<p className='text-xs opacity-50'>Eşleşen öğe yok</p>
 						) : (
-							<ul aria-label='Etkilenecek öğeler' className='flex max-h-[60dvh] min-h-64 flex-col gap-2 overflow-y-auto rounded-xl bg-button-focus-bg p-2 text-xs'>
+							<ul
+								aria-label='Etkilenecek öğeler'
+								className='flex max-h-[60dvh] min-h-64 flex-col gap-2 overflow-y-auto rounded-xl bg-button-focus-bg p-2 text-xs'
+							>
 								{previewRows.map((row, index) => (
-									<li key={row._id} className={`border-b border-border ${excludedIds.has(row._id) ? 'opacity-60' : ''}`}>
-										<label className={`flex flex-col gap-1 py-1 ${busy ? 'cursor-default' : 'cursor-pointer'}`}>
-										<span className='flex items-center gap-2'>
-											<input type='checkbox' aria-label={`${row.model} seç`} disabled={busy} checked={!excludedIds.has(row._id)} onChange={(event) => toggleItem(row._id, event.target.checked)} />
-											<b><span className='mr-2 font-normal opacity-50'>{(currentPreviewPage - 1) * previewPageSize + index + 1}.</span>{row.model}</b>
-										</span>
-										{previewFields ? <ResolvedBulkChanges item={row} fields={previewFields} rules={rules} highlighted={showAllProperties} /> : actions.filter((action) => PREVIEW_FIELDS.has(action.field)).map((action) => {
-											const paired = PAIRED_ENUM_FIELD[action.field];
-											const oldUnit = paired ? row[paired] : null;
-											const newUnit = paired ? actions.find((item) => item.field === paired)?.value ?? oldUnit : null;
-											return (
-												<span key={action.field} className={showAllProperties ? 'rounded bg-amber-500/10 px-2 py-1 font-medium text-amber-700 dark:text-amber-300' : 'opacity-70'}>
-													{fieldLabel(action.field)}: <DisplayValue value={row[action.field] ?? null} />{oldUnit ? ` ${oldUnit}` : ''}
-													{' → '}<DisplayValue value={action.value.trim() || null} />{newUnit ? ` ${newUnit}` : ''}
-												</span>
-											);
-										})}
-										{showAllProperties && Object.entries(row)
-											.filter(([field]) => PREVIEW_FIELDS.has(field) && field !== 'model' && !actions.some((action) => action.field === field))
-											.map(([field, value]) => (
-												<span key={field} className='px-2 py-0.5 opacity-60'>
-													{Object.hasOwn(FIELD_REGISTRY, field) ? fieldLabel(field as FieldKey) : field === 'ram' ? 'RAM' : field === '_id' ? 'Kayıt ID' : field === 'version' ? 'Sürüm' : field}: <DisplayValue value={value ?? null} />
-												</span>
-											))}
+									<li
+										key={row._id}
+										className={`border-b border-border ${excludedIds.has(row._id) ? 'opacity-60' : ''}`}
+									>
+										<label
+											className={`flex flex-col gap-1 py-1 ${busy ? 'cursor-default' : 'cursor-pointer'}`}
+										>
+											<span className='flex items-center gap-2'>
+												<input
+													type='checkbox'
+													aria-label={`${row.model} seç`}
+													disabled={busy}
+													checked={!excludedIds.has(row._id)}
+													onChange={(event) =>
+														toggleItem(row._id, event.target.checked)
+													}
+												/>
+												<b>
+													<span className='mr-2 font-normal opacity-50'>
+														{(currentPreviewPage - 1) * previewPageSize +
+															index +
+															1}
+														.
+													</span>
+													{row.model}
+												</b>
+											</span>
+											{previewFields ? (
+												<ResolvedBulkChanges
+													item={row}
+													fields={previewFields}
+													rules={rules}
+													highlighted={showAllProperties}
+												/>
+											) : (
+												actions
+													.filter((action) => PREVIEW_FIELDS.has(action.field))
+													.map((action) => {
+														const paired = PAIRED_ENUM_FIELD[action.field];
+														const oldUnit = paired ? row[paired] : null;
+														const newUnit = paired
+															? (actions.find((item) => item.field === paired)
+																	?.value ?? oldUnit)
+															: null;
+														return (
+															<span
+																key={action.field}
+																className={
+																	showAllProperties
+																		? 'rounded bg-amber-500/10 px-2 py-1 font-medium text-amber-700 dark:text-amber-300'
+																		: 'opacity-70'
+																}
+															>
+																{fieldLabel(action.field)}:{' '}
+																<DisplayValue
+																	value={row[action.field] ?? null}
+																/>
+																{oldUnit ? ` ${oldUnit}` : ''}
+																{' → '}
+																<DisplayValue
+																	value={action.value.trim() || null}
+																/>
+																{newUnit ? ` ${newUnit}` : ''}
+															</span>
+														);
+													})
+											)}
+											{showAllProperties &&
+												Object.entries(row)
+													.filter(
+														([field]) =>
+															PREVIEW_FIELDS.has(field) &&
+															field !== 'model' &&
+															!actions.some((action) => action.field === field),
+													)
+													.map(([field, value]) => (
+														<span
+															key={field}
+															className='px-2 py-0.5 opacity-60'
+														>
+															{Object.hasOwn(FIELD_REGISTRY, field)
+																? fieldLabel(field as FieldKey)
+																: field === 'ram'
+																	? 'RAM'
+																	: field === '_id'
+																		? 'Kayıt ID'
+																		: field === 'version'
+																			? 'Sürüm'
+																			: field}
+															: <DisplayValue value={value ?? null} />
+														</span>
+													))}
 										</label>
 									</li>
 								))}
@@ -463,8 +657,24 @@ export function BulkEditPanel({
 							title='Toplu değişikliği onayla'
 							message={
 								<div className='flex flex-col gap-1'>
-									<p><strong className='text-red-600 dark:text-red-400'>{pendingBulk.matched.length}</strong> öğe güncellenecek:</p>
-									<div className='max-h-72 overflow-y-auto'>{pendingBulk.matched.map((item) => <div key={item._id} className='mb-2'><b>{item.model}</b><ResolvedBulkChanges item={item} fields={pendingBulk.fields} rules={rules} /></div>)}</div>
+									<p>
+										<strong className='text-red-600 dark:text-red-400'>
+											{pendingBulk.matched.length}
+										</strong>{' '}
+										öğe güncellenecek:
+									</p>
+									<div className='max-h-72 overflow-y-auto'>
+										{pendingBulk.matched.map((item) => (
+											<div key={item._id} className='mb-2'>
+												<b>{item.model}</b>
+												<ResolvedBulkChanges
+													item={item}
+													fields={pendingBulk.fields}
+													rules={rules}
+												/>
+											</div>
+										))}
+									</div>
 								</div>
 							}
 							onConfirm={() => {
@@ -476,19 +686,37 @@ export function BulkEditPanel({
 							escapeEnabled={escapeEnabled}
 						/>
 					)}
-					{pendingDelete && <ConfirmDialog
-						danger
-						title='Toplu silmeyi onayla'
-						confirmLabel='Öğeleri sil'
-						message={<div className='flex flex-col gap-2'>
-							<p><strong className='text-red-600 dark:text-red-400'>{pendingDelete.length}</strong> öğe silinecek ve listeden kaldırılacak.</p>
-							<ul className='max-h-40 overflow-y-auto text-xs'>{pendingDelete.map((item, index) => <li key={item._id}>{index + 1}. {item.model}</li>)}</ul>
-						</div>}
-						onConfirm={() => { void deleteMatched(pendingDelete); setPendingDelete(null); }}
-						onCancel={() => setPendingDelete(null)}
-						enterEnabled={enterEnabled}
-						escapeEnabled={escapeEnabled}
-					/>}
+					{pendingDelete && (
+						<ConfirmDialog
+							danger
+							title='Toplu silmeyi onayla'
+							confirmLabel='Öğeleri sil'
+							message={
+								<div className='flex flex-col gap-2'>
+									<p>
+										<strong className='text-red-600 dark:text-red-400'>
+											{pendingDelete.length}
+										</strong>{' '}
+										öğe silinecek ve listeden kaldırılacak.
+									</p>
+									<ul className='max-h-40 overflow-y-auto text-xs'>
+										{pendingDelete.map((item, index) => (
+											<li key={item._id}>
+												{index + 1}. {item.model}
+											</li>
+										))}
+									</ul>
+								</div>
+							}
+							onConfirm={() => {
+								void deleteMatched(pendingDelete);
+								setPendingDelete(null);
+							}}
+							onCancel={() => setPendingDelete(null)}
+							enterEnabled={enterEnabled}
+							escapeEnabled={escapeEnabled}
+						/>
+					)}
 				</FilterWorkspace>
 			)}
 		</div>

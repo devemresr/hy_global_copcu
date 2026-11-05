@@ -53,6 +53,7 @@ createRoot(document.getElementById('root')!).render(
 						classNames: {
 							toast: 'rounded-xl! border! font-sans!',
 							title: 'text-sm!',
+							description: 'text-neutral-600! dark:text-neutral-300!',
 							error: 'text-red-500!',
 							warning: 'text-amber-500!',
 							actionButton:

@@ -1,5 +1,15 @@
 @import 'tailwindcss';
 
+summary.admin-collapse-heading::-webkit-details-marker {
+	display: none;
+}
+summary.admin-collapse-heading > .admin-collapse-icon {
+	transform: rotate(-90deg);
+}
+details[open] > summary.admin-collapse-heading > .admin-collapse-icon {
+	transform: rotate(0);
+}
+
 @theme {
 	--animate-float1: float1 2s ease-in-out infinite;
 	--animate-hoverFloatUp: hoverFloatUp 0.3s ease-in-out forwards;
@@ -40,6 +50,13 @@
 
 html {
 	background-color: var(--color-bg);
+}
+
+html,
+body,
+#root {
+	width: 100%;
+	min-width: 0;
 }
 
 /* Keep single-choice dropdown arrows inset consistently across every page. */

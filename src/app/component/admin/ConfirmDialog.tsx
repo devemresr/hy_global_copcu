@@ -1,3 +1,5 @@
+import { ModalCloseButton } from '../ModalCloseButton';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import type { ReactNode } from 'react';
 import { useModalHotkeys } from '../../hooks/useModalHotkeys';
 
@@ -15,6 +17,7 @@ type ConfirmDialogProps = {
 	// working Enter/Escape by default.
 	enterEnabled?: boolean;
 	escapeEnabled?: boolean;
+	closeOnOutsideClick?: boolean;
 };
 
 export function ConfirmDialog({
@@ -28,13 +31,18 @@ export function ConfirmDialog({
 	additionalAction,
 	enterEnabled = true,
 	escapeEnabled = true,
+	closeOnOutsideClick = true,
 }: ConfirmDialogProps) {
 	useModalHotkeys(onConfirm, onCancel, { enterEnabled, escapeEnabled });
+	const dismiss = useModalDismiss(onCancel, {
+		closeOnOutsideClick,
+		escapeEnabled,
+	});
 
 	return (
 		<div
 			className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4'
-			onClick={onCancel}
+			{...dismiss}
 		>
 			<div
 				role='dialog'
@@ -43,17 +51,21 @@ export function ConfirmDialog({
 				className='w-full max-w-sm bg-modal-bg text-text rounded-xl p-4'
 				onClick={(e) => e.stopPropagation()}
 			>
-				<p className='text-sm font-semibold mb-2'>{title}</p>
+				<div className='mb-2 flex items-center justify-between gap-3'>
+					<p className='text-sm font-semibold'>{title}</p>
+					<ModalCloseButton onClick={onCancel} label={cancelLabel} />
+				</div>
 				<div className='text-sm opacity-90 mb-4'>{message}</div>
 				<div className='flex flex-col justify-end gap-2 sm:flex-row sm:flex-wrap'>
-					<button
-						type='button'
-						onClick={onCancel}
-						className='rounded-xl bg-button-bg px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
-					>
-						{cancelLabel}
-					</button>
-					{additionalAction && <button type='button' onClick={additionalAction.onClick} className='rounded-xl border border-border bg-button-focus-bg px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'>{additionalAction.label}</button>}
+					{additionalAction && (
+						<button
+							type='button'
+							onClick={additionalAction.onClick}
+							className='rounded-xl border border-border bg-button-focus-bg px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
+						>
+							{additionalAction.label}
+						</button>
+					)}
 					<button
 						type='button'
 						onClick={onConfirm}

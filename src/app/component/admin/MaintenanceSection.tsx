@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { AdminCollapseButton } from './AdminCollapseHeading';
 import {
 	getSchedulePhase,
 	useScheduleClock,
@@ -149,13 +149,6 @@ function ScheduleFields({
 	);
 }
 
-const chevron = (open: boolean) =>
-	open ? (
-		<ChevronDown className='h-4 w-4 shrink-0' />
-	) : (
-		<ChevronRight className='h-4 w-4 shrink-0' />
-	);
-
 // Stacked, each card is its own collapsible box. Side by side it sits inside
 // MaintenanceSection's shared panel, which owns the toggle, so the header is
 // just a label. The body stays mounted either way so unsaved edits survive.
@@ -177,10 +170,7 @@ function SettingsCard({
 	const header = (
 		<>
 			{title}
-			<span className='flex items-center gap-2 font-normal'>
-				{badge}
-				{collapsible && chevron(open)}
-			</span>
+			<span className='flex items-center gap-2 font-normal'>{badge}</span>
 		</>
 	);
 	const headerClass =
@@ -193,14 +183,13 @@ function SettingsCard({
 			}`}
 		>
 			{collapsible ? (
-				<button
-					type='button'
+				<AdminCollapseButton
 					onClick={onToggle}
-					aria-expanded={open}
-					className={headerClass}
+					expanded={open}
+					index={title === 'Sayfa duyurusu' ? 1 : 0}
 				>
 					{header}
-				</button>
+				</AdminCollapseButton>
 			) : (
 				<div className={headerClass}>{header}</div>
 			)}
@@ -240,11 +229,10 @@ export function MaintenanceSection() {
 			}
 		>
 			{isRow && (
-				<button
-					type='button'
+				<AdminCollapseButton
 					onClick={() => setRowOpen((open) => !open)}
-					aria-expanded={rowOpen}
-					className='flex w-full flex-wrap items-center justify-between gap-2 text-left font-medium'
+					expanded={rowOpen}
+					index={0}
 				>
 					Site ayarları
 					<span className='flex flex-wrap items-center gap-2 font-normal'>
@@ -262,9 +250,8 @@ export function MaintenanceSection() {
 							activeLabel='Yayında'
 							activeTone='green'
 						/>
-						{chevron(rowOpen)}
 					</span>
-				</button>
+				</AdminCollapseButton>
 			)}
 			<div
 				className={
