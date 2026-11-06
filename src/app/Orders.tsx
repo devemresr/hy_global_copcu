@@ -1,3 +1,15 @@
+import { useOrderDraft } from './hooks/useOrderDraft';
+import {
+	orderDraftKey,
+	purchaseDraftSchema,
+	type PurchaseDraft,
+} from './helpers/orderDraft.helper';
+import { orderChoices, orderChoiceKey } from './helpers/orderChoices.helper';
+import {
+	mergePurchaseInspection,
+	warningInputKey,
+	type WarningCache,
+} from './helpers/purchaseWarnings.helper';
 import { Trash2 } from 'lucide-react';
 import {
 	AdminCollapseButton,
@@ -10,7 +22,6 @@ import {
 	STOCK_STEPPER,
 } from './constants/stockStyles.constant';
 import {
-	Fragment,
 	useEffect,
 	useMemo,
 	useRef,
@@ -56,15 +67,7 @@ import {
 	type SavedOrderLine,
 } from './hooks/api/endpoints/useOrders';
 
-type DraftLine = {
-	id: number;
-	type: OrderLine['type'];
-	quantity: number | '';
-	memoryGb: number | null;
-	requiresMemorySize: boolean;
-	quantityUnit: OrderQuantityUnit;
-	unitPriceOverride: number | '' | null;
-};
+type DraftLine = PurchaseDraft['lines'][number];
 const money = (n: number) =>
 	n.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
 
@@ -80,6 +83,7 @@ const initialLine = (
 	requiresMemorySize: ORDER_PRODUCT_TYPES[type].requiresMemorySize,
 	quantityUnit: 'piece',
 	unitPriceOverride: null,
+	totalPriceOverride: null,
 });
 
 export default function OrdersPage() {
@@ -87,15 +91,32 @@ export default function OrdersPage() {
 	const pricing = useOrderPricing();
 	const logout = useLogout();
 	const save = useCreateOrder();
-	const purchaseWarnings = usePurchaseWarnings();
+	const [warningCache, setWarningCache] = useState<WarningCache>({});
+	const purchaseWarnings = usePurchaseWarnings((response, input) =>
+		setWarningCache((current) =>
+			mergePurchaseInspection(current, input, response),
+		),
+	);
 	const submittingRef = useRef(false);
 	const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const [lines, setLines] = useState<DraftLine[]>([initialLine(0)]);
+	const draft = useOrderDraft(
+		orderDraftKey('purchase'),
+		purchaseDraftSchema,
+		() => ({ lines: [initialLine(0)], nextId: 1, bayiId: '' }),
+		'alış',
+		pricing.isSuccess,
+	);
+	const { lines, nextId, bayiId } = draft.value;
+	const setLines = (action: SetStateAction<DraftLine[]>) =>
+		draft.setValue((current) => ({
+			...current,
+			lines: typeof action === 'function' ? action(current.lines) : action,
+		}));
+	const setBayiId = (value: string) =>
+		draft.setValue((current) => ({ ...current, bayiId: value }));
 	const [collapsedRows, setCollapsedRows] = useState<Set<number>>(
 		() => new Set(),
 	);
-	const [nextId, setNextId] = useState(1);
-	const [bayiId, setBayiId] = useState('');
 	const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
 	const [rowPdfOrder, setRowPdfOrder] = useState<Order | null>(null);
 	const [excludedOrderIds, setExcludedOrderIds] = useState<Set<string>>(
@@ -166,14 +187,49 @@ export default function OrdersPage() {
 				Boolean(selectedHistory.error)));
 	const prices = pricing.data?.prices;
 	const productTypes = pricing.data?.productTypes ?? ORDER_PRODUCT_TYPES;
+	const choices = orderChoices(productTypes, pricing.data?.memorySizes);
+	const unusedChoice = choices.find(
+		(choice) =>
+			!lines.some((line) => orderChoiceKey(line) === orderChoiceKey(choice)),
+	);
+	function addLine() {
+		draft.setValue((current) => {
+			const choice = choices.find(
+				(candidate) =>
+					!current.lines.some(
+						(line) => orderChoiceKey(line) === orderChoiceKey(candidate),
+					),
+			);
+			return choice
+				? {
+						...current,
+						nextId: current.nextId + 1,
+						lines: [
+							...current.lines,
+							{ ...initialLine(current.nextId, choice.type), ...choice },
+						],
+					}
+				: current;
+		});
+	}
+	function resetRows() {
+		draft.clear({ lines: [initialLine(nextId)], nextId: nextId + 1, bayiId });
+		setCollapsedRows(new Set());
+	}
 	const listPrice = (line: DraftLine) =>
 		line.quantityUnit === 'piece' && line.memoryGb !== null
 			? prices?.[line.type]?.[String(line.memoryGb)]
 			: undefined;
+	const effectivePrice = (line: DraftLine) =>
+		line.totalPriceOverride !== null
+			? typeof line.totalPriceOverride === 'number' && Number(line.quantity) > 0
+				? line.totalPriceOverride / Number(line.quantity)
+				: undefined
+			: line.unitPriceOverride === null
+				? listPrice(line)
+				: line.unitPriceOverride;
 	const totals = lines.map((line) => {
-		const originalPrice = listPrice(line);
-		const price =
-			line.unitPriceOverride === null ? originalPrice : line.unitPriceOverride;
+		const price = effectivePrice(line);
 		return typeof price === 'number' &&
 			Number.isFinite(price) &&
 			price >= 0 &&
@@ -182,17 +238,16 @@ export default function OrdersPage() {
 			Number.isFinite(Number(line.quantity)) &&
 			Number(line.quantity) > 0 &&
 			Number(line.quantity) <= 1_000_000
-			? Math.round(price * Number(line.quantity) * 100) / 100
+			? typeof line.totalPriceOverride === 'number'
+				? line.totalPriceOverride
+				: Math.round(price * Number(line.quantity) * 100) / 100
 			: null;
 	});
 	const complete = lines.length > 0 && totals.every((n) => n !== null);
 	const warningPayload = JSON.stringify({
 		bayiId,
 		lines: lines.flatMap((line) => {
-			const unitPrice =
-				line.unitPriceOverride === null
-					? listPrice(line)
-					: line.unitPriceOverride;
+			const unitPrice = effectivePrice(line);
 			return typeof unitPrice === 'number' &&
 				Number.isFinite(unitPrice) &&
 				unitPrice >= 0 &&
@@ -202,18 +257,22 @@ export default function OrdersPage() {
 							type: line.type,
 							memoryGb: line.memoryGb,
 							quantityUnit: line.quantityUnit,
-							unitPrice,
+							unitPrice: Math.round(unitPrice * 1000000) / 1000000,
 						},
 					]
 				: [];
 		}),
 	});
 	const checkWarnings = purchaseWarnings.mutate;
-	const warningStatus =
-		purchaseWarnings.isSuccess &&
-		JSON.stringify(purchaseWarnings.variables) === warningPayload
-			? purchaseWarnings.data
-			: undefined;
+	const warningEntries = (
+		JSON.parse(warningPayload).lines as Parameters<typeof warningInputKey>[1][]
+	).map((line) => warningCache[warningInputKey(bayiId, line)]);
+	const warningStatus = {
+		risks: warningEntries.flatMap((entry) => (entry?.risk ? [entry.risk] : [])),
+		missingPrices: warningEntries.flatMap((entry) =>
+			entry?.missingPrice ? [entry.missingPrice] : [],
+		),
+	};
 	useEffect(() => {
 		if (
 			!/^[a-f\d]{24}$/i.test(bayiId) ||
@@ -254,7 +313,11 @@ export default function OrdersPage() {
 				memoryGb: line.memoryGb,
 				quantityUnit: line.quantityUnit,
 				quantity: Number(line.quantity),
-				...(typeof line.unitPriceOverride === 'number'
+				...(typeof line.totalPriceOverride === 'number'
+					? { totalPriceOverride: line.totalPriceOverride }
+					: {}),
+				...(line.totalPriceOverride === null &&
+				typeof line.unitPriceOverride === 'number'
 					? { unitPriceOverride: line.unitPriceOverride }
 					: {}),
 			})),
@@ -281,8 +344,12 @@ export default function OrdersPage() {
 			onSuccess: ({ order }) => {
 				setCreatedOrder(order);
 				setCollapsedRows(new Set());
-				setLines([initialLine(nextId)]);
-				setNextId(nextId + 1);
+				draft.clear({
+					lines: [initialLine(nextId)],
+					nextId: nextId + 1,
+					bayiId,
+				});
+				setWarningCache({});
 				setPage(1);
 				toast.success('Alış kaydedildi');
 			},
@@ -459,6 +526,9 @@ export default function OrdersPage() {
 					<Link className='ml-4 text-sm underline' to={PAGE_PATHS.STOCK}>
 						Stok
 					</Link>
+					<Link className='ml-4 text-sm underline' to={PAGE_PATHS.BALANCE}>
+						Bakiye
+					</Link>
 					<h1 className='mt-2 text-2xl font-semibold'>Alışlar</h1>
 				</div>
 				<button
@@ -481,6 +551,17 @@ export default function OrdersPage() {
 					onChange={setBayiId}
 					disabled={save.isPending}
 				/>
+				{draft.restoredAt && (
+					<p
+						role='status'
+						className='mb-3 rounded-lg bg-sky-500/10 px-3 py-2 text-xs'
+					>
+						{new Date(draft.restoredAt).toLocaleString('tr-TR', {
+							timeZone: 'Europe/Istanbul',
+						})}{' '}
+						tarihli kaydedilmemiş alış verileri yüklendi.
+					</p>
+				)}
 				{Boolean(warningStatus?.risks?.length) && (
 					<div
 						role='status'
@@ -511,11 +592,11 @@ export default function OrdersPage() {
 				)}
 				<div className='relative w-full min-w-0 max-w-full'>
 					<div className='block w-full min-w-0 text-left text-sm'>
-						<div className='block space-y-3'>
+						<div className='divide-y divide-border overflow-hidden rounded-xl border border-border'>
 							{lines.map((line, index) => (
-								<Fragment key={line.id}>
+								<div key={line.id} className='min-w-0'>
 									<div className='block'>
-										<div className='block py-1'>
+										<div className='block px-2 pt-2 md:hidden'>
 											<AdminCollapseButton
 												expanded={!collapsedRows.has(line.id)}
 												index={index}
@@ -539,12 +620,12 @@ export default function OrdersPage() {
 											</AdminCollapseButton>
 										</div>
 									</div>
-									{!collapsedRows.has(line.id) && (
+									{
 										<div
 											id={`order-row-${line.id}`}
-											className={`grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3 rounded-xl border border-border p-3 md:gap-2 md:p-3 ${line.requiresMemorySize ? 'md:grid-cols-[minmax(8rem,11rem)_max-content_max-content_minmax(5rem,1fr)_2.5rem]' : 'md:grid-cols-[minmax(7rem,10rem)_max-content_4rem_max-content_minmax(5rem,1fr)_2.5rem]'} ${index % 2 === 0 ? 'bg-button-bg/30' : 'bg-button-hover-bg/10'}`}
+											className={`grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-2 px-2 py-2 md:flex md:flex-wrap ${index % 2 === 0 ? 'bg-button-bg/30' : 'bg-button-hover-bg/10'} ${collapsedRows.has(line.id) ? 'hidden md:flex' : ''}`}
 										>
-											<div className='col-span-2 block min-w-0 md:col-span-1'>
+											<div className='col-span-2 block min-w-0 md:col-span-1 md:w-36'>
 												<label
 													className='mb-1 block text-[11px] font-medium'
 													htmlFor={`type-${line.id}`}
@@ -559,6 +640,9 @@ export default function OrdersPage() {
 													disabled={save.isPending}
 													productTypes={productTypes}
 													memorySizes={pricing.data?.memorySizes}
+													excluded={lines.filter(
+														(entry) => entry.id !== line.id,
+													)}
 													onChange={(product) =>
 														setLines((current) =>
 															current.map((entry) =>
@@ -575,6 +659,7 @@ export default function OrdersPage() {
 																					? 1
 																					: entry.quantity,
 																			unitPriceOverride: null,
+																			totalPriceOverride: null,
 																		}
 																	: entry,
 															),
@@ -643,6 +728,7 @@ export default function OrdersPage() {
 																						? 1
 																						: entry.quantity,
 																				unitPriceOverride: null,
+																				totalPriceOverride: null,
 																			}
 																		: entry,
 																),
@@ -668,31 +754,65 @@ export default function OrdersPage() {
 													rowNumber={index + 1}
 													originalPrice={listPrice(line)}
 													quantityUnit={line.quantityUnit}
-													value={line.unitPriceOverride}
+													value={
+														line.totalPriceOverride === null
+															? line.unitPriceOverride
+															: (effectivePrice(line) ?? '')
+													}
 													disabled={save.isPending}
 													onChange={(value) =>
 														setLines((current) =>
 															current.map((entry) =>
 																entry.id === line.id
-																	? { ...entry, unitPriceOverride: value }
+																	? {
+																			...entry,
+																			unitPriceOverride: value,
+																			totalPriceOverride: null,
+																		}
 																	: entry,
 															),
 														)
 													}
 												/>
 											</div>
-											<div className='block min-w-0 break-all text-left font-semibold tabular-nums'>
-												<span className='mb-1 block text-[11px] font-normal'>
-													Satır tutarı
-												</span>
-												{totals[index] === null ? '—' : money(totals[index])}
-											</div>
-											<div className='col-start-2 flex justify-end self-start md:col-auto md:pt-5'>
+											<label className='flex min-w-0 flex-col gap-1 text-[11px]'>
+												Satır tutarı (TL)
+												<NumberInputWithSteppers
+													id={`total-price-${line.id}`}
+													ariaLabel={`${index + 1}. satır toplam fiyatı`}
+													value={
+														line.totalPriceOverride === ''
+															? ''
+															: (totals[index] ?? '')
+													}
+													decimalPlaces={2}
+													disableWheel
+													disabled={save.isPending}
+													onChange={(change) =>
+														setLines((current) =>
+															current.map((entry) =>
+																entry.id === line.id
+																	? {
+																			...entry,
+																			totalPriceOverride:
+																				typeof change === 'function'
+																					? change(totals[index] ?? '')
+																					: change,
+																		}
+																	: entry,
+															),
+														)
+													}
+													className={STOCK_NUMBER_CONTROL}
+													stepperClassName={STOCK_STEPPER}
+												/>
+											</label>
+											<div className='col-span-2 flex flex-wrap items-center justify-end gap-1 md:col-span-1 md:pt-5 lg:ml-6'>
 												<button
 													type='button'
 													className={button}
 													aria-label={`${index + 1}. satırı sil`}
-													disabled={save.isPending}
+													disabled={save.isPending || lines.length === 1}
 													onClick={() =>
 														setLines((current) =>
 															current.filter((l) => l.id !== line.id),
@@ -701,10 +821,23 @@ export default function OrdersPage() {
 												>
 													<Trash2 size={16} aria-hidden />
 												</button>
+												{index === lines.length - 1 && (
+													<button
+														className={button}
+														disabled={
+															save.isPending ||
+															lines.length >= 200 ||
+															!unusedChoice
+														}
+														onClick={addLine}
+													>
+														+ Satır ekle
+													</button>
+												)}
 											</div>
 										</div>
-									)}
-								</Fragment>
+									}
+								</div>
 							))}
 						</div>
 					</div>
@@ -716,17 +849,7 @@ export default function OrdersPage() {
 					</span>
 				</div>
 
-				<div className='mt-4 flex flex-wrap gap-3'>
-					<button
-						className={button}
-						disabled={save.isPending || lines.length >= 200}
-						onClick={() => {
-							setLines((current) => [...current, initialLine(nextId)]);
-							setNextId(nextId + 1);
-						}}
-					>
-						+ Satır ekle
-					</button>
+				<div className='mt-4 flex flex-wrap items-center gap-3'>
 					<button
 						className={`${button} font-semibold`}
 						disabled={
@@ -738,6 +861,14 @@ export default function OrdersPage() {
 						onClick={saveOrder}
 					>
 						{save.isPending ? 'Kaydediliyor...' : 'Alışı kaydet'}
+					</button>
+					<button
+						type='button'
+						className={`${button} ml-auto`}
+						disabled={save.isPending}
+						onClick={resetRows}
+					>
+						Satırları sıfırla
 					</button>
 				</div>
 				{save.error && (

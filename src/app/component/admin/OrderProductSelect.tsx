@@ -1,9 +1,12 @@
 import {
 	ORDER_MEMORY_SIZES,
 	ORDER_PRODUCT_TYPES,
-	ORDER_PRODUCT_TYPE_ORDER,
 } from '../../constants/orderProducts.constant';
 import { formatOrderProduct } from '../../helpers/orderProduct.helper';
+import {
+	orderChoices,
+	orderChoiceKey,
+} from '../../helpers/orderChoices.helper';
 
 export type OrderProductChoice = {
 	type: keyof typeof ORDER_PRODUCT_TYPES;
@@ -19,6 +22,7 @@ export function OrderProductSelect({
 	className = '',
 	productTypes = ORDER_PRODUCT_TYPES,
 	memorySizes = [...ORDER_MEMORY_SIZES],
+	excluded = [],
 }: {
 	value: OrderProductChoice;
 	onChange: (value: OrderProductChoice) => void;
@@ -31,15 +35,13 @@ export function OrderProductSelect({
 		{ label: string; requiresMemorySize: boolean }
 	>;
 	memorySizes?: number[];
+	excluded?: OrderProductChoice[];
 }) {
-	const choices = ORDER_PRODUCT_TYPE_ORDER.filter(
-		(type) => productTypes[type],
-	).flatMap<OrderProductChoice>((type) =>
-		productTypes[type].requiresMemorySize
-			? [...memorySizes]
-					.sort((a, b) => a - b)
-					.map((memoryGb) => ({ type, memoryGb, requiresMemorySize: true }))
-			: [{ type, memoryGb: null, requiresMemorySize: false }],
+	const used = new Set(excluded.map(orderChoiceKey));
+	const choices = orderChoices(productTypes, memorySizes).filter(
+		(choice) =>
+			orderChoiceKey(choice) === orderChoiceKey(value) ||
+			!used.has(orderChoiceKey(choice)),
 	);
 	const key = (choice: OrderProductChoice) =>
 		choice.requiresMemorySize

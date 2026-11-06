@@ -6,11 +6,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StockManagementSection } from '../app/component/admin/StockManagementPanel';
 import { BAYI_ROUTES, STOCK_ROUTES } from '../app/constants/routes.constant';
 import { PAGE_PATHS } from '../app/constants/pagePaths.constant';
-import { jsonResponse, mockFetch } from './helpers';
+import { fakeJwt, jsonResponse, mockFetch } from './helpers';
+import { orderDraftKey } from '../app/helpers/orderDraft.helper';
 import { toast } from 'sonner';
 
 vi.mock('sonner', () => ({
-	toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
+	toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
 }));
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 Object.defineProperties(HTMLDialogElement.prototype, {
@@ -31,6 +32,7 @@ let root: Root | undefined;
 let container: HTMLDivElement;
 let client: QueryClient;
 afterEach(() => {
+	localStorage.clear();
 	act(() => root?.unmount());
 	client?.clear();
 	container?.remove();
@@ -136,6 +138,123 @@ function input(element: HTMLInputElement, value: string) {
 	element.dispatchEvent(new Event('input', { bubbles: true }));
 }
 describe('stock panel', () => {
+	it('reopens timestamped sale drafts and clears saved data on reset or a successful sale', async () => {
+		localStorage.setItem('accessToken', fakeJwt(900000));
+		mockFetch({
+			[STOCK_ROUTES.LIST]: () => jsonResponse(200, data),
+			[STOCK_ROUTES.SALES]: () => jsonResponse(201, { operation: {} }),
+		});
+		await mount();
+		await openPanel();
+		act(() =>
+			[...container.querySelectorAll('button')]
+				.find((button) => button.textContent === 'Satış')!
+				.click(),
+		);
+		act(() =>
+			[...container.querySelectorAll('[aria-label="Satış türü"] button')]
+				.find((button) => button.textContent === 'Kısmi satış')!
+				.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+		);
+		act(() =>
+			input(
+				container.querySelector<HTMLInputElement>(
+					'[aria-label="1. satış miktarı"]',
+				)!,
+				'5',
+			),
+		);
+		act(() =>
+			input(
+				container.querySelector<HTMLInputElement>(
+					'[aria-label="1. satış birim fiyatı"]',
+				)!,
+				'200',
+			),
+		);
+		const key = orderDraftKey('sale')!,
+			saved = JSON.parse(localStorage.getItem(key)!);
+		expect(saved.data.rows[0].quantity).toBe(5);
+		act(() => root!.unmount());
+		root = undefined;
+		client.clear();
+		container.remove();
+		await mount();
+		await openPanel();
+		expect(
+			container.querySelector<HTMLInputElement>(
+				'[aria-label="1. satış miktarı"]',
+			)!.value,
+		).toBe('5');
+		expect(
+			container.querySelector<HTMLInputElement>(
+				'[aria-label="1. satış geliri"]',
+			)!.value,
+		).toBe('1000');
+		expect(toast.info).toHaveBeenCalledWith(
+			'Kaydedilmemiş satış taslağı yüklendi',
+			{
+				description: new Date(saved.savedAt).toLocaleString('tr-TR', {
+					timeZone: 'Europe/Istanbul',
+				}),
+			},
+		);
+		act(() =>
+			[...container.querySelectorAll('dialog button')]
+				.find((button) => button.textContent === 'Satırları sıfırla')!
+				.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+		);
+		expect(localStorage.getItem(key)).toBeNull();
+		act(() =>
+			input(
+				container.querySelector<HTMLInputElement>(
+					'[aria-label="1. satış geliri"]',
+				)!,
+				'16000',
+			),
+		);
+		await act(async () =>
+			container
+				.querySelector('dialog form')!
+				.dispatchEvent(
+					new Event('submit', { bubbles: true, cancelable: true }),
+				),
+		);
+		expect(localStorage.getItem(key)).toBeNull();
+	});
+	it('links sale unit and total prices in both directions and uses the latest entered price', async () => {
+		const fetchMock = mockFetch({
+			[STOCK_ROUTES.LIST]: () => jsonResponse(200, data),
+			[STOCK_ROUTES.SALES]: () => jsonResponse(201, { operation: {} }),
+		});
+		await mount();
+		await openPanel();
+		act(() =>
+			[...container.querySelectorAll('button')]
+				.find((button) => button.textContent === 'Satış')!
+				.click(),
+		);
+		const form = container.querySelector('dialog form')!;
+		const unit = form.querySelector<HTMLInputElement>(
+			'[aria-label="1. satış birim fiyatı"]',
+		)!;
+		const total = form.querySelector<HTMLInputElement>(
+			'[aria-label="1. satış geliri"]',
+		)!;
+		act(() => input(unit, '400'));
+		expect(total.value).toBe('16000');
+		act(() => input(total, '12000'));
+		expect(unit.value).toBe('300');
+		await act(async () =>
+			form.dispatchEvent(
+				new Event('submit', { bubbles: true, cancelable: true }),
+			),
+		);
+		const call = fetchMock.mock.calls.find(
+			([url]) => new URL(url).pathname === STOCK_ROUTES.SALES,
+		)!;
+		expect(JSON.parse(call[1]!.body as string).lines[0].revenue).toBe(12000);
+	});
 	it('shows each report preset and clears dealer filters before requesting restocks or profit', async () => {
 		const purchase = {
 			id: 'purchase:0',
@@ -222,8 +341,10 @@ describe('stock panel', () => {
 					new Event('submit', { bubbles: true, cancelable: true }),
 				),
 		);
-		await choose('Stok yenilemeleri');
-		expect(report.textContent).toContain('eMMC – 64 GB · Tam yenileme');
+		await choose('Satışlar');
+		expect(report.textContent).toContain(
+			'eMMC – 64 GB · Stok sifirlayan satış',
+		);
 		expect(
 			report.querySelector<HTMLSelectElement>('#order-filter-bayi')!.value,
 		).toBe('');
@@ -248,7 +369,9 @@ describe('stock panel', () => {
 		expect(report.textContent).toContain(
 			'eMMC – 64 GB · Alış / stok girişi · Store A',
 		);
-		expect(report.textContent).toContain('eMMC – 64 GB · Tam yenileme');
+		expect(report.textContent).toContain(
+			'eMMC – 64 GB · Stok sifirlayan satış',
+		);
 		for (const [url] of fetchMock.mock.calls) {
 			const params = new URL(url).searchParams;
 			expect([...params.values()]).not.toContain('undefined');
@@ -261,11 +384,11 @@ describe('stock panel', () => {
 		await openPanel();
 		act(() =>
 			[...container.querySelectorAll('button')]
-				.find((button) => button.textContent === 'Stok yenileme')!
+				.find((button) => button.textContent === 'Satış')!
 				.click(),
 		);
 		const revenue = container.querySelector<HTMLInputElement>(
-			'[aria-label="1. yenileme satış geliri"]',
+			'[aria-label="1. satış geliri"]',
 		)!;
 		act(() => input(revenue, '16000'));
 		const toggle = container.querySelector<HTMLButtonElement>(
@@ -275,12 +398,10 @@ describe('stock panel', () => {
 			container.querySelectorAll('button[aria-controls="restock-row-0"]'),
 		).toHaveLength(1);
 		const remove = container.querySelector<HTMLButtonElement>(
-			'button[aria-label="1. yenileme ürününü sil"]',
+			'button[aria-label="1. satış ürününü sil"]',
 		)!;
 		expect(
-			container.querySelectorAll(
-				'button[aria-label="1. yenileme ürününü sil"]',
-			),
+			container.querySelectorAll('button[aria-label="1. satış ürününü sil"]'),
 		).toHaveLength(1);
 		expect(remove.querySelector('svg')).not.toBeNull();
 		expect(remove.textContent).toBe('');
@@ -381,26 +502,22 @@ describe('stock panel', () => {
 			await openPanel();
 			act(() =>
 				[...container.querySelectorAll('button')]
-					.find((button) => button.textContent === 'Stok yenileme')!
+					.find((button) => button.textContent === 'Satış')!
 					.click(),
 			);
 			const form = container.querySelector('dialog form')!;
 			act(() =>
-				[...form.querySelectorAll('[aria-label="Yenileme türü"] button')]
+				[...form.querySelectorAll('[aria-label="Satış türü"] button')]
 					.find(
 						(button) =>
 							button.textContent ===
-							(mode === 'complete' ? 'Tam yenileme' : 'Kısmi yenileme'),
+							(mode === 'complete' ? 'Tüm stok satışı' : 'Kısmi satış'),
 					)!
 					.dispatchEvent(new MouseEvent('click', { bubbles: true })),
 			);
+			expect(form.querySelector('[aria-label="Satış türü"] select')).toBeNull();
 			expect(
-				form.querySelector('[aria-label="Yenileme türü"] select'),
-			).toBeNull();
-			expect(
-				form.querySelectorAll(
-					'[aria-label="Yenileme türü"] [aria-pressed=true]',
-				),
+				form.querySelectorAll('[aria-label="Satış türü"] [aria-pressed=true]'),
 			).toHaveLength(1);
 			act(() =>
 				[...form.querySelectorAll('button')]
@@ -410,26 +527,26 @@ describe('stock panel', () => {
 			act(() => {
 				input(
 					form.querySelector<HTMLInputElement>(
-						'[aria-label="1. yenileme satış geliri"]',
+						'[aria-label="1. satış geliri"]',
 					)!,
 					'16000',
 				);
 				input(
 					form.querySelector<HTMLInputElement>(
-						'[aria-label="2. yenileme satış geliri"]',
+						'[aria-label="2. satış geliri"]',
 					)!,
 					'700',
 				);
 				if (mode === 'partial') {
 					input(
 						form.querySelector<HTMLInputElement>(
-							'[aria-label="1. yenileme miktarı"]',
+							'[aria-label="1. satış miktarı"]',
 						)!,
 						'5',
 					);
 					input(
 						form.querySelector<HTMLInputElement>(
-							'[aria-label="2. yenileme miktarı"]',
+							'[aria-label="2. satış miktarı"]',
 						)!,
 						'2',
 					);
@@ -449,17 +566,17 @@ describe('stock panel', () => {
 			expect(payload.mode).toBe(mode);
 			expect(payload.lines).toEqual([
 				{
-					type: 'EMMC',
-					memoryGb: 64,
-					quantityUnit: 'piece',
-					quantity: mode === 'complete' ? 40 : 5,
-					revenue: 16000,
-				},
-				{
 					type: 'EMCP',
 					memoryGb: 8,
 					quantityUnit: 'piece',
-					quantity: mode === 'complete' ? 10 : 2,
+					quantity: mode === 'complete' ? 10 : 5,
+					revenue: 16000,
+				},
+				{
+					type: 'EMMC',
+					memoryGb: 64,
+					quantityUnit: 'piece',
+					quantity: mode === 'complete' ? 40 : 2,
 					revenue: 700,
 				},
 			]);
@@ -492,12 +609,17 @@ describe('stock panel', () => {
 		await openPanel();
 		act(() =>
 			[...container.querySelectorAll('button')]
-				.find((button) => button.textContent === 'Stok yenileme')!
+				.find((button) => button.textContent === 'Satış')!
 				.click(),
 		);
 		const form = container.querySelector('dialog form')!;
 		expect(form.textContent).toContain('40 adet stoktan düşülür');
-		act(() => input(form.querySelector('input')!, '16000'));
+		act(() =>
+			input(
+				form.querySelector<HTMLInputElement>('[aria-label="1. satış geliri"]')!,
+				'16000',
+			),
+		);
 		await act(async () =>
 			form.dispatchEvent(
 				new Event('submit', { bubbles: true, cancelable: true }),
@@ -518,9 +640,7 @@ describe('stock panel', () => {
 				},
 			],
 		});
-		expect(toast.success).toHaveBeenCalledWith(
-			'Stok yenileme işlemi kaydedildi',
-		);
+		expect(toast.success).toHaveBeenCalledWith('Satış işlemi kaydedildi');
 	});
 	it('uses shared report filters and displays catalog and actual prices without a selling-price editor', async () => {
 		const fetchMock = mockFetch({

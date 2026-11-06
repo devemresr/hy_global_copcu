@@ -5,6 +5,7 @@ import {
 	keepPreviousData,
 } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import type { PurchaseInspection } from '../../../helpers/purchaseWarnings.helper';
 import { apiFetch, type ApiError } from '../core/api-client';
 import { STOCK_ROUTES } from '../../../constants/routes.constant';
 import type { OrderFilters } from '../../../schemas/order.schema';
@@ -116,6 +117,7 @@ export function useRecordStockSale() {
 		onSuccess: () =>
 			Promise.all([
 				client.invalidateQueries({ queryKey: ['stock'] }),
+				client.invalidateQueries({ queryKey: ['finance'] }),
 				client.invalidateQueries({ queryKey: ['logEvents'] }),
 			]),
 		onError: () => client.invalidateQueries({ queryKey: ['stock'] }),
@@ -130,7 +132,12 @@ export type PurchaseWarningInput = {
 		unitPrice: number;
 	}[];
 };
-export function usePurchaseWarnings() {
+export function usePurchaseWarnings(
+	onInspection?: (
+		result: PurchaseInspection,
+		input: PurchaseWarningInput,
+	) => void,
+) {
 	return useMutation<
 		{
 			warnings: { productKey: string; message: string }[];
@@ -143,7 +150,9 @@ export function usePurchaseWarnings() {
 		mutationFn: (body) =>
 			apiFetch(STOCK_ROUTES.WARNINGS, { method: 'POST', body }),
 		retry: false,
-		onSuccess: ({ warnings }) => {
+		onSuccess: (result, input) => {
+			onInspection?.(result, input);
+			const { warnings } = result;
 			for (const warning of warnings)
 				toast.warning('Zarar riski · Alış fiyatı yüksek', {
 					description: warning.message,

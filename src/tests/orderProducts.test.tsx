@@ -21,7 +21,7 @@ afterEach(() => {
 	container?.remove();
 });
 describe('order products and units', () => {
-	it('orders options as eMMC, eMCP, then other types, with numeric memory sizes', () => {
+	it('orders memory products by numeric size with eMMC first at each size', () => {
 		container = document.createElement('div');
 		document.body.append(container);
 		root = createRoot(container);
@@ -42,10 +42,10 @@ describe('order products and units', () => {
 			),
 		).toEqual([
 			'EMMC:8',
-			'EMMC:32',
-			'EMMC:128',
 			'EMCP:8',
+			'EMMC:32',
 			'EMCP:32',
+			'EMMC:128',
 			'EMCP:128',
 			'IPHONE',
 			'TABLET',

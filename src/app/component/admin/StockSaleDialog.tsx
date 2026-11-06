@@ -1,3 +1,10 @@
+import { useOrderDraft } from '../../hooks/useOrderDraft';
+import {
+	orderDraftKey,
+	saleDraftSchema,
+	type SaleDraft,
+} from '../../helpers/orderDraft.helper';
+import { compareProductChoices } from '../../helpers/orderChoices.helper';
 import { Trash2 } from 'lucide-react';
 import { AdminCollapseIcon } from './AdminCollapseHeading';
 import { adminHeadingClass } from '../../constants/adminHeading.constant';
@@ -17,7 +24,6 @@ import {
 import { formatOrderProduct } from '../../helpers/orderProduct.helper';
 import { ORDER_QUANTITY_UNIT_LABELS } from '../../constants/orderProducts.constant';
 import { NumberInputWithSteppers } from '../NumberInputWithSteppers';
-import { compareStockProducts } from '../../helpers/stockView.helper';
 import { ModalCloseButton } from '../ModalCloseButton';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 
@@ -25,13 +31,7 @@ const control = STOCK_CONTROL;
 const button = STOCK_BUTTON;
 const numberControl = STOCK_NUMBER_CONTROL;
 
-type Row = {
-	id: number;
-	key: string;
-	unit: 'piece' | 'kg' | 'g';
-	quantity: number | '';
-	revenue: number | '';
-};
+type Row = SaleDraft['rows'][number];
 const number = (n: number) =>
 	n.toLocaleString('tr-TR', { maximumFractionDigits: 6 });
 
@@ -54,10 +54,14 @@ export function StockSaleDialog({
 	const [collapsed, setCollapsed] = useState<Set<number>>(() => new Set());
 	const available = positions
 		.filter((p) => p.quantity > 0)
-		.sort(compareStockProducts);
-	const [mode, setMode] = useState<'partial' | 'complete'>('complete');
-	const [rows, setRows] = useState<Row[]>(() =>
-		available[0]
+		.sort(
+			(a, b) =>
+				compareProductChoices(a, b) ||
+				a.quantityUnit.localeCompare(b.quantityUnit),
+		);
+	const initialDraft = (): SaleDraft => ({
+		mode: 'complete',
+		rows: available[0]
 			? [
 					{
 						id: 0,
@@ -68,9 +72,27 @@ export function StockSaleDialog({
 					},
 				]
 			: [],
+		nextId: 1,
+		requestId: crypto.randomUUID(),
+	});
+	const draft = useOrderDraft(
+		orderDraftKey('sale'),
+		saleDraftSchema,
+		initialDraft,
+		'satış',
 	);
-	const [nextId, setNextId] = useState(1);
-	const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+	const { mode, rows, nextId, requestId } = draft.value;
+	const setRows = (action: import('react').SetStateAction<Row[]>) =>
+		draft.setValue((current) => ({
+			...current,
+			rows: typeof action === 'function' ? action(current.rows) : action,
+		}));
+	const setMode = (value: SaleDraft['mode']) =>
+		draft.setValue((current) => ({ ...current, mode: value }));
+	const setNextId = (value: number) =>
+		draft.setValue((current) => ({ ...current, nextId: value }));
+	const setRequestId = (value: string) =>
+		draft.setValue((current) => ({ ...current, requestId: value }));
 	const [error, setError] = useState('');
 	useEffect(() => {
 		const node = dialog.current;
@@ -87,6 +109,22 @@ export function StockSaleDialog({
 		);
 		edited();
 	}
+
+	const saleQuantity = (row: Row) =>
+		mode === 'complete'
+			? Number(
+					(
+						(positions.find((p) => p.key === row.key)?.quantity ?? 0) *
+						(row.unit === 'g' ? 1000 : 1)
+					).toFixed(6),
+				)
+			: Number(row.quantity);
+	const saleRevenue = (row: Row): number | '' =>
+		row.unitPrice === undefined
+			? row.revenue
+			: row.unitPrice === '' || saleQuantity(row) <= 0
+				? ''
+				: Math.round(row.unitPrice * saleQuantity(row) * 100) / 100;
 	async function submit() {
 		if (submitting.current) return;
 		const parsed = stockSaleSchema.safeParse({
@@ -108,7 +146,7 @@ export function StockSaleDialog({
 							: row.quantity === ''
 								? NaN
 								: Number(row.quantity),
-					revenue: row.revenue === '' ? NaN : Number(row.revenue),
+					revenue: saleRevenue(row) === '' ? NaN : Number(saleRevenue(row)),
 				};
 			}),
 		});
@@ -122,12 +160,13 @@ export function StockSaleDialog({
 		submitting.current = true;
 		try {
 			await save.mutateAsync(parsed.data);
-			toast.success('Stok yenileme işlemi kaydedildi');
+			draft.clear();
+			toast.success('Satış işlemi kaydedildi');
 			onClose();
 		} catch (failure) {
 			const message = (failure as Error).message;
 			setError(message);
-			toast.error('Stok yenileme kaydedilemedi', { description: message });
+			toast.error('Satış kaydedilemedi', { description: message });
 		} finally {
 			submitting.current = false;
 		}
@@ -141,7 +180,7 @@ export function StockSaleDialog({
 		>
 			<div className='mb-2 flex items-center justify-between gap-3'>
 				<h3 id='stock-sale-title' className='text-lg font-semibold'>
-					Stok yenileme
+					Satış
 				</h3>
 				<ModalCloseButton onClick={onClose} disabled={save.isPending} />
 			</div>
@@ -149,6 +188,17 @@ export function StockSaleDialog({
 				Birden fazla ürünü aynı işlemde kaydedin. Miktarlar ürünün toplam
 				stoğundan düşülür.
 			</p>
+			{draft.restoredAt && (
+				<p
+					role='status'
+					className='mb-3 rounded-lg bg-sky-500/10 px-3 py-2 text-xs'
+				>
+					{new Date(draft.restoredAt).toLocaleString('tr-TR', {
+						timeZone: 'Europe/Istanbul',
+					})}{' '}
+					tarihli kaydedilmemiş satış verileri yüklendi.
+				</p>
+			)}
 			<form
 				onSubmit={(event) => {
 					event.preventDefault();
@@ -159,7 +209,7 @@ export function StockSaleDialog({
 				<fieldset disabled={save.isPending} className='min-w-0 space-y-3'>
 					<div
 						role='group'
-						aria-label='Yenileme türü'
+						aria-label='Satış türü'
 						className='flex flex-wrap gap-2'
 					>
 						{(['complete', 'partial'] as const).map((value) => (
@@ -174,7 +224,7 @@ export function StockSaleDialog({
 								}}
 								className={`${button} rounded-full! px-3! ${mode === value ? 'border-text! bg-text! text-bg!' : ''}`}
 							>
-								{value === 'complete' ? 'Tam yenileme' : 'Kısmi yenileme'}
+								{value === 'complete' ? 'Tüm stok satışı' : 'Kısmi satış'}
 							</button>
 						))}
 					</div>
@@ -217,7 +267,7 @@ export function StockSaleDialog({
 										type='button'
 										className={`${button} w-9 px-0!`}
 										disabled={rows.length <= 1}
-										aria-label={`${index + 1}. yenileme ürününü sil`}
+										aria-label={`${index + 1}. satış ürününü sil`}
 										title='Ürünü kaldır'
 										onClick={() => {
 											setRows((current) =>
@@ -238,7 +288,7 @@ export function StockSaleDialog({
 										<label className='flex w-44 max-w-full shrink-0 flex-col gap-1 text-xs'>
 											Ürün
 											<select
-												aria-label={`${index + 1}. yenileme ürünü`}
+												aria-label={`${index + 1}. satış ürünü`}
 												className={`${control} w-full pe-6!`}
 												value={row.key}
 												onChange={(event) => {
@@ -250,10 +300,16 @@ export function StockSaleDialog({
 															key: p.key,
 															unit: p.quantityUnit,
 															quantity: '',
+															unitPrice: undefined,
 															revenue: '',
 														});
 												}}
 											>
+												{!available.some((entry) => entry.key === row.key) && (
+													<option value={row.key} disabled>
+														Seçili ürün artık stokta yok
+													</option>
+												)}
 												{available
 													.filter(
 														(p) =>
@@ -272,7 +328,7 @@ export function StockSaleDialog({
 											<label className='flex w-16 shrink-0 flex-col gap-1 text-xs'>
 												Birim
 												<select
-													aria-label={`${index + 1}. yenileme birimi`}
+													aria-label={`${index + 1}. satış birimi`}
 													className={`${control} w-full pe-5!`}
 													value={row.unit}
 													onChange={(event) =>
@@ -292,7 +348,7 @@ export function StockSaleDialog({
 												Miktar ({ORDER_QUANTITY_UNIT_LABELS[row.unit]})
 												<NumberInputWithSteppers
 													id={`restock-quantity-${row.id}`}
-													ariaLabel={`${index + 1}. yenileme miktarı`}
+													ariaLabel={`${index + 1}. satış miktarı`}
 													disableWheel
 													decimalPlaces={row.unit === 'piece' ? 0 : 3}
 													value={row.quantity}
@@ -331,18 +387,46 @@ export function StockSaleDialog({
 											</div>
 										)}
 										<label className='flex w-fit flex-col gap-1 text-xs'>
+											Birim fiyat (TL/{ORDER_QUANTITY_UNIT_LABELS[row.unit]})
+											<NumberInputWithSteppers
+												id={`sale-unit-price-${row.id}`}
+												ariaLabel={`${index + 1}. satış birim fiyatı`}
+												disableWheel
+												decimalPlaces={6}
+												value={
+													row.unitPrice ??
+													(row.revenue !== '' && saleQuantity(row) > 0
+														? Number(
+																(row.revenue / saleQuantity(row)).toFixed(6),
+															)
+														: '')
+												}
+												onChange={(change) =>
+													update(row.id, {
+														unitPrice:
+															typeof change === 'function'
+																? change(row.unitPrice ?? '')
+																: change,
+													})
+												}
+												className={numberControl}
+												stepperClassName={STOCK_STEPPER}
+											/>
+										</label>
+										<label className='flex w-fit flex-col gap-1 text-xs'>
 											Satış geliri (TL)
 											<NumberInputWithSteppers
 												id={`restock-revenue-${row.id}`}
-												ariaLabel={`${index + 1}. yenileme satış geliri`}
+												ariaLabel={`${index + 1}. satış geliri`}
 												disableWheel
 												decimalPlaces={2}
-												value={row.revenue}
+												value={saleRevenue(row)}
 												onChange={(change) =>
 													update(row.id, {
+														unitPrice: undefined,
 														revenue:
 															typeof change === 'function'
-																? change(row.revenue)
+																? change(saleRevenue(row))
 																: change,
 													})
 												}
@@ -397,7 +481,7 @@ export function StockSaleDialog({
 				<p className='text-sm font-semibold'>
 					Toplam satış geliri:{' '}
 					{rows
-						.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0)
+						.reduce((sum, row) => sum + (Number(saleRevenue(row)) || 0), 0)
 						.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
 				</p>
 				{error && (
@@ -405,13 +489,28 @@ export function StockSaleDialog({
 						{error}
 					</p>
 				)}
-				<button
-					type='submit'
-					disabled={save.isPending || rows.length === 0}
-					className={button}
-				>
-					{save.isPending ? 'Kaydediliyor...' : 'Yenilemeyi kaydet'}
-				</button>
+				<div className='flex flex-wrap items-center justify-between gap-3'>
+					{' '}
+					<button
+						type='submit'
+						disabled={save.isPending || rows.length === 0}
+						className={button}
+					>
+						{save.isPending ? 'Kaydediliyor...' : 'Satışı kaydet'}
+					</button>
+					<button
+						type='button'
+						className={`${button} ml-auto`}
+						disabled={save.isPending}
+						onClick={() => {
+							draft.clear();
+							setCollapsed(new Set());
+							setError('');
+						}}
+					>
+						Satırları sıfırla
+					</button>
+				</div>
 			</form>
 		</dialog>
 	);

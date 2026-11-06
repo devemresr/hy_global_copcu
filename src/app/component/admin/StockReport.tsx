@@ -23,8 +23,8 @@ const quantity = (value: number) =>
 	value.toLocaleString('tr-TR', { maximumFractionDigits: 6 });
 const kindLabels = {
 	purchase: 'Alış / stok girişi',
-	complete: 'Tam yenileme',
-	partial: 'Kısmi yenileme',
+	complete: 'Stok sifirlayan satış',
+	partial: 'Kısmi satış',
 };
 const presets = [
 	{
@@ -47,7 +47,7 @@ const presets = [
 	},
 	{
 		id: 'restock',
-		label: 'Stok yenilemeleri',
+		label: 'Satışlar',
 		movementType: 'restock',
 		view: 'movements',
 	},
@@ -151,9 +151,9 @@ export function StockReport({
 					>
 						<option value='all'>Tüm hareketler</option>
 						<option value='purchase'>Alış girişleri</option>
-						<option value='restock'>Tüm yenilemeler</option>
-						<option value='complete'>Tam yenileme</option>
-						<option value='partial'>Kısmi yenileme</option>
+						<option value='restock'>Tüm satışlar</option>
+						<option value='complete'>Tüm stok satışı</option>
+						<option value='partial'>Kısmi satış</option>
 					</select>
 				</label>
 				<label className='space-y-1 text-xs'>
@@ -232,10 +232,10 @@ export function StockReport({
 				)}
 			</div>
 			<p className='text-xs text-text/70'>
-				Tarih ve tutar, alışın veya yenilemenin toplamına uygulanır. Ürün ve
-				boyut seçimi işlemin ilgili satırlarını gösterir. Bayi seçimi alış
-				girişlerini gösterir; yenilemeler belirli bir bayiye ait değildir.
-				Güncel stok ve fiyat ortalamaları rapor filtrelerinden bağımsızdır.
+				Tarih ve tutar, alışın veya satışın toplamına uygulanır. Ürün ve boyut
+				seçimi işlemin ilgili satırlarını gösterir. Bayi seçimi alış girişlerini
+				gösterir; satışlar belirli bir bayiye ait değildir. Güncel stok ve fiyat
+				ortalamaları rapor filtrelerinden bağımsızdır.
 			</p>
 			{loading && (
 				<p role='status' className='text-xs text-text/70'>

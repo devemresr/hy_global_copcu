@@ -35,7 +35,7 @@ export function OrderUnitPriceInput({
 					listPrice === undefined ? `unit-price-note-${rowNumber}` : undefined
 				}
 				value={current}
-				decimalPlaces={2}
+				decimalPlaces={6}
 				disableWheel
 				disabled={disabled}
 				onChange={(change) =>

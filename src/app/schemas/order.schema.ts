@@ -6,12 +6,19 @@ export const orderLineSchema = z
 		type: z.enum(['EMCP', 'EMMC', 'IPHONE', 'TABLET']),
 		quantity: z.number().finite().positive().max(1_000_000).multipleOf(0.001),
 		quantityUnit: z.enum(['piece', 'kg', 'g']).default('piece'),
+		totalPriceOverride: z
+			.number()
+			.finite()
+			.min(0)
+			.max(1e12)
+			.multipleOf(0.01)
+			.optional(),
 		unitPriceOverride: z
 			.number()
 			.finite()
 			.min(0)
 			.max(1_000_000)
-			.multipleOf(0.01)
+			.multipleOf(0.000001)
 			.optional(),
 		manualListPrice: z
 			.number()
@@ -70,7 +77,13 @@ export const createOrderSchema = z
 		bayiId: z.string().regex(/^[a-f\d]{24}$/i, 'Bir bayi seçin.'),
 		lines: z.array(orderLineSchema).min(1).max(200),
 	})
-	.strict();
+	.strict()
+	.refine(
+		(value) =>
+			new Set(value.lines.map((line) => `${line.type}:${line.memoryGb ?? '-'}`))
+				.size === value.lines.length,
+		'Aynı ürünü bir kez ekleyin; miktarını aynı satırda düzenleyin.',
+	);
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 const dateSchema = z
 	.string()

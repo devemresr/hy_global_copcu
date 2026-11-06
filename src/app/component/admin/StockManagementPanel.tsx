@@ -1,4 +1,9 @@
 import { StockReport } from './StockReport';
+import {
+	orderDraftKey,
+	readOrderDraft,
+	saleDraftSchema,
+} from '../../helpers/orderDraft.helper';
 import { AdminSummary } from './AdminCollapseHeading';
 import {
 	STOCK_BUTTON,
@@ -38,7 +43,7 @@ export function StockManagementPanel() {
 	const [filters, setFilters] = useState<StockFilters>({});
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(20);
-	const [saleOpen, setSaleOpen] = useState(false);
+	const [saleOpen, setSaleOpen] = useState<boolean | null>(null);
 	const [productType, setProductType] = useState<
 		(typeof ORDER_PRODUCT_TYPE_ORDER)[number] | 'all'
 	>('all');
@@ -73,7 +78,7 @@ export function StockManagementPanel() {
 						}
 						onClick={() => setSaleOpen(true)}
 					>
-						Stok yenileme
+						Satış
 					</button>
 				</div>
 			</div>
@@ -92,7 +97,10 @@ export function StockManagementPanel() {
 			)}
 			{data && (
 				<>
-					{saleOpen && (
+					{(saleOpen ??
+						Boolean(
+							readOrderDraft(orderDraftKey('sale'), saleDraftSchema),
+						)) && (
 						<StockSaleDialog
 							positions={data.positions}
 							onClose={() => setSaleOpen(false)}
