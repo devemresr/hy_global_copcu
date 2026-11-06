@@ -449,6 +449,12 @@ function AdminPage() {
 
 			<div className='mb-3 flex flex-wrap justify-end gap-2'>
 				<Link
+					to={PAGE_PATHS.BALANCE}
+					className='rounded-xl border-2 border-border px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
+				>
+					Bakiye
+				</Link>
+				<Link
 					to={PAGE_PATHS.STOCK}
 					className='rounded-xl border-2 border-border px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
 				>

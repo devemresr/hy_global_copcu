@@ -157,6 +157,7 @@ export function useCreateOrder() {
 			return Promise.all([
 				client.invalidateQueries({ queryKey: ['orders'] }),
 				client.invalidateQueries({ queryKey: ['stock'] }),
+				client.invalidateQueries({ queryKey: ['finance'] }),
 				client.invalidateQueries({ queryKey: ['logEvents'] }),
 			]);
 		},

@@ -10,6 +10,7 @@ export default function StockPage() {
 				<nav className='flex gap-4 text-sm underline'>
 					<Link to={PAGE_PATHS.ADMIN}>Yönetim</Link>
 					<Link to={PAGE_PATHS.ORDERS}>Alış</Link>
+					<Link to={PAGE_PATHS.BALANCE}>Bakiye</Link>
 				</nav>
 			</header>
 			<StockManagementPanel />

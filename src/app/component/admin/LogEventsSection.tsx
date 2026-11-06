@@ -25,9 +25,12 @@ import { Pagination } from './Pagination';
 // LogEvent model comment), so this covers both action sets rather than
 // assuming every entry is an item edit.
 const ACTION_LABELS: Record<string, string> = {
+	'finance:entry_create': 'Gelir / gider eklendi',
+	'finance:entry_void': 'Gelir / gider iptal edildi',
+	'finance:category_create': 'Bakiye alt türü eklendi',
 	'stock:purchase_create': 'Alım / stok girişi kaydedildi',
-	'stock:restock_complete': 'Tam stok yenileme kaydedildi',
-	'stock:restock_partial': 'Kısmi stok yenileme kaydedildi',
+	'stock:restock_complete': 'Tam satış kaydedildi',
+	'stock:restock_partial': 'Kısmi satış kaydedildi',
 	'stock:price_update': 'Satış fiyatı güncellendi',
 	'items:add_rule': 'Kural oluşturuldu',
 	'items:edit_rule': 'Kural güncellendi',
@@ -45,6 +48,9 @@ const ACTION_LABELS: Record<string, string> = {
 type ActionKind = 'create' | 'update' | 'delete' | 'maintenance' | 'notice';
 
 const ACTION_KIND: Record<string, ActionKind> = {
+	'finance:entry_create': 'create',
+	'finance:entry_void': 'delete',
+	'finance:category_create': 'create',
 	'stock:purchase_create': 'create',
 	'stock:restock_complete': 'create',
 	'stock:restock_partial': 'create',
@@ -162,6 +168,7 @@ function actionLabel(event: LogEventDto): string {
 }
 
 const LOG_FILTERS: { types: LogEntityType[]; label: string }[] = [
+	{ types: ['finance_entry', 'finance_category'], label: 'Bakiye işlemleri' },
 	{
 		types: ['stock_restock', 'stock_price', 'stock_purchase'],
 		label: 'Stok işlemleri',
@@ -176,6 +183,16 @@ const LOG_FILTERS: { types: LogEntityType[]; label: string }[] = [
 // A field outside FIELD_REGISTRY (none currently, but any future one) falls
 // back to its raw name instead of throwing.
 function fieldLabel(field: string, entityType?: LogEntityType): string {
+	if (entityType === 'finance_entry' || entityType === 'finance_category')
+		return (
+			(
+				{
+					amount: 'Tutar (TL)',
+					description: 'Açıklama',
+					group: 'Ana tür',
+				} as Record<string, string>
+			)[field] ?? field
+		);
 	if (
 		entityType === 'stock_restock' ||
 		entityType === 'stock_price' ||

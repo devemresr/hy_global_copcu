@@ -14,6 +14,7 @@ export const PAGE_PATHS = {
 	ADMIN: `${STAFF_BASE}/admin`,
 	ORDERS: `${STAFF_BASE}/admin/alis`,
 	STOCK: `${STAFF_BASE}/admin/stok`,
+	BALANCE: `${STAFF_BASE}/admin/bakiye`,
 } as const;
 
 // Staff-only pages - exempt from maintenance mode and analytics.

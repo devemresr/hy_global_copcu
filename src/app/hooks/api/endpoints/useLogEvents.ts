@@ -9,6 +9,8 @@ export type LogEventFieldChange = {
 };
 
 export type LogEntityType =
+	| 'finance_entry'
+	| 'finance_category'
 	| 'item'
 	| 'item_rule'
 	| 'site_maintenance'

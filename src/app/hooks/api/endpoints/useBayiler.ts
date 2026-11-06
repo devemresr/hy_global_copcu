@@ -8,9 +8,10 @@ import {
 } from '../../../schemas/bayi.schema';
 export type { Bayi } from '../../../schemas/bayi.schema';
 
-export function useBayiler() {
+export function useBayiler(enabled = true) {
 	return useQuery<{ bayiler: Bayi[] }, ApiError>({
 		queryKey: ['bayiler'],
+		enabled,
 		queryFn: () => apiFetch(BAYI_ROUTES.LIST),
 		retry: false,
 	});

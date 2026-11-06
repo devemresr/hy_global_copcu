@@ -17,9 +17,9 @@ export function OrderHistoryFilters({
 }: {
 	value: OrderFilters;
 	onChange: (filters: OrderFilters) => void;
-	context?: 'orders' | 'stock';
+	context?: 'orders' | 'stock' | 'finance';
 }) {
-	const bayiler = useBayiler();
+	const bayiler = useBayiler(context !== 'finance');
 	const bayiNames = [
 		...new Set([
 			...(bayiler.data?.bayiler ?? []).map((bayi) => bayi.name),
@@ -66,15 +66,17 @@ export function OrderHistoryFilters({
 		<details
 			open
 			className={
-				context === 'stock'
+				context !== 'orders'
 					? 'min-w-0 rounded-xl border border-sky-500/40 bg-sky-500/10 p-3 sm:p-4'
 					: 'min-w-0 rounded-xl border border-border p-3 sm:p-4'
 			}
 		>
 			<AdminSummary index={2}>
-				{context === 'stock'
-					? 'Stok ve satış raporu filtreleri'
-					: 'Alış ve rapor filtreleri'}
+				{context === 'finance'
+					? 'Bakiye raporu filtreleri'
+					: context === 'stock'
+						? 'Stok ve satış raporu filtreleri'
+						: 'Alış ve rapor filtreleri'}
 			</AdminSummary>
 			<form
 				className='mt-3 min-w-0 space-y-3'
@@ -83,9 +85,11 @@ export function OrderHistoryFilters({
 					apply();
 				}}
 				aria-label={
-					context === 'stock'
-						? 'Stok ve satış filtreleri'
-						: 'Alış ve PDF filtreleri'
+					context === 'finance'
+						? 'Bakiye raporu filtreleri'
+						: context === 'stock'
+							? 'Stok ve satış filtreleri'
+							: 'Alış ve PDF filtreleri'
 				}
 			>
 				<div className='flex flex-wrap items-center justify-between gap-2'>
@@ -95,35 +99,39 @@ export function OrderHistoryFilters({
 					>
 						{priceActive || dateActive || bayiActive
 							? `${Number(priceActive) + Number(dateActive) + Number(bayiActive)} filtre etkin`
-							: context === 'stock'
+							: context !== 'orders'
 								? 'Filtre yok · Tüm kayıtlar'
 								: 'Filtre yok · Tüm alışlar'}
 					</span>
 				</div>
 				<p className='text-xs opacity-70'>
-					{context === 'stock'
-						? 'Bayi adı, tutar ve tarih stok girişlerini filtreler. Satış raporunda tarih ve tutar birlikte uygulanır.'
-						: 'Bayi adı, fiyat ve tarih birlikte uygulanır. Sonuçlardan rapora dahil edilecek alışları seçebilirsiniz.'}
+					{context === 'finance'
+						? 'Tarih ve tutar, aşağıdaki gelir/gider ve alt tür filtreleriyle birlikte uygulanır.'
+						: context === 'stock'
+							? 'Bayi adı, tutar ve tarih stok girişlerini filtreler. Satış raporunda tarih ve tutar birlikte uygulanır.'
+							: 'Bayi adı, fiyat ve tarih birlikte uygulanır. Sonuçlardan rapora dahil edilecek alışları seçebilirsiniz.'}
 				</p>
-				<label
-					className='flex w-full max-w-64 flex-col gap-1 text-sm'
-					htmlFor='order-filter-bayi'
-				>
-					Bayi adı
-					<select
-						id='order-filter-bayi'
-						value={bayiName}
-						onChange={(event) => setBayiName(event.target.value)}
-						className='h-9 min-w-0 rounded-lg border border-border bg-button-bg px-2 py-1 text-text'
+				{context !== 'finance' && (
+					<label
+						className='flex w-full max-w-64 flex-col gap-1 text-sm'
+						htmlFor='order-filter-bayi'
 					>
-						<option value=''>Tüm bayiler</option>
-						{bayiNames.map((name) => (
-							<option key={name} value={name}>
-								{name}
-							</option>
-						))}
-					</select>
-				</label>
+						Bayi adı
+						<select
+							id='order-filter-bayi'
+							value={bayiName}
+							onChange={(event) => setBayiName(event.target.value)}
+							className='h-9 min-w-0 rounded-lg border border-border bg-button-bg px-2 py-1 text-text'
+						>
+							<option value=''>Tüm bayiler</option>
+							{bayiNames.map((name) => (
+								<option key={name} value={name}>
+									{name}
+								</option>
+							))}
+						</select>
+					</label>
+				)}
 				{bayiler.isError && (
 					<p role='alert' className='text-xs text-red-500'>
 						Bayiler yüklenemedi.{' '}

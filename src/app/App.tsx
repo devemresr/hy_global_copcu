@@ -9,6 +9,7 @@ import { UmamiAnalytics } from './component/UmamiAnalytics';
 import AdminPage from './Admin';
 import OrdersPage from './Orders';
 import StockPage from './Stock';
+import BalancePage from './Balance';
 import { LoginPage } from './Login';
 import { PAGE_PATHS } from './constants/pagePaths.constant';
 
@@ -27,6 +28,7 @@ export function App() {
 				<Route path={PAGE_PATHS.ADMIN} element={<AdminPage />} />
 				<Route path={PAGE_PATHS.ORDERS} element={<OrdersPage />} />
 				<Route path={PAGE_PATHS.STOCK} element={<StockPage />} />
+				<Route path={PAGE_PATHS.BALANCE} element={<BalancePage />} />
 				<Route
 					path={`${PAGE_PATHS.ADMIN}/siparis`}
 					element={<Navigate to={PAGE_PATHS.ORDERS} replace />}
