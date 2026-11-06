@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act } from 'react';
+import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { useModalDismiss } from '../app/hooks/useModalDismiss';
 import { ModalCloseButton } from '../app/component/ModalCloseButton';
@@ -51,6 +51,38 @@ function event(dialog: HTMLDialogElement, type: string, x: number, y: number) {
 	);
 }
 describe('modal dismissal', () => {
+	it('keeps background scrolling locked until the last nested modal closes', () => {
+		const previous = document.body.style.overflow;
+		document.body.style.overflow = 'auto';
+		function Locked() {
+			useModalDismiss(() => {});
+			return null;
+		}
+		function Harness() {
+			const [first, setFirst] = useState(true),
+				[second, setSecond] = useState(true);
+			return (
+				<>
+					{first && <Locked key='first' />}
+					{second && <Locked key='second' />}
+					<button onClick={() => setFirst(false)}>First</button>
+					<button onClick={() => setSecond(false)}>Second</button>
+				</>
+			);
+		}
+		container = document.createElement('div');
+		document.body.append(container);
+		root = createRoot(container);
+		act(() => root.render(<Harness />));
+		expect(document.body.style.overflow).toBe('hidden');
+		expect(document.body.style.position).toBe('fixed');
+		act(() => container.querySelectorAll('button')[0].click());
+		expect(document.body.style.overflow).toBe('hidden');
+		act(() => container.querySelectorAll('button')[1].click());
+		expect(document.body.style.overflow).toBe('auto');
+		expect(document.body.style.position).not.toBe('fixed');
+		document.body.style.overflow = previous;
+	});
 	it('closes on a true outside click, while clicks on padding stay inside', () => {
 		const { dialog, close } = mount();
 		event(dialog, 'pointerdown', 120, 120);

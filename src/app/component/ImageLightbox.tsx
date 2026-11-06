@@ -1,5 +1,5 @@
 import { ModalCloseButton } from './ModalCloseButton';
-import { useEffect } from 'react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePinchZoom } from '../hooks/usePinchZoom';
 import { useModalHotkeys } from '../hooks/useModalHotkeys';
@@ -22,13 +22,7 @@ export function ImageLightbox({ src, alt, onClose, onPrev, onNext }: Props) {
 
 	useModalHotkeys(noop, onClose, { enterEnabled: false, escapeEnabled: true });
 
-	useEffect(() => {
-		const prevOverflow = document.body.style.overflow;
-		document.body.style.overflow = 'hidden';
-		return () => {
-			document.body.style.overflow = prevOverflow;
-		};
-	}, []);
+	useBodyScrollLock();
 
 	return (
 		<div

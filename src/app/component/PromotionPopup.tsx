@@ -63,11 +63,8 @@ export function PromotionPopup({
 				// Storage can be blocked in private browsing or by browser policy.
 			}
 		}
-		const previousOverflow = document.body.style.overflow;
-		document.body.style.overflow = 'hidden';
 		return () => {
 			dialog.close();
-			document.body.style.overflow = previousOverflow;
 			if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
 				previousFocus.focus();
 			}
@@ -78,7 +75,7 @@ export function PromotionPopup({
 		setIsOpen(false);
 		onClose?.();
 	};
-	const dismiss = useModalDismiss(close);
+	const dismiss = useModalDismiss(close, { open: isOpen });
 	if (!isOpen) return null;
 
 	return (
@@ -87,9 +84,9 @@ export function PromotionPopup({
 			aria-labelledby='promotion-title'
 			aria-describedby='promotion-description'
 			{...dismiss}
-			className='fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-4xl overflow-y-auto rounded-2xl border border-emerald-800 bg-[#0F2417] p-0 text-white shadow-2xl backdrop:bg-black/75 backdrop:backdrop-blur-sm'
+			className='fixed inset-0 m-auto h-[min(48rem,calc(100dvh-2rem))] max-h-[calc(100dvh-2rem)] w-[calc(100%_-_2rem)] max-w-4xl overflow-hidden rounded-2xl border border-emerald-800 bg-[#0F2417] p-0 text-white shadow-2xl open:flex open:flex-col backdrop:bg-black/75 backdrop:backdrop-blur-sm'
 		>
-			<div className='sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-emerald-900 bg-[#0F2417] px-4 py-3'>
+			<div className='z-10 flex shrink-0 items-center justify-between gap-3 border-b border-emerald-900 bg-[#0F2417] px-4 py-3'>
 				<span className='min-w-0 break-words text-xs font-semibold tracking-widest text-emerald-300'>
 					{promotion.brandLabel || DEFAULT_PROMOTION.brandLabel}
 				</span>
@@ -100,20 +97,20 @@ export function PromotionPopup({
 					appearance='promotion'
 				/>
 			</div>
-			<div className='grid md:grid-cols-2'>
+			<div className='grid min-h-0 flex-1 grid-rows-[minmax(0,0.8fr)_minmax(0,1fr)] md:grid-cols-2 md:grid-rows-1'>
 				<Link
 					to={PAGE_PATHS.PRICING}
 					onClick={close}
 					aria-label='Fiyat listesi ve tüm detayları görüntüle'
-					className='block self-start bg-black/20 focus-visible:outline-2 focus-visible:outline-emerald-300'
+					className='flex min-h-0 items-center justify-center overflow-hidden bg-black/20 focus-visible:outline-2 focus-visible:outline-emerald-300'
 				>
 					<img
 						src={pricing.url}
 						alt='Hurda telefon anakartı alım fiyat listesi ve kargo bilgileri'
-						className='h-auto w-full'
+						className='h-full max-h-full w-full object-contain'
 					/>
 				</Link>
-				<div className='flex flex-col justify-center p-5 sm:p-7'>
+				<div className='flex min-h-0 flex-col overflow-y-auto overscroll-contain p-4 sm:p-6'>
 					<p className='text-sm font-medium text-emerald-300'>
 						{promotion.tagline || DEFAULT_PROMOTION.tagline}
 					</p>

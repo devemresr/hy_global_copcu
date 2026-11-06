@@ -37,6 +37,7 @@ export function CustomerPriceEditor({
 	const [exporting, setExporting] = useState(false);
 	const dismiss = useModalDismiss(() => setOpen(false), {
 		disabled: exporting,
+		open,
 	});
 	const dialogRef = useRef<HTMLDialogElement>(null);
 	const triggerRef = useRef<HTMLButtonElement>(null);
@@ -57,12 +58,9 @@ export function CustomerPriceEditor({
 		if (!open) return;
 		const dialog = dialogRef.current;
 		const trigger = triggerRef.current;
-		const previousOverflow = document.body.style.overflow;
-		document.body.style.overflow = 'hidden';
 		dialog?.showModal();
 		return () => {
 			dialog?.close();
-			document.body.style.overflow = previousOverflow;
 			trigger?.focus();
 		};
 	}, [open]);

@@ -4,8 +4,10 @@ import {
 	type PointerEvent,
 	type SyntheticEvent,
 } from 'react';
+import { useBodyScrollLock } from './useBodyScrollLock';
 
 type Options = {
+	open?: boolean;
 	closeOnOutsideClick?: boolean;
 	escapeEnabled?: boolean;
 	disabled?: boolean;
@@ -15,11 +17,13 @@ type Options = {
 export function useModalDismiss(
 	onClose: () => void,
 	{
+		open = true,
 		closeOnOutsideClick = true,
 		escapeEnabled = true,
 		disabled = false,
 	}: Options = {},
 ) {
+	useBodyScrollLock(open);
 	const pointerOutside = useRef<boolean | null>(null);
 	function outside(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>) {
 		if (event.target !== event.currentTarget) return false;
