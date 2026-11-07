@@ -122,7 +122,8 @@ export default function BalancePage() {
 				<nav className='flex gap-4 text-sm underline'>
 					<Link to={PAGE_PATHS.ADMIN}>Yönetim</Link>
 					<Link to={PAGE_PATHS.ORDERS}>Alış</Link>
-					<Link to={PAGE_PATHS.STOCK}>Stok / Satış</Link>
+					<Link to={PAGE_PATHS.STOCK}>Stok</Link>
+					<Link to={PAGE_PATHS.SALES}>Satış</Link>
 				</nav>
 			</header>
 			<p className='text-sm text-text/70'>

@@ -1,3 +1,4 @@
+import { TradeRows } from './component/admin/TradeRows';
 import type { OrderChartSettings } from './helpers/orderChartSeries.helper';
 import { useOrderDraft } from './hooks/useOrderDraft';
 import {
@@ -11,17 +12,8 @@ import {
 	warningInputKey,
 	type WarningCache,
 } from './helpers/purchaseWarnings.helper';
-import { Trash2 } from 'lucide-react';
-import {
-	AdminCollapseButton,
-	AdminSummary,
-} from './component/admin/AdminCollapseHeading';
-import {
-	STOCK_CONTROL,
-	STOCK_BUTTON,
-	STOCK_NUMBER_CONTROL,
-	STOCK_STEPPER,
-} from './constants/stockStyles.constant';
+import { AdminSummary } from './component/admin/AdminCollapseHeading';
+import { STOCK_BUTTON } from './constants/stockStyles.constant';
 import {
 	useEffect,
 	useMemo,
@@ -32,12 +24,10 @@ import {
 import { Link } from 'react-router';
 import type { ColDef } from 'ag-grid-community';
 import { toast } from 'sonner';
-import { NumberInputWithSteppers } from './component/NumberInputWithSteppers';
 import { InventoryDataGrid } from './component/InventoryDataGrid';
 import { Pagination } from './component/admin/Pagination';
 import { OrderCharts } from './component/admin/OrderCharts';
 import { OrderHistoryFilters } from './component/admin/OrderHistoryFilters';
-import { OrderUnitPriceInput } from './component/admin/OrderUnitPriceInput';
 import { CreatedOrderPdfModal } from './component/admin/CreatedOrderPdfModal';
 import { OrderReportPdfModal } from './component/admin/OrderReportPdfModal';
 import { BayiPicker } from './component/admin/BayiPicker';
@@ -45,7 +35,6 @@ import { OrderProductSelect } from './component/admin/OrderProductSelect';
 import {
 	ORDER_PRODUCT_TYPES,
 	ORDER_QUANTITY_UNIT_LABELS,
-	type OrderQuantityUnit,
 } from './constants/orderProducts.constant';
 import {
 	formatOrderProduct,
@@ -100,7 +89,7 @@ export default function OrdersPage() {
 	);
 	const submittingRef = useRef(false);
 	const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const draft = useOrderDraft(
+	const draft = useOrderDraft<PurchaseDraft>(
 		orderDraftKey('purchase'),
 		purchaseDraftSchema,
 		() => ({ lines: [initialLine(0)], nextId: 1, bayiId: '' }),
@@ -215,7 +204,11 @@ export default function OrdersPage() {
 		});
 	}
 	function resetRows() {
-		draft.clear({ lines: [initialLine(nextId)], nextId: nextId + 1, bayiId });
+		draft.clear({
+			lines: [initialLine(nextId)],
+			nextId: nextId + 1,
+			bayiId,
+		});
 		setCollapsedRows(new Set());
 	}
 	const listPrice = (line: DraftLine) =>
@@ -290,22 +283,6 @@ export default function OrdersPage() {
 	}, [bayiId, warningPayload, checkWarnings]);
 	const total =
 		Math.round(totals.reduce<number>((s, n) => s + (n ?? 0), 0) * 100) / 100;
-	function updateNumber(
-		id: number,
-		key: 'quantity',
-		action: SetStateAction<number | ''>,
-	) {
-		setLines((current) =>
-			current.map((line) =>
-				line.id === id
-					? {
-							...line,
-							[key]: typeof action === 'function' ? action(line[key]) : action,
-						}
-					: line,
-			),
-		);
-	}
 	async function saveOrder() {
 		if (submittingRef.current) return;
 		const parsed = createOrderSchema.safeParse({
@@ -529,6 +506,9 @@ export default function OrdersPage() {
 					<Link className='ml-4 text-sm underline' to={PAGE_PATHS.STOCK}>
 						Stok
 					</Link>
+					<Link className='ml-4 text-sm underline' to={PAGE_PATHS.SALES}>
+						Satış
+					</Link>
 					<Link className='ml-4 text-sm underline' to={PAGE_PATHS.BALANCE}>
 						Bakiye
 					</Link>
@@ -593,258 +573,85 @@ export default function OrdersPage() {
 						Kaydederken tekrar kontrol edilecek.
 					</p>
 				)}
-				<div className='relative w-full min-w-0 max-w-full'>
-					<div className='block w-full min-w-0 text-left text-sm'>
-						<div className='divide-y divide-border overflow-hidden rounded-xl border border-border'>
-							{lines.map((line, index) => (
-								<div key={line.id} className='min-w-0'>
-									<div className='block'>
-										<div className='block px-2 pt-2 md:hidden'>
-											<AdminCollapseButton
-												expanded={!collapsedRows.has(line.id)}
-												index={index}
-												aria-controls={`order-row-${line.id}`}
-												onClick={() =>
-													setCollapsedRows((current) => {
-														const next = new Set(current);
-														if (next.has(line.id)) next.delete(line.id);
-														else next.add(line.id);
-														return next;
-													})
+				<TradeRows
+					lines={lines}
+					disabled={save.isPending}
+					collapsedRows={collapsedRows}
+					onToggle={(id) =>
+						setCollapsedRows((current) => {
+							const next = new Set(current);
+							if (next.has(id)) next.delete(id);
+							else next.add(id);
+							return next;
+						})
+					}
+					onRemove={(id) =>
+						setLines((current) => current.filter((row) => row.id !== id))
+					}
+					onAdd={addLine}
+					canAdd={Boolean(unusedChoice)}
+					totals={totals}
+					listPrice={listPrice}
+					effectivePrice={effectivePrice}
+					onUpdate={(id, patch) =>
+						setLines((current) =>
+							current.map((row) =>
+								row.id === id
+									? {
+											...row,
+											...patch,
+											...(patch.quantityUnit
+												? {
+														unitPriceOverride: null,
+														totalPriceOverride: null,
+														quantity:
+															patch.quantityUnit === 'piece' &&
+															!Number.isInteger(row.quantity)
+																? 1
+																: row.quantity,
+													}
+												: {}),
+										}
+									: row,
+							),
+						)
+					}
+					productInput={(line, index) => (
+						<OrderProductSelect
+							className='h-9!'
+							value={line}
+							rowNumber={index + 1}
+							id={'type-' + line.id}
+							disabled={save.isPending}
+							productTypes={productTypes}
+							memorySizes={pricing.data?.memorySizes}
+							excluded={lines.filter((row) => row.id !== line.id)}
+							onChange={(product) =>
+								setLines((current) =>
+									current.map((row) =>
+										row.id === line.id
+											? {
+													...row,
+													...product,
+													quantityUnit: product.requiresMemorySize
+														? 'piece'
+														: row.quantityUnit,
+													quantity:
+														product.requiresMemorySize &&
+														!Number.isInteger(row.quantity)
+															? 1
+															: row.quantity,
+													unitPriceOverride: null,
+													totalPriceOverride: null,
 												}
-											>
-												<span>
-													{index + 1}. satır · {formatOrderProduct(line)} ·{' '}
-													{formatOrderQuantity(
-														Number(line.quantity) || 0,
-														line.quantityUnit,
-													)}
-												</span>
-											</AdminCollapseButton>
-										</div>
-									</div>
-									{
-										<div
-											id={`order-row-${line.id}`}
-											className={`grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-2 px-2 py-2 md:flex md:flex-wrap ${index % 2 === 0 ? 'bg-button-bg/30' : 'bg-button-hover-bg/10'} ${collapsedRows.has(line.id) ? 'hidden md:flex' : ''}`}
-										>
-											<div className='col-span-2 block min-w-0 md:col-span-1 md:w-36'>
-												<label
-													className='mb-1 block text-[11px] font-medium'
-													htmlFor={`type-${line.id}`}
-												>
-													Ürün
-												</label>
-												<OrderProductSelect
-													className='h-9!'
-													value={line}
-													rowNumber={index + 1}
-													id={`type-${line.id}`}
-													disabled={save.isPending}
-													productTypes={productTypes}
-													memorySizes={pricing.data?.memorySizes}
-													excluded={lines.filter(
-														(entry) => entry.id !== line.id,
-													)}
-													onChange={(product) =>
-														setLines((current) =>
-															current.map((entry) =>
-																entry.id === line.id
-																	? {
-																			...entry,
-																			...product,
-																			quantityUnit: product.requiresMemorySize
-																				? 'piece'
-																				: entry.quantityUnit,
-																			quantity:
-																				product.requiresMemorySize &&
-																				!Number.isInteger(entry.quantity)
-																					? 1
-																					: entry.quantity,
-																			unitPriceOverride: null,
-																			totalPriceOverride: null,
-																		}
-																	: entry,
-															),
-														)
-													}
-												/>
-											</div>
-											<div className='block min-w-0'>
-												<label
-													className='mb-1 block text-[11px] font-medium'
-													htmlFor={`count-${line.id}`}
-												>
-													Miktar
-												</label>
-												<NumberInputWithSteppers
-													id={`count-${line.id}`}
-													ariaLabel={`${index + 1}. satır miktar`}
-													value={line.quantity}
-													disableWheel
-													decimalPlaces={line.quantityUnit === 'piece' ? 0 : 3}
-													onChange={(action) =>
-														updateNumber(line.id, 'quantity', action)
-													}
-													disabled={save.isPending}
-													steppers={
-														line.quantityUnit === 'kg'
-															? [
-																	{ amount: 0.1, label: '+0,1' },
-																	{ amount: 1, label: '+1' },
-																]
-															: [
-																	{ amount: 1, label: '+1' },
-																	{ amount: 5, label: '+5' },
-																]
-													}
-													className={STOCK_NUMBER_CONTROL}
-													stepperClassName={STOCK_STEPPER}
-												/>
-											</div>
-											{!line.requiresMemorySize && (
-												<div className='block min-w-0'>
-													<label
-														className='mb-1 block text-[11px] font-medium'
-														htmlFor={`unit-${line.id}`}
-													>
-														Birim
-													</label>
-													<select
-														id={`unit-${line.id}`}
-														aria-label={`${index + 1}. satır miktar birimi`}
-														value={line.quantityUnit}
-														disabled={save.isPending}
-														className={`${STOCK_CONTROL} w-16 pe-5!`}
-														onChange={(event) => {
-															const quantityUnit = event.target
-																.value as OrderQuantityUnit;
-															setLines((current) =>
-																current.map((entry) =>
-																	entry.id === line.id
-																		? {
-																				...entry,
-																				quantityUnit,
-																				quantity:
-																					quantityUnit === 'piece' &&
-																					!Number.isInteger(entry.quantity)
-																						? 1
-																						: entry.quantity,
-																				unitPriceOverride: null,
-																				totalPriceOverride: null,
-																			}
-																		: entry,
-																),
-															);
-														}}
-													>
-														{Object.entries(ORDER_QUANTITY_UNIT_LABELS).map(
-															([unit, label]) => (
-																<option key={unit} value={unit}>
-																	{label}
-																</option>
-															),
-														)}
-													</select>
-												</div>
-											)}
-											<div className='col-span-2 block min-w-0 md:col-span-1'>
-												<span className='mb-1 block text-[11px] font-medium'>
-													Birim fiyat (TL/
-													{ORDER_QUANTITY_UNIT_LABELS[line.quantityUnit]})
-												</span>
-												<OrderUnitPriceInput
-													rowNumber={index + 1}
-													originalPrice={listPrice(line)}
-													quantityUnit={line.quantityUnit}
-													value={
-														line.totalPriceOverride === null
-															? line.unitPriceOverride
-															: (effectivePrice(line) ?? '')
-													}
-													disabled={save.isPending}
-													onChange={(value) =>
-														setLines((current) =>
-															current.map((entry) =>
-																entry.id === line.id
-																	? {
-																			...entry,
-																			unitPriceOverride: value,
-																			totalPriceOverride: null,
-																		}
-																	: entry,
-															),
-														)
-													}
-												/>
-											</div>
-											<label className='flex min-w-0 flex-col gap-1 text-[11px]'>
-												Satır tutarı (TL)
-												<NumberInputWithSteppers
-													id={`total-price-${line.id}`}
-													ariaLabel={`${index + 1}. satır toplam fiyatı`}
-													value={
-														line.totalPriceOverride === ''
-															? ''
-															: (totals[index] ?? '')
-													}
-													decimalPlaces={2}
-													disableWheel
-													disabled={save.isPending}
-													onChange={(change) =>
-														setLines((current) =>
-															current.map((entry) =>
-																entry.id === line.id
-																	? {
-																			...entry,
-																			totalPriceOverride:
-																				typeof change === 'function'
-																					? change(totals[index] ?? '')
-																					: change,
-																		}
-																	: entry,
-															),
-														)
-													}
-													className={STOCK_NUMBER_CONTROL}
-													stepperClassName={STOCK_STEPPER}
-												/>
-											</label>
-											<div className='col-span-2 flex flex-wrap items-center justify-end gap-1 md:col-span-1 md:pt-5 lg:ml-6'>
-												<button
-													type='button'
-													className={button}
-													aria-label={`${index + 1}. satırı sil`}
-													disabled={save.isPending || lines.length === 1}
-													onClick={() =>
-														setLines((current) =>
-															current.filter((l) => l.id !== line.id),
-														)
-													}
-												>
-													<Trash2 size={16} aria-hidden />
-												</button>
-												{index === lines.length - 1 && (
-													<button
-														className={button}
-														disabled={
-															save.isPending ||
-															lines.length >= 200 ||
-															!unusedChoice
-														}
-														onClick={addLine}
-													>
-														+ Satır ekle
-													</button>
-												)}
-											</div>
-										</div>
-									}
-								</div>
-							))}
-						</div>
-					</div>
-				</div>
+											: row,
+									),
+								)
+							}
+						/>
+					)}
+				/>
+
 				<div className='mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-button-bg p-3 font-semibold text-text'>
 					<span>Genel toplam</span>
 					<span aria-live='polite' className='break-all text-lg tabular-nums'>

@@ -1,7 +1,8 @@
+import SalesPage from '../app/Sales';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Routes, Route } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StockManagementSection } from '../app/component/admin/StockManagementPanel';
 import { BAYI_ROUTES, STOCK_ROUTES } from '../app/constants/routes.constant';
@@ -105,7 +106,7 @@ const data = {
 	movementPages: 1,
 	reportTotals: { purchaseCost: 13500, revenue: 16000, profit: 2500 },
 };
-async function mount() {
+async function mount(sales = false) {
 	container = document.createElement('div');
 	document.body.append(container);
 	root = createRoot(container);
@@ -113,14 +114,20 @@ async function mount() {
 	await act(async () =>
 		root!.render(
 			<QueryClientProvider client={client}>
-				<MemoryRouter>
-					<StockManagementSection />
+				<MemoryRouter initialEntries={[sales ? PAGE_PATHS.SALES : '/']}>
+					<Routes>
+						<Route path={PAGE_PATHS.SALES} element={<SalesPage />} />
+						<Route path='*' element={<StockManagementSection />} />
+					</Routes>
 				</MemoryRouter>
 			</QueryClientProvider>,
 		),
 	);
 }
 async function openPanel() {
+	await act(async () => {
+		await new Promise((resolve) => setTimeout(resolve, 30));
+	});
 	await act(async () => {
 		const details = container.querySelector('details')!;
 		details.open = true;
@@ -137,6 +144,16 @@ function input(element: HTMLInputElement, value: string) {
 	)!.set!.call(element, value);
 	element.dispatchEvent(new Event('input', { bubbles: true }));
 }
+async function openSalePage() {
+	await act(async () => {
+		[...container.querySelectorAll('a')]
+			.find((a) => a.textContent === 'Satış')!
+			.click();
+	});
+	await act(async () => {
+		await new Promise((resolve) => setTimeout(resolve, 40));
+	});
+}
 describe('stock panel', () => {
 	it('reopens timestamped sale drafts and clears saved data on reset or a successful sale', async () => {
 		localStorage.setItem('accessToken', fakeJwt(900000));
@@ -146,11 +163,7 @@ describe('stock panel', () => {
 		});
 		await mount();
 		await openPanel();
-		act(() =>
-			[...container.querySelectorAll('button')]
-				.find((button) => button.textContent === 'Satış')!
-				.click(),
-		);
+		await openSalePage();
 		act(() =>
 			[...container.querySelectorAll('[aria-label="Satış türü"] button')]
 				.find((button) => button.textContent === 'Kısmi satış')!
@@ -159,7 +172,7 @@ describe('stock panel', () => {
 		act(() =>
 			input(
 				container.querySelector<HTMLInputElement>(
-					'[aria-label="1. satış miktarı"]',
+					'[aria-label="1. satır miktar"]',
 				)!,
 				'5',
 			),
@@ -167,7 +180,7 @@ describe('stock panel', () => {
 		act(() =>
 			input(
 				container.querySelector<HTMLInputElement>(
-					'[aria-label="1. satış birim fiyatı"]',
+					'[aria-label="1. satır birim fiyat (TL/adet)"]',
 				)!,
 				'200',
 			),
@@ -179,16 +192,16 @@ describe('stock panel', () => {
 		root = undefined;
 		client.clear();
 		container.remove();
-		await mount();
+		await mount(true);
 		await openPanel();
 		expect(
 			container.querySelector<HTMLInputElement>(
-				'[aria-label="1. satış miktarı"]',
+				'[aria-label="1. satır miktar"]',
 			)!.value,
 		).toBe('5');
 		expect(
 			container.querySelector<HTMLInputElement>(
-				'[aria-label="1. satış geliri"]',
+				'[aria-label="1. satır toplam fiyatı"]',
 			)!.value,
 		).toBe('1000');
 		expect(toast.info).toHaveBeenCalledWith(
@@ -200,7 +213,11 @@ describe('stock panel', () => {
 			},
 		);
 		act(() =>
-			[...container.querySelectorAll('dialog button')]
+			[
+				...container.querySelectorAll(
+					'section[aria-labelledby="new-sale"] button',
+				),
+			]
 				.find((button) => button.textContent === 'Satırları sıfırla')!
 				.dispatchEvent(new MouseEvent('click', { bubbles: true })),
 		);
@@ -208,14 +225,14 @@ describe('stock panel', () => {
 		act(() =>
 			input(
 				container.querySelector<HTMLInputElement>(
-					'[aria-label="1. satış geliri"]',
+					'[aria-label="1. satır toplam fiyatı"]',
 				)!,
 				'16000',
 			),
 		);
 		await act(async () =>
 			container
-				.querySelector('dialog form')!
+				.querySelector('section[aria-labelledby="new-sale"] form')!
 				.dispatchEvent(
 					new Event('submit', { bubbles: true, cancelable: true }),
 				),
@@ -229,17 +246,15 @@ describe('stock panel', () => {
 		});
 		await mount();
 		await openPanel();
-		act(() =>
-			[...container.querySelectorAll('button')]
-				.find((button) => button.textContent === 'Satış')!
-				.click(),
-		);
-		const form = container.querySelector('dialog form')!;
+		await openSalePage();
+		const form = container.querySelector(
+			'section[aria-labelledby="new-sale"] form',
+		)!;
 		const unit = form.querySelector<HTMLInputElement>(
-			'[aria-label="1. satış birim fiyatı"]',
+			'[aria-label="1. satır birim fiyat (TL/adet)"]',
 		)!;
 		const total = form.querySelector<HTMLInputElement>(
-			'[aria-label="1. satış geliri"]',
+			'[aria-label="1. satır toplam fiyatı"]',
 		)!;
 		act(() => input(unit, '400'));
 		expect(total.value).toBe('16000');
@@ -383,34 +398,34 @@ describe('stock panel', () => {
 		mockFetch({ [STOCK_ROUTES.LIST]: () => jsonResponse(200, data) });
 		await mount();
 		await openPanel();
-		act(() =>
-			[...container.querySelectorAll('button')]
-				.find((button) => button.textContent === 'Satış')!
-				.click(),
-		);
+		await openSalePage();
 		const revenue = container.querySelector<HTMLInputElement>(
-			'[aria-label="1. satış geliri"]',
+			'[aria-label="1. satır toplam fiyatı"]',
 		)!;
 		act(() => input(revenue, '16000'));
 		const toggle = container.querySelector<HTMLButtonElement>(
-			'button[aria-controls="restock-row-0"]',
+			'section[aria-labelledby="new-sale"] button[aria-controls]',
 		)!;
 		expect(
-			container.querySelectorAll('button[aria-controls="restock-row-0"]'),
+			container.querySelectorAll(
+				'section[aria-labelledby="new-sale"] button[aria-controls]',
+			),
 		).toHaveLength(1);
 		const remove = container.querySelector<HTMLButtonElement>(
-			'button[aria-label="1. satış ürününü sil"]',
+			'button[aria-label="1. satırı sil"]',
 		)!;
 		expect(
-			container.querySelectorAll('button[aria-label="1. satış ürününü sil"]'),
+			container.querySelectorAll('button[aria-label="1. satırı sil"]'),
 		).toHaveLength(1);
 		expect(remove.querySelector('svg')).not.toBeNull();
 		expect(remove.textContent).toBe('');
 		act(() => toggle.click());
 		expect(toggle.getAttribute('aria-expanded')).toBe('false');
-		expect(container.querySelector<HTMLElement>('#restock-row-0')!.hidden).toBe(
-			true,
-		);
+		expect(
+			document
+				.getElementById(toggle.getAttribute('aria-controls')!)!
+				.className.includes('hidden'),
+		).toBe(true);
 		act(() => toggle.click());
 		expect(toggle.getAttribute('aria-expanded')).toBe('true');
 		expect(revenue.value).toBe('16000');
@@ -501,12 +516,10 @@ describe('stock panel', () => {
 			});
 			await mount();
 			await openPanel();
-			act(() =>
-				[...container.querySelectorAll('button')]
-					.find((button) => button.textContent === 'Satış')!
-					.click(),
-			);
-			const form = container.querySelector('dialog form')!;
+			await openSalePage();
+			const form = container.querySelector(
+				'section[aria-labelledby="new-sale"] form',
+			)!;
 			act(() =>
 				[...form.querySelectorAll('[aria-label="Satış türü"] button')]
 					.find(
@@ -522,32 +535,32 @@ describe('stock panel', () => {
 			).toHaveLength(1);
 			act(() =>
 				[...form.querySelectorAll('button')]
-					.find((button) => button.textContent === '+ Ürün ekle')!
+					.find((button) => button.textContent === '+ Satır ekle')!
 					.click(),
 			);
 			act(() => {
 				input(
 					form.querySelector<HTMLInputElement>(
-						'[aria-label="1. satış geliri"]',
+						'[aria-label="1. satır toplam fiyatı"]',
 					)!,
 					'16000',
 				);
 				input(
 					form.querySelector<HTMLInputElement>(
-						'[aria-label="2. satış geliri"]',
+						'[aria-label="2. satır toplam fiyatı"]',
 					)!,
 					'700',
 				);
 				if (mode === 'partial') {
 					input(
 						form.querySelector<HTMLInputElement>(
-							'[aria-label="1. satış miktarı"]',
+							'[aria-label="1. satır miktar"]',
 						)!,
 						'5',
 					);
 					input(
 						form.querySelector<HTMLInputElement>(
-							'[aria-label="2. satış miktarı"]',
+							'[aria-label="2. satır miktar"]',
 						)!,
 						'2',
 					);
@@ -608,16 +621,19 @@ describe('stock panel', () => {
 		});
 		await mount();
 		await openPanel();
-		act(() =>
-			[...container.querySelectorAll('button')]
-				.find((button) => button.textContent === 'Satış')!
-				.click(),
-		);
-		const form = container.querySelector('dialog form')!;
-		expect(form.textContent).toContain('40 adet stoktan düşülür');
+		await openSalePage();
+		const form = container.querySelector(
+			'section[aria-labelledby="new-sale"] form',
+		)!;
+		expect(
+			form.querySelector<HTMLInputElement>('[aria-label="1. satır miktar"]')!
+				.value,
+		).toBe('40');
 		act(() =>
 			input(
-				form.querySelector<HTMLInputElement>('[aria-label="1. satış geliri"]')!,
+				form.querySelector<HTMLInputElement>(
+					'[aria-label="1. satır toplam fiyatı"]',
+				)!,
 				'16000',
 			),
 		);

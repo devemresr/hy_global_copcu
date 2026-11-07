@@ -1,9 +1,4 @@
 import { StockReport } from './StockReport';
-import {
-	orderDraftKey,
-	readOrderDraft,
-	saleDraftSchema,
-} from '../../helpers/orderDraft.helper';
 import { AdminSummary } from './AdminCollapseHeading';
 import {
 	STOCK_BUTTON,
@@ -15,7 +10,6 @@ import {
 	useStock,
 	type StockFilters,
 } from '../../hooks/api/endpoints/useStock';
-import { StockSaleDialog } from './StockSaleDialog';
 import {
 	ORDER_PRODUCT_TYPES,
 	ORDER_PRODUCT_TYPE_ORDER,
@@ -43,7 +37,6 @@ export function StockManagementPanel() {
 	const [filters, setFilters] = useState<StockFilters>({});
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(20);
-	const [saleOpen, setSaleOpen] = useState<boolean | null>(null);
 	const [productType, setProductType] = useState<
 		(typeof ORDER_PRODUCT_TYPE_ORDER)[number] | 'all'
 	>('all');
@@ -61,25 +54,16 @@ export function StockManagementPanel() {
 		<div className='mt-4 min-w-0 space-y-4'>
 			<div className='flex min-w-0 flex-wrap items-center justify-between gap-3'>
 				<p className='max-w-2xl text-sm text-text/80'>
-					Kayıtlı alımlar otomatik olarak stok girişidir. Satış ve çıkışları
-					buradan yönetin; bayi bilgileri alım geçmişinde korunur.
+					Kayıtlı alımlar otomatik olarak stok girişidir. Satışları ayrı Satış
+					sayfasından kaydedin; bayi bilgileri alım geçmişinde korunur.
 				</p>
 				<div className='flex flex-wrap gap-2'>
 					<Link className={button} to={PAGE_PATHS.ORDERS}>
 						+ Alım / stok girişi ekle
 					</Link>
-					<button
-						className={button}
-						type='button'
-						disabled={
-							!data?.positions.some((p) => p.quantity > 0) ||
-							stock.isFetching ||
-							stock.isError
-						}
-						onClick={() => setSaleOpen(true)}
-					>
+					<Link className={button} to={PAGE_PATHS.SALES}>
 						Satış
-					</button>
+					</Link>
 				</div>
 			</div>
 			{stock.isPending && <p role='status'>Stok yükleniyor...</p>}
@@ -97,15 +81,6 @@ export function StockManagementPanel() {
 			)}
 			{data && (
 				<>
-					{(saleOpen ??
-						Boolean(
-							readOrderDraft(orderDraftKey('sale'), saleDraftSchema),
-						)) && (
-						<StockSaleDialog
-							positions={data.positions}
-							onClose={() => setSaleOpen(false)}
-						/>
-					)}
 					<details open aria-label='Mevcut stok' className='space-y-3'>
 						<AdminSummary index={0}>Mevcut stok · Tüm bayiler</AdminSummary>
 						<p className='text-xs text-text/70'>

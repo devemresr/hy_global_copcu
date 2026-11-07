@@ -1,3 +1,4 @@
+import SalesPage from './Sales';
 import InventoryPage from './InventoryPage';
 import { Routes, Route, Navigate } from 'react-router';
 import { TermsPage } from './Terms';
@@ -27,6 +28,7 @@ export function App() {
 				<Route path={PAGE_PATHS.LOGIN} element={<LoginPage />} />
 				<Route path={PAGE_PATHS.ADMIN} element={<AdminPage />} />
 				<Route path={PAGE_PATHS.ORDERS} element={<OrdersPage />} />
+				<Route path={PAGE_PATHS.SALES} element={<SalesPage />} />
 				<Route path={PAGE_PATHS.STOCK} element={<StockPage />} />
 				<Route path={PAGE_PATHS.BALANCE} element={<BalancePage />} />
 				<Route

@@ -600,7 +600,12 @@ describe('orders page', () => {
 		expect(
 			container.querySelector('[aria-live=polite]')?.textContent,
 		).toContain('55,00');
-		act(() => button('+1').click());
+		act(() =>
+			container
+				.querySelector<HTMLInputElement>('#count-0')!
+				.parentElement!.querySelector('button')!
+				.click(),
+		);
 		act(() => button('+5').click());
 		expect(container.querySelector<HTMLInputElement>('#count-0')?.value).toBe(
 			'7',

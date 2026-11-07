@@ -16,7 +16,9 @@ export function OrderUnitPriceInput({
 	disabled,
 	rowNumber,
 	quantityUnit = 'piece',
+	kind = 'purchase',
 }: {
+	kind?: 'purchase' | 'sale';
 	originalPrice: number | undefined;
 	value: number | '' | null;
 	onChange: (value: number | '' | null) => void;
@@ -32,7 +34,9 @@ export function OrderUnitPriceInput({
 				id={`unit-price-${rowNumber}`}
 				ariaLabel={`${rowNumber}. satır birim fiyat (TL/${ORDER_QUANTITY_UNIT_LABELS[quantityUnit]})`}
 				describedBy={
-					listPrice === undefined ? `unit-price-note-${rowNumber}` : undefined
+					kind === 'purchase' && listPrice === undefined
+						? `unit-price-note-${rowNumber}`
+						: undefined
 				}
 				value={current}
 				decimalPlaces={6}
@@ -48,7 +52,7 @@ export function OrderUnitPriceInput({
 				className={STOCK_NUMBER_CONTROL}
 				stepperClassName={STOCK_STEPPER}
 			/>
-			{listPrice === undefined && (
+			{kind === 'purchase' && listPrice === undefined && (
 				<p
 					id={`unit-price-note-${rowNumber}`}
 					className='text-[11px] text-text/70'
@@ -56,12 +60,12 @@ export function OrderUnitPriceInput({
 					* alış fiyatı bulunamadığından fark hesaplanamıyor.
 				</p>
 			)}
-			{listPrice !== undefined && (
+			{kind === 'purchase' && listPrice !== undefined && (
 				<p className='text-[11px] text-text/70'>
 					Alış fiyatı: {formatOrderMoney(listPrice)}
 				</p>
 			)}
-			{listPrice !== undefined && value !== null && (
+			{kind === 'purchase' && listPrice !== undefined && value !== null && (
 				<button
 					type='button'
 					disabled={disabled}
