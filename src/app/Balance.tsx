@@ -131,27 +131,6 @@ export default function BalancePage() {
 				ekleyebilirsiniz. Otomatik alış/satış kayıtlarını ayrıca manuel
 				eklemeyin.
 			</p>
-			<section
-				className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'
-				aria-label='Bakiye özeti'
-			>
-				{[
-					['Genel bakiye · tüm kayıtlar', data.balance],
-					['Filtrelenen gelir', data.income],
-					['Filtrelenen gider', data.expenses],
-					['Dönem net hareketi', data.net],
-				].map(([label, value]) => (
-					<div
-						key={label}
-						className='rounded-xl border border-border bg-button-bg/30 p-4'
-					>
-						<p className='text-xs text-text/70'>{label}</p>
-						<p className='mt-2 break-words text-xl font-semibold tabular-nums'>
-							{money(Number(value))}
-						</p>
-					</div>
-				))}
-			</section>
 			<details className='space-y-3 rounded-xl border border-border p-3'>
 				<AdminSummary index={0}>Gelir / gider ekle</AdminSummary>
 				<form
@@ -340,91 +319,113 @@ export default function BalancePage() {
 						categoryId: filters.categoryId,
 					})
 				}
-			/>
-			<div className='flex flex-wrap items-end gap-3'>
-				<label className='space-y-1 text-xs'>
-					Hareket
-					<select
-						aria-label='Bakiye hareket filtresi'
-						className={`${STOCK_CONTROL} w-auto!`}
-						value={filters.direction ?? ''}
-						onChange={(event) =>
-							changeFilters({
-								...filters,
-								direction:
-									(event.target.value as FinanceFilters['direction']) ||
-									undefined,
-								group: undefined,
-								categoryId: undefined,
-							})
-						}
-					>
-						<option value=''>Tüm hareketler</option>
-						<option value='expense'>Gider</option>
-						<option value='income'>Gelir</option>
-					</select>
-				</label>
-				<label className='space-y-1 text-xs'>
-					Ana tür
-					<select
-						aria-label='Bakiye ana tür filtresi'
-						className={`${STOCK_CONTROL} w-auto!`}
-						value={filters.group ?? ''}
-						onChange={(event) =>
-							changeFilters({
-								...filters,
-								group: (event.target.value as FinanceGroup) || undefined,
-								categoryId: undefined,
-							})
-						}
-					>
-						<option value=''>Tüm türler</option>
-						{Object.entries(groups)
-							.filter(
-								([key]) =>
-									!filters.direction ||
-									(filters.direction === 'expense'
-										? ['purchase', 'other'].includes(key)
-										: ['sale', 'investment'].includes(key)),
-							)
-							.map(([value, label]) => (
-								<option key={value} value={value}>
-									{label}
-								</option>
-							))}
-					</select>
-				</label>
-				<label className='space-y-1 text-xs'>
-					Alt tür
-					<select
-						aria-label='Bakiye alt tür filtresi'
-						className={`${STOCK_CONTROL} w-auto! max-w-56`}
-						value={filters.categoryId ?? ''}
-						onChange={(event) =>
-							changeFilters({
-								...filters,
-								categoryId: event.target.value || undefined,
-							})
-						}
-					>
-						<option value=''>Tüm alt türler</option>
-						{categories
-							.filter(
-								(category) =>
-									(!filters.group || category.group === filters.group) &&
-									(!filters.direction ||
+			>
+				<div className='flex flex-wrap items-end gap-3'>
+					<label className='space-y-1 text-xs'>
+						Hareket
+						<select
+							aria-label='Bakiye hareket filtresi'
+							className={`${STOCK_CONTROL} w-auto!`}
+							value={filters.direction ?? ''}
+							onChange={(event) =>
+								changeFilters({
+									...filters,
+									direction:
+										(event.target.value as FinanceFilters['direction']) ||
+										undefined,
+									group: undefined,
+									categoryId: undefined,
+								})
+							}
+						>
+							<option value=''>Tüm hareketler</option>
+							<option value='expense'>Gider</option>
+							<option value='income'>Gelir</option>
+						</select>
+					</label>
+					<label className='space-y-1 text-xs'>
+						Ana tür
+						<select
+							aria-label='Bakiye ana tür filtresi'
+							className={`${STOCK_CONTROL} w-auto!`}
+							value={filters.group ?? ''}
+							onChange={(event) =>
+								changeFilters({
+									...filters,
+									group: (event.target.value as FinanceGroup) || undefined,
+									categoryId: undefined,
+								})
+							}
+						>
+							<option value=''>Tüm türler</option>
+							{Object.entries(groups)
+								.filter(
+									([key]) =>
+										!filters.direction ||
 										(filters.direction === 'expense'
-											? ['purchase', 'other'].includes(category.group)
-											: ['sale', 'investment'].includes(category.group))),
-							)
-							.map((category) => (
-								<option key={category._id} value={category._id}>
-									{groups[category.group]} · {category.name}
-								</option>
-							))}
-					</select>
-				</label>
-			</div>
+											? ['purchase', 'other'].includes(key)
+											: ['sale', 'investment'].includes(key)),
+								)
+								.map(([value, label]) => (
+									<option key={value} value={value}>
+										{label}
+									</option>
+								))}
+						</select>
+					</label>
+					<label className='space-y-1 text-xs'>
+						Alt tür
+						<select
+							aria-label='Bakiye alt tür filtresi'
+							className={`${STOCK_CONTROL} w-auto! max-w-56`}
+							value={filters.categoryId ?? ''}
+							onChange={(event) =>
+								changeFilters({
+									...filters,
+									categoryId: event.target.value || undefined,
+								})
+							}
+						>
+							<option value=''>Tüm alt türler</option>
+							{categories
+								.filter(
+									(category) =>
+										(!filters.group || category.group === filters.group) &&
+										(!filters.direction ||
+											(filters.direction === 'expense'
+												? ['purchase', 'other'].includes(category.group)
+												: ['sale', 'investment'].includes(category.group))),
+								)
+								.map((category) => (
+									<option key={category._id} value={category._id}>
+										{groups[category.group]} · {category.name}
+									</option>
+								))}
+						</select>
+					</label>
+				</div>
+			</OrderHistoryFilters>
+			<section
+				className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'
+				aria-label='Bakiye özeti'
+			>
+				{[
+					['Genel bakiye · tüm kayıtlar', data.balance],
+					['Filtrelenen gelir', data.income],
+					['Filtrelenen gider', data.expenses],
+					['Dönem net hareketi', data.net],
+				].map(([label, value]) => (
+					<div
+						key={label}
+						className='rounded-xl border border-border bg-button-bg/30 p-4'
+					>
+						<p className='text-xs text-text/70'>{label}</p>
+						<p className='mt-2 break-words text-xl font-semibold tabular-nums'>
+							{money(Number(value))}
+						</p>
+					</div>
+				))}
+			</section>
 			<p className='text-xs text-text/70'>
 				Seçili filtrelerin dönem öncesi bakiyesi: {money(data.openingBalance)} ·
 				Dönem sonu: {money(data.closingBalance)}. Genel bakiye filtrelerden

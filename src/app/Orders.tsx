@@ -1,3 +1,4 @@
+import type { OrderChartSettings } from './helpers/orderChartSeries.helper';
 import { useOrderDraft } from './hooks/useOrderDraft';
 import {
 	orderDraftKey,
@@ -125,6 +126,7 @@ export default function OrdersPage() {
 	const [historyPdf, setHistoryPdf] = useState<{
 		data: OrdersResponse;
 		filters: OrderFilters;
+		settings?: OrderChartSettings;
 	} | null>(null);
 	const [filters, setFilters] = useState<OrderFilters>({});
 	const [page, setPage] = useState(1);
@@ -508,6 +510,7 @@ export default function OrdersPage() {
 				<OrderReportPdfModal
 					data={historyPdf.data}
 					filters={historyPdf.filters}
+					settings={historyPdf.settings}
 					onClose={() => setHistoryPdf(null)}
 				/>
 			)}
@@ -1001,10 +1004,11 @@ export default function OrdersPage() {
 									)}
 								{reportData && (
 									<OrderCharts
-										onOpenPdf={() => {
+										onOpenPdf={(settings) => {
 											if (!reportRefreshing && reportData.summary.count > 0)
 												setHistoryPdf({
 													data: reportData,
+													settings,
 													filters: { ...filters },
 												});
 										}}

@@ -69,6 +69,7 @@ export function singleOrderReport(order: Order): OrdersResponse {
 				total: order.total,
 			},
 		],
+		byTypeAndMemory: order.lines,
 		byType,
 		byMemory: byMemory.sort((a, b) => a._id - b._id),
 		adjustments: order.lines

@@ -102,141 +102,145 @@ export function StockReport({
 						memoryGb: filters.memoryGb,
 					});
 				}}
-			/>
-			<div
-				className='flex flex-wrap gap-2'
-				role='group'
-				aria-label='Stok raporu hazır filtreleri'
 			>
-				{presets.map((preset) => (
-					<button
-						type='button'
-						key={preset.id}
-						aria-pressed={
-							view === preset.view &&
-							(filters.movementType ?? 'all') === preset.movementType
-						}
-						onClick={() => {
-							setView(preset.view);
-							onChange({
-								...filters,
-								bayiName:
-									preset.movementType === 'purchase'
-										? filters.bayiName
-										: undefined,
-								movementType: preset.movementType,
-							});
-						}}
-						className={`min-h-9 rounded-full border px-3 py-1 text-xs ${view === preset.view && (filters.movementType ?? 'all') === preset.movementType ? 'border-text bg-text text-bg' : 'border-border bg-button-bg hover:bg-button-hover-bg'}`}
-					>
-						{preset.label}
-					</button>
-				))}
-			</div>
-			<div className='flex flex-wrap items-end gap-3'>
-				<label className='space-y-1 text-xs'>
-					Hareket türü
-					<select
-						aria-label='Stok hareket türü'
-						className={`${STOCK_CONTROL} w-auto!`}
-						value={filters.movementType ?? 'all'}
-						onChange={(event) =>
-							onChange({
-								...filters,
-								bayiName: undefined,
-								movementType: event.target
-									.value as StockFilters['movementType'],
-							})
-						}
-					>
-						<option value='all'>Tüm hareketler</option>
-						<option value='purchase'>Alış girişleri</option>
-						<option value='restock'>Tüm satışlar</option>
-						<option value='complete'>Tüm stok satışı</option>
-						<option value='partial'>Kısmi satış</option>
-					</select>
-				</label>
-				<label className='space-y-1 text-xs'>
-					Ürün türü
-					<select
-						aria-label='Rapor ürün türü'
-						className={`${STOCK_CONTROL} w-auto!`}
-						value={filters.productType ?? ''}
-						onChange={(event) =>
-							onChange({
-								...filters,
-								productType:
-									(event.target.value as StockFilters['productType']) ||
-									undefined,
-							})
-						}
-					>
-						<option value=''>Tüm türler</option>
-						{ORDER_PRODUCT_TYPE_ORDER.map((type) => (
-							<option key={type} value={type}>
-								{ORDER_PRODUCT_TYPES[type].label}
-							</option>
-						))}
-					</select>
-				</label>
-				<label className='space-y-1 text-xs'>
-					Hafıza boyutu
-					<select
-						aria-label='Rapor hafıza boyutu'
-						className={`${STOCK_CONTROL} w-auto!`}
-						value={filters.memoryGb ?? ''}
-						onChange={(event) =>
-							onChange({
-								...filters,
-								memoryGb: event.target.value
-									? Number(event.target.value)
-									: undefined,
-							})
-						}
-					>
-						<option value=''>Tüm boyutlar</option>
-						{ORDER_MEMORY_SIZES.map((size) => (
-							<option key={size} value={size}>
-								{size} GB
-							</option>
-						))}
-					</select>
-				</label>
-				<label className='space-y-1 text-xs'>
-					Görünüm
-					<select
-						aria-label='Stok raporu görünümü'
-						className={`${STOCK_CONTROL} w-auto!`}
-						value={view}
-						onChange={(event) => setView(event.target.value as typeof view)}
-					>
-						<option value='movements'>Hareket kayıtları</option>
-						<option value='profits'>Gerçekleşen kâr</option>
-					</select>
-				</label>
-				{view === 'profits' && (
+				<div
+					className='flex flex-wrap gap-2'
+					role='group'
+					aria-label='Stok raporu hazır filtreleri'
+				>
+					{presets.map((preset) => (
+						<button
+							type='button'
+							key={preset.id}
+							aria-pressed={
+								view === preset.view &&
+								(filters.movementType ?? 'all') === preset.movementType
+							}
+							onClick={() => {
+								setView(preset.view);
+								onChange({
+									...filters,
+									bayiName:
+										preset.movementType === 'purchase'
+											? filters.bayiName
+											: undefined,
+									movementType: preset.movementType,
+								});
+							}}
+							className={`min-h-9 rounded-full border px-3 py-1 text-xs ${view === preset.view && (filters.movementType ?? 'all') === preset.movementType ? 'border-text bg-text text-bg' : 'border-border bg-button-bg hover:bg-button-hover-bg'}`}
+						>
+							{preset.label}
+						</button>
+					))}
+				</div>
+				<div className='flex flex-wrap items-end gap-3'>
 					<label className='space-y-1 text-xs'>
-						Gruplama
+						Hareket türü
 						<select
-							aria-label='Kâr gruplaması'
+							aria-label='Stok hareket türü'
 							className={`${STOCK_CONTROL} w-auto!`}
-							value={groupBy}
+							value={filters.movementType ?? 'all'}
 							onChange={(event) =>
-								setGroupBy(event.target.value as typeof groupBy)
+								onChange({
+									...filters,
+									bayiName: undefined,
+									movementType: event.target
+										.value as StockFilters['movementType'],
+								})
 							}
 						>
-							<option value='product'>Ürün türü + hafıza boyutu</option>
-							<option value='memory'>Hafıza boyutu · tüm bellek tipleri</option>
+							<option value='all'>Tüm hareketler</option>
+							<option value='purchase'>Alış girişleri</option>
+							<option value='restock'>Tüm satışlar</option>
+							<option value='complete'>Tüm stok satışı</option>
+							<option value='partial'>Kısmi satış</option>
 						</select>
 					</label>
-				)}
-			</div>
-			<p className='text-xs text-text/70'>
-				Tarih ve tutar, alışın veya satışın toplamına uygulanır. Ürün ve boyut
-				seçimi işlemin ilgili satırlarını gösterir. Bayi seçimi alış girişlerini
-				gösterir; satışlar belirli bir bayiye ait değildir. Güncel stok ve fiyat
-				ortalamaları rapor filtrelerinden bağımsızdır.
-			</p>
+					<label className='space-y-1 text-xs'>
+						Ürün türü
+						<select
+							aria-label='Rapor ürün türü'
+							className={`${STOCK_CONTROL} w-auto!`}
+							value={filters.productType ?? ''}
+							onChange={(event) =>
+								onChange({
+									...filters,
+									productType:
+										(event.target.value as StockFilters['productType']) ||
+										undefined,
+								})
+							}
+						>
+							<option value=''>Tüm türler</option>
+							{ORDER_PRODUCT_TYPE_ORDER.map((type) => (
+								<option key={type} value={type}>
+									{ORDER_PRODUCT_TYPES[type].label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className='space-y-1 text-xs'>
+						Hafıza boyutu
+						<select
+							aria-label='Rapor hafıza boyutu'
+							className={`${STOCK_CONTROL} w-auto!`}
+							value={filters.memoryGb ?? ''}
+							onChange={(event) =>
+								onChange({
+									...filters,
+									memoryGb: event.target.value
+										? Number(event.target.value)
+										: undefined,
+								})
+							}
+						>
+							<option value=''>Tüm boyutlar</option>
+							{ORDER_MEMORY_SIZES.map((size) => (
+								<option key={size} value={size}>
+									{size} GB
+								</option>
+							))}
+						</select>
+					</label>
+					<label className='space-y-1 text-xs'>
+						Görünüm
+						<select
+							aria-label='Stok raporu görünümü'
+							className={`${STOCK_CONTROL} w-auto!`}
+							value={view}
+							onChange={(event) => setView(event.target.value as typeof view)}
+						>
+							<option value='movements'>Hareket kayıtları</option>
+							<option value='profits'>Gerçekleşen kâr</option>
+						</select>
+					</label>
+					{view === 'profits' && (
+						<label className='space-y-1 text-xs'>
+							Gruplama
+							<select
+								aria-label='Kâr gruplaması'
+								className={`${STOCK_CONTROL} w-auto!`}
+								value={groupBy}
+								onChange={(event) =>
+									setGroupBy(event.target.value as typeof groupBy)
+								}
+							>
+								<option value='product'>Ürün türü + hafıza boyutu</option>
+								<option value='memory'>
+									Hafıza boyutu · tüm bellek tipleri
+								</option>
+							</select>
+						</label>
+					)}
+				</div>
+				<p className='text-xs text-text/70'>
+					Tarih ve işlem toplamı, alışın veya satışın tamamına uygulanır. Diğer
+					sayısal alanlar ürün satırlarını filtreler. Ürün ve boyut seçimi
+					işlemin ilgili satırlarını gösterir. Bayi seçimi alış girişlerini
+					gösterir; satışlar belirli bir bayiye ait değildir. Güncel stok ve
+					fiyat ortalamaları rapor filtrelerinden bağımsızdır.
+				</p>
+			</OrderHistoryFilters>
 			{loading && (
 				<p role='status' className='text-xs text-text/70'>
 					Stok raporu güncelleniyor...

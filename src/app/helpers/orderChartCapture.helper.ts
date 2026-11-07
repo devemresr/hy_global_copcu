@@ -11,6 +11,7 @@ export function captureOrderChart(
 	kind: 'daily' | 'byType' | 'byMemory',
 	title: string,
 	dark: boolean,
+	formatMetric?: (value: number) => string,
 ): OrderChartImage {
 	const palette = ORDER_CHART_PALETTES[dark ? 'dark' : 'light'];
 	const type = 'type' in source.config ? source.config.type : 'bar';
@@ -29,10 +30,12 @@ export function captureOrderChart(
 	const canvas = document.createElement('canvas');
 	canvas.width = kind === 'daily' ? 1200 : 900;
 	canvas.height = kind === 'daily' ? 420 : 600;
-	const formatValue = (value: number) =>
-		kind === 'byMemory'
-			? `${value.toLocaleString('tr-TR')} adet`
-			: formatOrderMoney(value);
+	const formatValue =
+		formatMetric ??
+		((value: number) =>
+			kind === 'byMemory'
+				? `${value.toLocaleString('tr-TR')} adet`
+				: formatOrderMoney(value));
 	const background: Plugin<'line' | 'bar' | 'pie'> = {
 		id: 'order-export-background',
 		beforeDraw(chart) {
@@ -76,7 +79,7 @@ export function captureOrderChart(
 			labels,
 			datasets: [
 				{
-					label: kind === 'byMemory' ? 'Adet' : 'Tutar (TL)',
+					label: source.data.datasets[0].label ?? title,
 					data: values,
 					backgroundColor: colors,
 					borderColor: type === 'line' ? palette.series[0] : palette.background,

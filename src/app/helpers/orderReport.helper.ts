@@ -1,3 +1,4 @@
+import { numericFilterLabel } from './numericFilters.helper';
 import { ORDER_PDF_PAGE, orderPdfTable } from './orderPdfLayout.helper';
 import { pdfChartsSection } from './pdfCharts.helper';
 import { orderDatePdf } from './orderDatePdf.helper';
@@ -105,6 +106,10 @@ export function orderReportDocument(
 						} satisfies Content,
 					]
 				: []),
+			...(filters.numericFilters ?? []).map((filter) => ({
+				text: numericFilterLabel(filter),
+				margin: [0, 0, 0, 4] as [number, number, number, number],
+			})),
 			...pdfChartsSection(charts),
 			...charts
 				.filter((chart) => chart.kind === 'daily' && chart.view)

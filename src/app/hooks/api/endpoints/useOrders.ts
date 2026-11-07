@@ -1,3 +1,4 @@
+import { reportFilterParams } from '../../../helpers/numericFilters.helper';
 import {
 	keepPreviousData,
 	useMutation,
@@ -132,7 +133,7 @@ export function useOrders(
 						},
 					})
 				: apiFetch(ORDER_ROUTES.LIST, {
-						params: { ...filters, page, pageSize },
+						params: { ...reportFilterParams(filters), page, pageSize },
 					}),
 		placeholderData: keepPreviousData,
 		enabled,

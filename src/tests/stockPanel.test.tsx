@@ -329,8 +329,9 @@ describe('stock panel', () => {
 			'eMMC – 64 GB · Alış / stok girişi · Store A',
 		);
 		act(() => {
-			const select =
-				report.querySelector<HTMLSelectElement>('#order-filter-bayi')!;
+			const select = report.querySelector<HTMLSelectElement>(
+				'select[id$="-bayi"]',
+			)!;
 			select.value = 'Store A';
 			select.dispatchEvent(new Event('change', { bubbles: true }));
 		});
@@ -346,7 +347,7 @@ describe('stock panel', () => {
 			'eMMC – 64 GB · Stok sifirlayan satış',
 		);
 		expect(
-			report.querySelector<HTMLSelectElement>('#order-filter-bayi')!.value,
+			report.querySelector<HTMLSelectElement>('select[id$="-bayi"]')!.value,
 		).toBe('');
 		await choose('Gerçekleşen kâr');
 		expect(
@@ -653,14 +654,15 @@ describe('stock panel', () => {
 		await mount();
 		await openPanel();
 		act(() => {
-			const select =
-				container.querySelector<HTMLSelectElement>('#order-filter-bayi')!;
+			const select = container.querySelector<HTMLSelectElement>(
+				'select[id$="-bayi"]',
+			)!;
 			select.value = 'Store A';
 			select.dispatchEvent(new Event('change', { bubbles: true }));
 		});
 		await act(async () =>
 			container
-				.querySelector('#order-filter-bayi')!
+				.querySelector('select[id$="-bayi"]')!
 				.closest('form')!
 				.dispatchEvent(
 					new Event('submit', { bubbles: true, cancelable: true }),

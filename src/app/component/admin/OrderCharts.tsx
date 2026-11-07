@@ -1,3 +1,15 @@
+import {
+	CHART_METRICS,
+	DAILY_METRICS,
+	PRODUCT_METRICS,
+	MEMORY_METRICS,
+	formatChartMetric,
+	dailyChartSeries,
+	productChartSeries,
+	memoryChartSeries,
+	type ChartMetric,
+	type OrderChartSettings,
+} from '../../helpers/orderChartSeries.helper';
 import { AdminSummary, AdminCollapseButton } from './AdminCollapseHeading';
 import { useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -23,7 +35,6 @@ import type {
 import {
 	ORDER_CHART_PALETTES,
 	ORDER_CHART_TITLES,
-	ORDER_TYPE_LABELS,
 	formatOrderMoney,
 	orderTypeColorIndex,
 	orderMemoryColorIndex,
@@ -87,12 +98,14 @@ export function OrderCharts({
 	refreshing,
 	exportOrder,
 	onOpenPdf,
+	initialSettings,
 }: {
 	data: OrdersResponse;
 	filters: OrderFilters;
 	refreshing: boolean;
 	exportOrder?: Order;
-	onOpenPdf?: () => void;
+	onOpenPdf?: (settings: OrderChartSettings) => void;
+	initialSettings?: OrderChartSettings;
 }) {
 	const { theme } = useTheme();
 	const palette = ORDER_CHART_PALETTES[theme === 'dark' ? 'dark' : 'light'];
@@ -102,11 +115,71 @@ export function OrderCharts({
 	);
 	const [dateView, setDateView] = useState<
 		'line' | 'bar' | 'calendar' | 'list'
-	>('line');
+	>(initialSettings?.dateView ?? 'line');
 	const [shareFile, setShareFile] = useState<{
 		file: File;
 		selection: string;
 	} | null>(null);
+	const [dailyMetric, setDailyMetric] = useState<ChartMetric>(
+		initialSettings?.dailyMetric ?? 'total',
+	);
+	const [productMetric, setProductMetric] = useState<ChartMetric>(
+		initialSettings?.productMetric ?? 'total',
+	);
+	const [memoryMetric, setMemoryMetric] = useState<ChartMetric>(
+		initialSettings?.memoryMetric ?? 'piece',
+	);
+	const dailySeries = useMemo(
+		() => dailyChartSeries(data, dailyMetric),
+		[data, dailyMetric],
+	);
+	const productSeries = useMemo(
+		() => productChartSeries(data, productMetric),
+		[data, productMetric],
+	);
+	const memorySeries = useMemo(
+		() => memoryChartSeries(data, memoryMetric),
+		[data, memoryMetric],
+	);
+	const chartTitles = {
+		daily:
+			dateView === 'calendar'
+				? 'Alış takvimi'
+				: dateView === 'list'
+					? 'Tarihe göre alış listesi'
+					: 'Tarihlere göre ' + CHART_METRICS[dailyMetric],
+		byType:
+			productMetric === 'total'
+				? ORDER_CHART_TITLES.byType
+				: 'Ürün ve bellek boyutuna göre ' + CHART_METRICS[productMetric],
+		byMemory:
+			memoryMetric === 'piece'
+				? ORDER_CHART_TITLES.byMemory
+				: 'Bellek boyutuna göre ' + CHART_METRICS[memoryMetric],
+	};
+	const metricSelector = (
+		label: string,
+		metric: ChartMetric,
+		onChange: (v: ChartMetric) => void,
+		choices: ChartMetric[],
+	) => (
+		<label className='flex max-w-full flex-col gap-1 text-xs'>
+			Gösterilen değer
+			<select
+				aria-label={label + ' veri alanı'}
+				className='h-9 max-w-full rounded-lg border border-border bg-button-bg px-2 text-sm text-text'
+				value={metric}
+				disabled={exporting}
+				onChange={(e) => onChange(e.target.value as ChartMetric)}
+			>
+				{choices.map((key) => (
+					<option key={key} value={key}>
+						{CHART_METRICS[key]}
+					</option>
+				))}
+			</select>
+		</label>
+	);
 	const baseOptions = {
 		responsive: true,
 		maintainAspectRatio: false,
@@ -125,80 +198,61 @@ export function OrderCharts({
 		grid: { color: palette.grid },
 		border: { color: palette.grid },
 	};
-	const lineOptions: ChartOptions<'line'> = {
+	const cartesianOptions = (metric: ChartMetric) => ({
 		...baseOptions,
 		plugins: {
 			legend: { display: false },
 			tooltip: {
 				...tooltip,
-				callbacks: { label: (c) => formatOrderMoney(c.parsed.y ?? 0) },
+				callbacks: {
+					label: (c: { parsed: { y?: number | null } }) =>
+						formatChartMetric(c.parsed.y ?? 0, metric),
+				},
 			},
 		},
-		scales: {
-			y: {
-				...axis,
-				beginAtZero: true,
-				title: { display: true, text: 'TL', color: palette.text },
-			},
-			x: { ...axis, ticks: { color: palette.text, maxTicksLimit: 10 } },
-		},
-	};
-	const barOptions: ChartOptions<'bar'> = {
-		...baseOptions,
-		plugins: { legend: { display: false }, tooltip },
 		scales: {
 			x: axis,
 			y: {
 				...axis,
 				beginAtZero: true,
-				ticks: { color: palette.text, precision: 0 },
-				title: { display: true, text: 'Adet', color: palette.text },
+				title: {
+					display: true,
+					text: CHART_METRICS[metric],
+					color: palette.text,
+				},
 			},
 		},
-	};
-	const pieOptions: ChartOptions<'pie'> = {
+	});
+	const pieMetricOptions = (metric: ChartMetric): ChartOptions<'pie'> => ({
 		...baseOptions,
 		plugins: {
 			legend: { position: 'bottom', labels: { color: palette.text } },
 			tooltip: {
 				...tooltip,
 				callbacks: {
-					label: (c) => `${c.label}: ${formatOrderMoney(c.parsed)}`,
+					label: (c) => c.label + ': ' + formatChartMetric(c.parsed, metric),
 				},
 			},
 		},
-	};
+	});
+	const lineOptions: ChartOptions<'line'> = cartesianOptions(dailyMetric);
+	const moneyBarOptions: ChartOptions<'bar'> = cartesianOptions(dailyMetric);
+	const typeBarOptions: ChartOptions<'bar'> = cartesianOptions(productMetric);
+	const barOptions: ChartOptions<'bar'> = cartesianOptions(memoryMetric);
+	const pieOptions = pieMetricOptions(productMetric);
+	const countPieOptions = pieMetricOptions(memoryMetric);
 	const dailyRef = useRef<ChartJS<'line'>>(null);
 	const typeRef = useRef<ChartJS<'pie'>>(null);
 	const memoryRef = useRef<ChartJS<'bar'>>(null);
 	const dailyBarRef = useRef<ChartJS<'bar'>>(null);
 	const typeBarRef = useRef<ChartJS<'bar'>>(null);
 	const memoryPieRef = useRef<ChartJS<'pie'>>(null);
-	const [typesAsBar, setTypesAsBar] = useState(false);
-	const [memoryAsPie, setMemoryAsPie] = useState(false);
-	const moneyBarOptions: ChartOptions<'bar'> = {
-		...barOptions,
-		scales: { ...barOptions.scales, y: lineOptions.scales!.y },
-		plugins: {
-			legend: { display: false },
-			tooltip: {
-				...tooltip,
-				callbacks: { label: (c) => formatOrderMoney(c.parsed.y ?? 0) },
-			},
-		},
-	};
-	const countPieOptions: ChartOptions<'pie'> = {
-		...pieOptions,
-		plugins: {
-			...pieOptions.plugins,
-			tooltip: {
-				...tooltip,
-				callbacks: {
-					label: (c) => `${c.label}: ${c.parsed.toLocaleString('tr-TR')} adet`,
-				},
-			},
-		},
-	};
+	const [typesAsBar, setTypesAsBar] = useState(
+		initialSettings?.typesAsBar ?? false,
+	);
+	const [memoryAsPie, setMemoryAsPie] = useState(
+		initialSettings?.memoryAsPie ?? false,
+	);
 	const [exporting, setExporting] = useState(false);
 	const [exportError, setExportError] = useState('');
 	const [pdfCharts, setPdfCharts] = useState<PdfChartSelection>({
@@ -213,6 +267,9 @@ export function OrderCharts({
 		pdfCharts,
 		typesAsBar,
 		memoryAsPie,
+		dailyMetric,
+		productMetric,
+		memoryMetric,
 		dateView,
 		theme,
 	]);
@@ -257,8 +314,17 @@ export function OrderCharts({
 				captureOrderChart(
 					chart!,
 					key,
-					ORDER_CHART_TITLES[key],
+					chartTitles[key],
 					theme === 'dark',
+					(v) =>
+						formatChartMetric(
+							v,
+							key === 'daily'
+								? dailyMetric
+								: key === 'byType'
+									? productMetric
+									: memoryMetric,
+						),
 				),
 			);
 			if (
@@ -268,7 +334,7 @@ export function OrderCharts({
 			)
 				images.unshift({
 					kind: 'daily',
-					title: ORDER_CHART_TITLES.daily,
+					title: chartTitles.daily,
 					image: '',
 					view: dateView,
 				});
@@ -388,15 +454,25 @@ export function OrderCharts({
 								previewOpen ? 'mt-3 min-w-0' : 'h-0 min-w-0 overflow-hidden'
 							}
 						>
+							<p className='mb-3 text-xs opacity-70'>
+								Her grafikte gösterilen değeri seçebilirsiniz. Ortalama fiyatlar
+								toplam tutar / toplam miktar ile hesaplanır; adet ve ağırlık
+								birleştirilmez. Takvim ve liste alış ayrıntılarını gösterir.
+							</p>
 							<div className='grid min-w-0 grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2'>
 								{!exportOrder && (
 									<>
 										{' '}
 										<figure className='m-0 min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-white p-3 sm:p-4 text-slate-700 dark:bg-[#101e19] dark:text-slate-200 lg:col-span-2'>
 											<figcaption className='mb-3 flex min-w-0 flex-col items-start gap-2 text-sm sm:mb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:text-base [&_label]:min-h-11 [&_label]:min-w-0 [&_label]:max-w-full [&_label]:text-sm'>
-												<span className='font-medium'>
-													{ORDER_CHART_TITLES.daily}
-												</span>
+												<span className='font-medium'>{chartTitles.daily}</span>
+												{(dateView === 'line' || dateView === 'bar') &&
+													metricSelector(
+														'Tarih grafiği',
+														dailyMetric,
+														setDailyMetric,
+														DAILY_METRICS,
+													)}
 												<select
 													aria-label='Tutar grafiği türü'
 													className='max-w-full rounded-lg border border-border bg-button-bg px-3 py-1.5 text-sm text-text'
@@ -424,15 +500,15 @@ export function OrderCharts({
 															key={theme}
 															ref={dailyBarRef}
 															role='img'
-															aria-label={ORDER_CHART_TITLES.daily}
+															aria-label={chartTitles.daily}
 															plugins={[reportBackground as Plugin<'bar'>]}
 															options={moneyBarOptions}
 															data={{
-																labels: data.daily.map((d) => d._id),
+																labels: dailySeries.map((d) => d.label),
 																datasets: [
 																	{
-																		label: 'Tutar (TL)',
-																		data: data.daily.map((d) => d.total),
+																		label: CHART_METRICS[dailyMetric],
+																		data: dailySeries.map((d) => d.value),
 																		backgroundColor: palette.series[0],
 																		borderRadius: 4,
 																	},
@@ -444,15 +520,15 @@ export function OrderCharts({
 															key={theme}
 															ref={dailyRef}
 															role='img'
-															aria-label={ORDER_CHART_TITLES.daily}
+															aria-label={chartTitles.daily}
 															plugins={[reportBackground as Plugin<'line'>]}
 															options={lineOptions}
 															data={{
-																labels: data.daily.map((d) => d._id),
+																labels: dailySeries.map((d) => d.label),
 																datasets: [
 																	{
-																		label: 'Tutar (TL)',
-																		data: data.daily.map((d) => d.total),
+																		label: CHART_METRICS[dailyMetric],
+																		data: dailySeries.map((d) => d.value),
 																		borderColor: palette.series[0],
 																		pointBackgroundColor: palette.series[0],
 																		tension: 0.2,
@@ -468,9 +544,13 @@ export function OrderCharts({
 								)}
 								<figure className='m-0 min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-white p-3 sm:p-4 text-slate-700 dark:bg-[#101e19] dark:text-slate-200'>
 									<figcaption className='mb-3 flex min-w-0 flex-col items-start gap-2 text-sm sm:mb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:text-base [&_label]:min-h-11 [&_label]:min-w-0 [&_label]:max-w-full [&_label]:text-sm'>
-										<span className='font-medium'>
-											{ORDER_CHART_TITLES.byType}
-										</span>
+										<span className='font-medium'>{chartTitles.byType}</span>
+										{metricSelector(
+											'Ürün grafiği',
+											productMetric,
+											setProductMetric,
+											PRODUCT_METRICS,
+										)}
 										<select
 											aria-label='Ürün grafik türü'
 											className='max-w-full rounded-lg border border-border bg-button-bg px-3 py-1.5 text-sm text-text'
@@ -484,27 +564,36 @@ export function OrderCharts({
 											<option value='bar'>Sütun</option>
 										</select>
 									</figcaption>
+									{!productSeries.length && (
+										<p className='mb-2 text-xs'>
+											Seçilen veri alanı ve birim için kayıt yok.
+										</p>
+									)}
 									<div className='relative h-60 w-full min-w-0 max-w-full sm:h-72 [&_canvas]:max-w-full'>
 										{typesAsBar ? (
 											<Bar
 												key={theme}
 												ref={typeBarRef}
 												role='img'
-												aria-label={ORDER_CHART_TITLES.byType}
+												aria-label={chartTitles.byType}
 												plugins={[reportBackground as Plugin<'bar'>]}
-												options={moneyBarOptions}
+												options={typeBarOptions}
 												data={{
-													labels: data.byType.map(
-														(d) => ORDER_TYPE_LABELS[d._id] ?? d._id,
-													),
+													labels: productSeries.map((d) => d.label),
 													datasets: [
 														{
-															label: 'Tutar (TL)',
-															data: data.byType.map((d) => d.total),
-															backgroundColor: data.byType.map(
+															label: CHART_METRICS[productMetric],
+															data: productSeries.map((d) => d.value),
+															backgroundColor: productSeries.map(
 																(entry) =>
 																	palette.series[
-																		orderTypeColorIndex(entry._id)
+																		(orderTypeColorIndex(entry.type) +
+																			(entry.memoryGb == null
+																				? 0
+																				: orderMemoryColorIndex(
+																						entry.memoryGb,
+																					))) %
+																			palette.series.length
 																	],
 															),
 															borderRadius: 4,
@@ -517,20 +606,24 @@ export function OrderCharts({
 												key={theme}
 												ref={typeRef}
 												role='img'
-												aria-label={ORDER_CHART_TITLES.byType}
+												aria-label={chartTitles.byType}
 												plugins={[reportBackground as Plugin<'pie'>]}
 												options={pieOptions}
 												data={{
-													labels: data.byType.map(
-														(d) => ORDER_TYPE_LABELS[d._id] ?? d._id,
-													),
+													labels: productSeries.map((d) => d.label),
 													datasets: [
 														{
-															data: data.byType.map((d) => d.total),
-															backgroundColor: data.byType.map(
+															data: productSeries.map((d) => d.value),
+															backgroundColor: productSeries.map(
 																(entry) =>
 																	palette.series[
-																		orderTypeColorIndex(entry._id)
+																		(orderTypeColorIndex(entry.type) +
+																			(entry.memoryGb == null
+																				? 0
+																				: orderMemoryColorIndex(
+																						entry.memoryGb,
+																					))) %
+																			palette.series.length
 																	],
 															),
 															borderColor: palette.background,
@@ -546,8 +639,14 @@ export function OrderCharts({
 									<figure className='m-0 min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-white p-3 sm:p-4 text-slate-700 dark:bg-[#101e19] dark:text-slate-200'>
 										<figcaption className='mb-3 flex min-w-0 flex-col items-start gap-2 text-sm sm:mb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:text-base [&_label]:min-h-11 [&_label]:min-w-0 [&_label]:max-w-full [&_label]:text-sm'>
 											<span className='font-medium'>
-												{ORDER_CHART_TITLES.byMemory}
+												{chartTitles.byMemory}
 											</span>
+											{metricSelector(
+												'Bellek grafiği',
+												memoryMetric,
+												setMemoryMetric,
+												MEMORY_METRICS,
+											)}
 											<select
 												aria-label='Bellek grafik türü'
 												className='max-w-full rounded-lg border border-border bg-button-bg px-3 py-1.5 text-sm text-text'
@@ -567,15 +666,15 @@ export function OrderCharts({
 													key={theme}
 													ref={memoryPieRef}
 													role='img'
-													aria-label={ORDER_CHART_TITLES.byMemory}
+													aria-label={chartTitles.byMemory}
 													plugins={[reportBackground as Plugin<'pie'>]}
 													options={countPieOptions}
 													data={{
-														labels: data.byMemory.map((d) => `${d._id} GB`),
+														labels: memorySeries.map((d) => d.label),
 														datasets: [
 															{
-																label: 'Adet',
-																data: data.byMemory.map((d) => d.quantity),
+																label: CHART_METRICS[memoryMetric],
+																data: memorySeries.map((d) => d.value),
 																backgroundColor: data.byMemory.map(
 																	(entry) =>
 																		palette.series[
@@ -593,15 +692,15 @@ export function OrderCharts({
 													key={theme}
 													ref={memoryRef}
 													role='img'
-													aria-label={ORDER_CHART_TITLES.byMemory}
+													aria-label={chartTitles.byMemory}
 													plugins={[reportBackground as Plugin<'bar'>]}
 													options={barOptions}
 													data={{
-														labels: data.byMemory.map((d) => `${d._id} GB`),
+														labels: memorySeries.map((d) => d.label),
 														datasets: [
 															{
-																label: 'Adet',
-																data: data.byMemory.map((d) => d.quantity),
+																label: CHART_METRICS[memoryMetric],
+																data: memorySeries.map((d) => d.value),
 																backgroundColor: data.byMemory.map(
 																	(entry) =>
 																		palette.series[
@@ -636,7 +735,18 @@ export function OrderCharts({
 					type='button'
 					data-action='download-report'
 					disabled={exporting || refreshing || data.summary.count === 0}
-					onClick={() => (onOpenPdf ? onOpenPdf() : void exportPdf())}
+					onClick={() =>
+						onOpenPdf
+							? onOpenPdf({
+									dailyMetric,
+									productMetric,
+									memoryMetric,
+									dateView,
+									typesAsBar,
+									memoryAsPie,
+								})
+							: void exportPdf()
+					}
 					className='min-h-9 max-w-full rounded-xl border border-border bg-button-bg px-3 py-2 text-sm hover:bg-button-hover-bg disabled:opacity-40'
 				>
 					{exporting ? 'PDF hazırlanıyor...' : 'PDF raporu indir'}
@@ -645,7 +755,18 @@ export function OrderCharts({
 					type='button'
 					data-action='share-report'
 					disabled={exporting || refreshing || data.summary.count === 0}
-					onClick={() => (onOpenPdf ? onOpenPdf() : void exportPdf(true))}
+					onClick={() =>
+						onOpenPdf
+							? onOpenPdf({
+									dailyMetric,
+									productMetric,
+									memoryMetric,
+									dateView,
+									typesAsBar,
+									memoryAsPie,
+								})
+							: void exportPdf(true)
+					}
 					className='min-h-9 rounded-xl border border-border bg-button-bg px-3 py-2 text-sm hover:bg-button-hover-bg disabled:opacity-40'
 				>
 					{shareFile?.selection === shareSelection ? 'PDF’yi paylaş' : 'Paylaş'}

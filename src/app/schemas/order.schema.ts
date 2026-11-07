@@ -1,3 +1,4 @@
+import { numericFilterSchema } from '../helpers/numericFilters.helper';
 import { z } from 'zod';
 import { ORDER_PRODUCT_TYPES } from '../constants/orderProducts.constant';
 
@@ -96,6 +97,7 @@ const dateSchema = z
 export const orderFiltersSchema = z
 	.object({
 		bayiName: z.string().trim().max(120).optional(),
+		numericFilters: z.array(numericFilterSchema).max(30).optional(),
 		from: dateSchema.optional(),
 		until: dateSchema.optional(),
 		minTotal: z.number().finite().min(0).max(1e15).optional(),

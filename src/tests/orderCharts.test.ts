@@ -98,6 +98,10 @@ const data: OrdersResponse = {
 		{ _id: 'EMCP', total: 400, quantity: 20 },
 	],
 	byMemory: [{ _id: 64, total: 1000, quantity: 50 }],
+	byTypeAndMemory: [
+		{ type: 'EMMC', memoryGb: 64, total: 600, quantity: 30 },
+		{ type: 'EMCP', memoryGb: 64, total: 400, quantity: 20 },
+	],
 };
 function mount(refreshing = false, report = data, theme: Theme = 'light') {
 	container = document.createElement('div');
@@ -210,13 +214,65 @@ describe('order charts', () => {
 			),
 		);
 		expect(container.querySelectorAll('[role=switch]')).toHaveLength(0);
+		act(() => {
+			const metric = container.querySelector<HTMLSelectElement>(
+				'select[aria-label="Ürün grafiği veri alanı"]',
+			)!;
+			metric.value = 'piece';
+			metric.dispatchEvent(new Event('change', { bubbles: true }));
+		});
 		await act(async () =>
 			container
 				.querySelector<HTMLButtonElement>('[data-action=download-report]')!
 				.click(),
 		);
 		expect(open).toHaveBeenCalledOnce();
+		expect(open).toHaveBeenCalledWith(
+			expect.objectContaining({ productMetric: 'piece' }),
+		);
 		expect(download).not.toHaveBeenCalled();
+	});
+	it('restores the selected measures and views in the PDF chart configuration', () => {
+		mount();
+		act(() =>
+			root!.render(
+				createElement(
+					ThemeContext.Provider,
+					{ value: { theme: 'light' } },
+					createElement(OrderCharts, {
+						key: 'configured',
+						data,
+						filters: {},
+						refreshing: false,
+						initialSettings: {
+							dailyMetric: 'count',
+							productMetric: 'piece',
+							memoryMetric: 'averagePiece',
+							dateView: 'bar',
+							typesAsBar: true,
+							memoryAsPie: true,
+						},
+					}),
+				),
+			),
+		);
+		expect(
+			container.querySelector<HTMLSelectElement>(
+				'select[aria-label="Ürün grafiği veri alanı"]',
+			)!.value,
+		).toBe('piece');
+		expect(
+			[...container.querySelectorAll('[data-kind]')].map((el) =>
+				el.getAttribute('data-kind'),
+			),
+		).toEqual(['bar', 'bar', 'pie']);
+		const charts = container.querySelectorAll('canvas');
+		expect(
+			JSON.parse(charts[1].getAttribute('data-chart')!).datasets[0].data,
+		).toEqual([30, 20]);
+		expect(
+			JSON.parse(charts[2].getAttribute('data-chart')!).datasets[0].data,
+		).toEqual([20]);
 	});
 	it('keeps chart previews collapsed until requested', () => {
 		mount();
@@ -282,7 +338,9 @@ describe('order charts', () => {
 		).toEqual(['line', 'pie', 'bar']);
 		act(() =>
 			container
-				.querySelectorAll<HTMLSelectElement>('figcaption select')
+				.querySelectorAll<HTMLSelectElement>(
+					'figcaption select:not([aria-label$="veri alanı"])',
+				)
 				.forEach((select, index) => {
 					select.value = index === 2 ? 'pie' : 'bar';
 					select.dispatchEvent(new Event('change', { bubbles: true }));

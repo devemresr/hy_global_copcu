@@ -333,8 +333,9 @@ describe('orders page', () => {
 			[ORDER_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
 		});
 		await mount();
-		const select =
-			container.querySelector<HTMLSelectElement>('#order-filter-bayi')!;
+		const select = container.querySelector<HTMLSelectElement>(
+			'form[aria-label="Alış ve PDF filtreleri"] select[id$="-bayi"]',
+		)!;
 		act(() => {
 			select.value = TEST_BAYI.name;
 			select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -465,10 +466,10 @@ describe('orders page', () => {
 		});
 		await mount();
 		const minimum = container.querySelector<HTMLInputElement>(
-			'#order-filter-minTotal',
+			'input[id$="-min-0"]',
 		)!;
 		const maximum = container.querySelector<HTMLInputElement>(
-			'#order-filter-maxTotal',
+			'input[id$="-max-0"]',
 		)!;
 		act(() => minimum.parentElement!.querySelector('button')!.click());
 		act(() => maximum.parentElement!.querySelectorAll('button')[1].click());
@@ -530,17 +531,17 @@ describe('orders page', () => {
 		});
 		await mount();
 		const minimum = container.querySelector<HTMLInputElement>(
-			'#order-filter-minTotal',
+			'input[id$="-min-0"]',
 		)!;
 		const maximum = container.querySelector<HTMLInputElement>(
-			'#order-filter-maxTotal',
+			'input[id$="-max-0"]',
 		)!;
 		expect(minimum.type).toBe('text');
 		expect(minimum.parentElement?.className).toContain('w-full');
 		act(() => minimum.parentElement!.querySelector('button')!.click());
 		act(() => maximum.parentElement!.querySelectorAll('button')[1].click());
 		expect(minimum.value).toBe('100');
-		expect(maximum.value).toBe('1,000');
+		expect(maximum.value).toBe('1000');
 		await act(async () => button('Filtreleri uygula').click());
 		await act(async () => {
 			await new Promise((r) => setTimeout(r, 25));
@@ -564,10 +565,10 @@ describe('orders page', () => {
 		});
 		await mount();
 		const minimum = container.querySelector<HTMLInputElement>(
-			'#order-filter-minTotal',
+			'input[id$="-min-0"]',
 		)!;
 		const maximum = container.querySelector<HTMLInputElement>(
-			'#order-filter-maxTotal',
+			'input[id$="-max-0"]',
 		)!;
 		act(() => minimum.parentElement!.querySelectorAll('button')[1].click());
 		act(() => maximum.parentElement!.querySelector('button')!.click());

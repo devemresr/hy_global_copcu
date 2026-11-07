@@ -1,3 +1,4 @@
+import { reportFilterParams } from '../../../helpers/numericFilters.helper';
 import {
 	keepPreviousData,
 	useMutation,
@@ -48,7 +49,9 @@ export function useFinance(
 	return useQuery<FinanceResponse, ApiError>({
 		queryKey: ['finance', filters, page, pageSize],
 		queryFn: () =>
-			apiFetch('/finance', { params: { ...filters, page, pageSize } }),
+			apiFetch('/finance', {
+				params: { ...reportFilterParams(filters), page, pageSize },
+			}),
 		placeholderData: keepPreviousData,
 		retry: false,
 	});

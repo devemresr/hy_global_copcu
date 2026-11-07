@@ -1,3 +1,4 @@
+import { reportFilterParams } from '../../../helpers/numericFilters.helper';
 import {
 	useMutation,
 	useQuery,
@@ -104,7 +105,9 @@ export function useStock(filters: StockFilters, page = 1, pageSize = 20) {
 	return useQuery<StockResponse, ApiError>({
 		queryKey: ['stock', filters, page, pageSize],
 		queryFn: () =>
-			apiFetch(STOCK_ROUTES.LIST, { params: { ...filters, page, pageSize } }),
+			apiFetch(STOCK_ROUTES.LIST, {
+				params: { ...reportFilterParams(filters), page, pageSize },
+			}),
 		placeholderData: keepPreviousData,
 		retry: false,
 	});

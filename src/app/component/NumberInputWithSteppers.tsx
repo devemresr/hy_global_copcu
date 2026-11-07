@@ -25,6 +25,7 @@ const DEFAULT_STEPPERS: Steppers = [
 type Props = {
 	ariaLabel?: string;
 	storage?: boolean;
+	allowNegative?: boolean;
 	decimalPlaces?: number;
 	disableWheel?: boolean;
 	disabled?: boolean;
@@ -60,6 +61,7 @@ export function NumberInputWithSteppers({ storage, ...props }: Props) {
 
 function AdditiveNumberInput({
 	ariaLabel,
+	allowNegative = false,
 	disabled = false,
 	describedBy,
 	value,
@@ -75,11 +77,12 @@ function AdditiveNumberInput({
 	const [draft, setDraft] = useState<string | null>(null);
 	if (
 		draft !== null &&
+		!(allowNegative && draft === '-' && value === '') &&
 		(!decimalPlaces || Number(draft.replace(',', '.')) !== value)
 	)
 		setDraft(null);
 	const handleInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
-		if (['-', '+', 'e', 'E'].includes(e.key)) {
+		if (['+', 'e', 'E', ...(allowNegative ? [] : ['-'])].includes(e.key)) {
 			e.preventDefault();
 		}
 	};
@@ -94,13 +97,13 @@ function AdditiveNumberInput({
 			onChange((prev) => {
 				const current = prev === '' ? 0 : Number(prev);
 				const next = current + (e.deltaY < 0 ? 10 : -10);
-				return Math.max(0, next);
+				return allowNegative ? next : Math.max(0, next);
 			});
 		};
 
 		el.addEventListener('wheel', handleWheel, { passive: false });
 		return () => el.removeEventListener('wheel', handleWheel);
-	}, [onChange, disabled, disableWheel]);
+	}, [onChange, disabled, disableWheel, allowNegative]);
 
 	const handleChange = useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,8 +111,8 @@ function AdditiveNumberInput({
 				? e.target.value.replace(',', '.')
 				: e.target.value.replace(/,/g, '');
 
-			if (raw === '') {
-				setDraft(null);
+			if (raw === '' || (allowNegative && raw === '-')) {
+				setDraft(raw === '-' ? '-' : null);
 				onChange('');
 				return;
 			}
@@ -118,7 +121,7 @@ function AdditiveNumberInput({
 					decimalPlaces
 						? new RegExp(`^\\d+(?:\\.\\d{0,${decimalPlaces}})?$`)
 						: /^\d+$/
-				).test(raw)
+				).test(allowNegative ? raw.replace(/^-/, '') : raw)
 			) {
 				return; // ignore non-digit input (since type=text allows anything)
 			}
@@ -128,10 +131,10 @@ function AdditiveNumberInput({
 				if (prev === 0 && Number(raw) === 0) {
 					return prev;
 				}
-				return Math.max(0, Number(raw));
+				return allowNegative ? Number(raw) : Math.max(0, Number(raw));
 			});
 		},
-		[onChange, decimalPlaces],
+		[onChange, decimalPlaces, allowNegative],
 	);
 
 	const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -140,7 +143,7 @@ function AdditiveNumberInput({
 		const pasted = e.clipboardData.getData('text');
 		if (decimalPlaces) {
 			const number = Number(pasted.trim().replace(',', '.'));
-			if (Number.isFinite(number) && number >= 0) {
+			if (Number.isFinite(number) && (allowNegative || number >= 0)) {
 				setDraft(null);
 				onChange(
 					Math.round(number * 10 ** decimalPlaces) / 10 ** decimalPlaces,
@@ -150,7 +153,14 @@ function AdditiveNumberInput({
 		}
 		const normalized = pasted.replace(/^0+(?=\d)/, '');
 
-		onChange(normalized === '' ? '' : Math.max(0, Number(normalized)));
+		if (Number.isFinite(Number(normalized)))
+			onChange(
+				normalized === ''
+					? ''
+					: allowNegative
+						? Number(normalized)
+						: Math.max(0, Number(normalized)),
+			);
 	};
 
 	const displayValue =

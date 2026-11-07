@@ -1,3 +1,4 @@
+import { Switch } from './Switch';
 import { AdminSummary } from './AdminCollapseHeading';
 import { useId, useState } from 'react';
 import { toast } from 'sonner';
@@ -42,6 +43,7 @@ export function OrderPeriodPicker({
 	onChange: (range: Partial<OrderDateRange>) => void;
 }) {
 	const id = useId();
+	const [showExactDates, setShowExactDates] = useState(false);
 	const [year, setYear] = useState<number>(
 		Number((value.from ?? istanbulToday()).slice(0, 4)),
 	);
@@ -98,9 +100,14 @@ export function OrderPeriodPicker({
 	].sort((a, b) => b - a);
 	return (
 		<div className='w-full min-w-0 max-w-full space-y-3 border-t border-border pt-3 sm:space-y-4'>
-			<div className='flex flex-wrap items-center justify-between gap-2 text-sm'>
+			<div className='flex flex-wrap items-center gap-2 text-sm lg:gap-8'>
 				<span className='font-medium'>Tarih</span>
-				<span className='text-xs opacity-70'>
+				<Switch
+					checked={showExactDates}
+					onChange={setShowExactDates}
+					label='Kesin tarih aralıklarını göster'
+				/>
+				<span className='ml-auto text-xs opacity-70'>
 					{value.from || value.until ? 'Etkin' : 'Tüm tarihler'}
 				</span>
 			</div>
@@ -133,9 +140,11 @@ export function OrderPeriodPicker({
 								{preset.label}
 								{selected ? ' ×' : ''}
 							</span>
-							<span className='block text-[10px] opacity-75'>
-								{orderRangeLabel(range)}
-							</span>
+							{showExactDates && (
+								<span className='block text-[10px] opacity-75'>
+									{orderRangeLabel(range)}
+								</span>
+							)}
 						</button>
 					);
 				})}
@@ -278,10 +287,15 @@ export function OrderPeriodPicker({
 					düğmeye tekrar basın.
 				</p>
 			)}
-			<p className='min-w-0 break-words text-xs opacity-70' aria-live='polite'>
-				{value.from ?? 'Başlangıç sınırı yok'} –{' '}
-				{value.until ?? 'Bitiş sınırı yok'} · İstanbul saati
-			</p>
+			{showExactDates && (
+				<p
+					className='min-w-0 break-words text-xs opacity-70'
+					aria-live='polite'
+				>
+					{value.from ?? 'Başlangıç sınırı yok'} –{' '}
+					{value.until ?? 'Bitiş sınırı yok'} · İstanbul saati
+				</p>
+			)}
 			{error && (
 				<p role='alert' className='text-sm text-red-500'>
 					{error}

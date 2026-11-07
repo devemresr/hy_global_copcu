@@ -1,3 +1,4 @@
+import type { OrderChartSettings } from '../../helpers/orderChartSeries.helper';
 import { ModalCloseButton } from '../ModalCloseButton';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useEffect, useRef } from 'react';
@@ -11,10 +12,12 @@ export function OrderReportPdfModal({
 	data,
 	filters,
 	onClose,
+	settings,
 }: {
 	data: OrdersResponse;
 	filters: OrderFilters;
 	onClose: () => void;
+	settings?: OrderChartSettings;
 }) {
 	const dialogRef = useRef<HTMLDialogElement>(null);
 	const dismiss = useModalDismiss(onClose);
@@ -42,7 +45,12 @@ export function OrderReportPdfModal({
 				</div>
 				<ModalCloseButton onClick={onClose} />
 			</div>
-			<OrderCharts data={data} filters={filters} refreshing={false} />
+			<OrderCharts
+				data={data}
+				filters={filters}
+				refreshing={false}
+				initialSettings={settings}
+			/>
 		</dialog>
 	);
 }
