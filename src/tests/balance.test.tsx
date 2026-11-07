@@ -75,6 +75,14 @@ it('records a non-stock expense using a custom subtype and reuses report filters
 		});
 	expect(container.querySelector('#order-filter-bayi')).toBeNull();
 	expect(container.textContent).toContain('Genel bakiye');
+	expect(container.textContent).not.toContain('Diğer için yeni alt tür');
+	const subtype = container.querySelector<HTMLSelectElement>(
+		'select[aria-label="Bakiye alt türü"]',
+	)!;
+	act(() => {
+		subtype.value = '__add_subtype__';
+		subtype.dispatchEvent(new Event('change', { bubbles: true }));
+	});
 	const forms = container.querySelectorAll('form');
 	type(forms[1].querySelector('input')!, 'Nakliye');
 	await act(async () =>

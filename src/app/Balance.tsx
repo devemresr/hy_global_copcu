@@ -74,6 +74,7 @@ export default function BalancePage() {
 	const [date, setDate] = useState(istanbulToday);
 	const [description, setDescription] = useState('');
 	const [subtypeName, setSubtypeName] = useState('');
+	const [addingSubtype, setAddingSubtype] = useState(false);
 	const [requestId, setRequestId] = useState(() => crypto.randomUUID());
 	const [categoryRequestId, setCategoryRequestId] = useState(() =>
 		crypto.randomUUID(),
@@ -92,6 +93,8 @@ export default function BalancePage() {
 	}
 	function changeGroup(next: FinanceGroup) {
 		setGroup(next);
+		setAddingSubtype(false);
+		setSubtypeName('');
 		setCategoryId(`system:${next}`);
 		setRequestId(crypto.randomUUID());
 		setCategoryRequestId(crypto.randomUUID());
@@ -205,8 +208,13 @@ export default function BalancePage() {
 							<select
 								aria-label='Bakiye alt türü'
 								className={`${STOCK_CONTROL} w-auto! max-w-56`}
-								value={categoryId}
+								value={addingSubtype ? '__add_subtype__' : categoryId}
 								onChange={(event) => {
+									if (event.target.value === '__add_subtype__') {
+										setAddingSubtype(true);
+										return;
+									}
+									setAddingSubtype(false);
 									setCategoryId(event.target.value);
 									setRequestId(crypto.randomUUID());
 								}}
@@ -218,6 +226,7 @@ export default function BalancePage() {
 											{category.name}
 										</option>
 									))}
+								<option value='__add_subtype__'>+ Yeni alt tür ekle</option>
 							</select>
 						</label>
 						<label className='space-y-1 text-xs'>
@@ -261,56 +270,78 @@ export default function BalancePage() {
 								}}
 							/>
 						</label>
-						<button className={STOCK_BUTTON} type='submit'>
+						<button
+							className={STOCK_BUTTON}
+							type='submit'
+							disabled={addingSubtype}
+						>
 							{create.isPending ? 'Kaydediliyor...' : 'Kaydı ekle'}
 						</button>
 					</fieldset>
 				</form>
-				<form
-					onSubmit={(event) => {
-						event.preventDefault();
-						createCategory.mutate(
-							{ requestId: categoryRequestId, group, name: subtypeName },
-							{
-								onSuccess: (response) => {
-									const created = response as { category: { _id: string } };
-									setCategoryId(created.category._id);
-									setSubtypeName('');
-									setCategoryRequestId(crypto.randomUUID());
-									setRequestId(crypto.randomUUID());
-									toast.success('Alt tür eklendi');
+				{addingSubtype && (
+					<form
+						onSubmit={(event) => {
+							event.preventDefault();
+							createCategory.mutate(
+								{ requestId: categoryRequestId, group, name: subtypeName },
+								{
+									onSuccess: (response) => {
+										const created = response as { category: { _id: string } };
+										setCategoryId(created.category._id);
+										setSubtypeName('');
+										setAddingSubtype(false);
+										setCategoryRequestId(crypto.randomUUID());
+										setRequestId(crypto.randomUUID());
+										toast.success('Alt tür eklendi');
+									},
+									onError: (error) => toast.error(error.message),
 								},
-								onError: (error) => toast.error(error.message),
-							},
-						);
-					}}
-					className='flex flex-wrap items-end gap-2 border-t border-border pt-3'
-				>
-					<label className='flex flex-col gap-1 text-xs'>
-						{groups[group]} için yeni alt tür
-						<input
-							className={STOCK_CONTROL}
-							value={subtypeName}
-							required
-							maxLength={100}
-							disabled={createCategory.isPending}
-							onChange={(event) => {
-								setSubtypeName(event.target.value);
-								setCategoryRequestId(crypto.randomUUID());
-							}}
-						/>
-					</label>
-					<button
-						className={STOCK_BUTTON}
-						disabled={createCategory.isPending || !subtypeName.trim()}
-						type='submit'
+							);
+						}}
+						className='flex flex-wrap items-end gap-2 border-t border-border pt-3'
 					>
-						Alt tür ekle
-					</button>
-				</form>
+						<label className='flex flex-col gap-1 text-xs'>
+							{groups[group]} için yeni alt tür
+							<input
+								className={STOCK_CONTROL}
+								autoFocus
+								value={subtypeName}
+								required
+								maxLength={100}
+								disabled={createCategory.isPending}
+								onChange={(event) => {
+									setSubtypeName(event.target.value);
+									setCategoryRequestId(crypto.randomUUID());
+								}}
+							/>
+						</label>
+						<button
+							className={STOCK_BUTTON}
+							disabled={createCategory.isPending || !subtypeName.trim()}
+							type='submit'
+						>
+							Alt tür ekle
+						</button>
+						<button
+							type='button'
+							className={STOCK_BUTTON}
+							disabled={createCategory.isPending}
+							onClick={() => {
+								setAddingSubtype(false);
+								setSubtypeName('');
+							}}
+						>
+							Vazgeç
+						</button>
+					</form>
+				)}
 			</details>
 			<OrderHistoryFilters
 				context='finance'
+				categoryName={
+					categories.find((c) => c._id === filters.categoryId)?.name
+				}
 				value={filters}
 				onChange={(next) =>
 					changeFilters({
