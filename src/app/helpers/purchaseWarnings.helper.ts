@@ -17,8 +17,12 @@ type Line = PurchaseWarningInput['lines'][number];
 function productKey(line: Line) {
 	return `${line.type}:${ORDER_PRODUCT_TYPES[line.type].requiresMemorySize ? line.memoryGb : '-'}:${line.quantityUnit === 'piece' ? 'piece' : 'kg'}`;
 }
-export function warningInputKey(bayiId: string, line: Line) {
-	return `${bayiId}:${productKey(line)}:${line.quantityUnit === 'g' ? line.unitPrice * 1000 : line.unitPrice}`;
+export function warningInputKey(
+	bayiId: string,
+	line: Line,
+	comparisonDays = 30,
+) {
+	return `${bayiId}:${comparisonDays}:${line.quantity ?? 1}:${productKey(line)}:${line.quantityUnit === 'g' ? line.unitPrice * 1000 : line.unitPrice}`;
 }
 export function mergePurchaseInspection(
 	cache: WarningCache,
@@ -27,8 +31,8 @@ export function mergePurchaseInspection(
 ): WarningCache {
 	const next = { ...cache };
 	for (const line of input.lines) {
-		const label = `${ORDER_PRODUCT_TYPES[line.type].label}${ORDER_PRODUCT_TYPES[line.type].requiresMemorySize ? ` ${line.memoryGb} GB` : ''} (${line.quantityUnit === 'piece' ? 'adet' : 'kg'})`;
-		next[warningInputKey(input.bayiId, line)] = {
+		const label = `${ORDER_PRODUCT_TYPES[line.type].label}${ORDER_PRODUCT_TYPES[line.type].requiresMemorySize ? ` ${line.memoryGb} GB` : ''} (${(line.quantity ?? 1).toLocaleString('tr-TR')} ${line.quantityUnit === 'piece' ? 'adet' : line.quantityUnit})`;
+		next[warningInputKey(input.bayiId, line, input.comparisonDays)] = {
 			risk: (response.risks ?? response.warnings).find(
 				(risk) => risk.productKey === productKey(line),
 			),

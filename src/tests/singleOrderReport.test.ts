@@ -29,6 +29,33 @@ const order: Order = {
 	],
 };
 describe('saved order PDF', () => {
+	it('shows only above-list exceptions in a single purchase PDF while retaining all adjustments in report data', () => {
+		const mixed: Order = {
+			...order,
+			lines: [
+				order.lines[0],
+				{
+					...order.lines[0],
+					type: 'EMCP',
+					memoryGb: 8,
+					originalUnitPrice: 50,
+					unitPrice: 70,
+					total: 140,
+					priceAdjustment: 20,
+				},
+			],
+		};
+		const document = singleOrderDocument(mixed, []);
+		const content = JSON.stringify(document.content);
+		expect(content).toContain('Bu alıştaki fiyat değişiklikleri');
+		expect(content).toContain(
+			(40).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }),
+		);
+		expect(content).not.toContain(
+			(-40).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }),
+		);
+		expect(singleOrderReport(mixed).adjustments).toHaveLength(2);
+	});
 	it('prints weight units and no memory column for products that do not use memory', () => {
 		const weighted: Order = {
 			...order,
@@ -85,9 +112,7 @@ describe('saved order PDF', () => {
 		expect(content).toContain('Özel alış');
 		expect(content).toContain('300,00');
 		expect(content).toContain('280,00');
-		expect(content).toContain(
-			(-40).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }),
-		);
+		expect(content).not.toContain('Bu alıştaki fiyat değişiklikleri');
 		expect(content).not.toContain('data:image');
 		for (const excluded of [
 			'Alt sınır yok',

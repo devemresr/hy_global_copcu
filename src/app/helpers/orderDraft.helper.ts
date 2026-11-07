@@ -4,6 +4,7 @@ import { getAccessToken } from '../hooks/api/core/tokenManager';
 const input = z.union([z.number().finite().min(0).max(1e12), z.literal('')]);
 const product = z.enum(['EMMC', 'EMCP', 'IPHONE', 'TABLET']);
 export const purchaseDraftSchema = z.object({
+	comparisonDays: z.number().int().min(1).max(36500).optional(),
 	bayiId: z.string().max(24),
 	nextId: z.number().int().min(1),
 	lines: z

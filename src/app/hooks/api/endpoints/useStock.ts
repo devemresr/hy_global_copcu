@@ -127,12 +127,14 @@ export function useRecordStockSale() {
 	});
 }
 export type PurchaseWarningInput = {
+	comparisonDays?: number;
 	bayiId: string;
 	lines: {
 		type: StockPosition['type'];
 		memoryGb: number | null;
 		quantityUnit: 'piece' | 'kg' | 'g';
 		unitPrice: number;
+		quantity?: number;
 	}[];
 };
 export function usePurchaseWarnings(

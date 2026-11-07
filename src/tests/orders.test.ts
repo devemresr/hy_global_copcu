@@ -132,6 +132,49 @@ const emptyHistory = {
 	page: 1,
 };
 describe('orders page', () => {
+	it('shows entered quantities in missing-sale warnings and sends the selected lookback during purchase save', async () => {
+		const fetchMock = mockFetch({
+			[ORDER_ROUTES.PRICING]: () =>
+				jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
+			[ORDER_ROUTES.LIST]: () =>
+				jsonResponse(201, { order: { _id: 'saved', name: 'Bayi' } }),
+			[STOCK_ROUTES.WARNINGS]: (init) => {
+				const body = JSON.parse(init.body as string);
+				return jsonResponse(200, {
+					warnings: [],
+					risks: [],
+					missingPrices: [`eMCP 8 GB (${body.lines[0].quantity} adet)`],
+				});
+			},
+		});
+		await mount(false);
+		const enter = (id: string, value: string) =>
+			act(() => {
+				const input = container.querySelector<HTMLInputElement>(id)!;
+				Object.getOwnPropertyDescriptor(
+					HTMLInputElement.prototype,
+					'value',
+				)!.set!.call(input, value);
+				input.dispatchEvent(new Event('input', { bubbles: true }));
+			});
+		expect(
+			container.querySelector<HTMLInputElement>('#purchase-comparison-days')!
+				.value,
+		).toBe('30');
+		enter('#count-0', '3');
+		enter('#purchase-comparison-days', '7');
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 700));
+		});
+		expect(container.textContent).toContain('Son 7 günde satış olmadığı');
+		expect(container.textContent).toContain('eMCP 8 GB (3 adet)');
+		await act(async () => button('Alışı kaydet').click());
+		const save = fetchMock.mock.calls.find(
+			([url, init]) =>
+				new URL(url).pathname === ORDER_ROUTES.LIST && init?.method === 'POST',
+		)!;
+		expect(JSON.parse(save[1]!.body as string).comparisonDays).toBe(7);
+	});
 	it('restores timestamped purchase drafts across remounts and clears them after reset or save', async () => {
 		localStorage.setItem('accessToken', fakeJwt(900000));
 		mockFetch({
@@ -377,6 +420,7 @@ describe('orders page', () => {
 				init?.method === 'POST',
 		);
 		expect(JSON.parse(post![1]!.body as string)).toEqual({
+			comparisonDays: 30,
 			bayiId: TEST_BAYI._id,
 			lines: [
 				{
@@ -442,6 +486,7 @@ describe('orders page', () => {
 				init?.method === 'POST',
 		);
 		expect(JSON.parse(post![1]!.body as string)).toEqual({
+			comparisonDays: 30,
 			bayiId: TEST_BAYI._id,
 			lines: [
 				{ type: 'EMCP', quantity: 1, memoryGb: 8, quantityUnit: 'piece' },
@@ -676,6 +721,7 @@ describe('orders page', () => {
 				init?.method === 'POST',
 		);
 		expect(JSON.parse(post![1]!.body as string)).toEqual({
+			comparisonDays: 30,
 			bayiId: TEST_BAYI._id,
 			lines: [
 				{ type: 'EMCP', quantity: 1, memoryGb: 8, quantityUnit: 'piece' },

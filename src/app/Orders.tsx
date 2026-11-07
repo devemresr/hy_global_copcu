@@ -13,7 +13,11 @@ import {
 	type WarningCache,
 } from './helpers/purchaseWarnings.helper';
 import { AdminSummary } from './component/admin/AdminCollapseHeading';
-import { STOCK_BUTTON } from './constants/stockStyles.constant';
+import {
+	STOCK_BUTTON,
+	STOCK_NUMBER_CONTROL,
+	STOCK_STEPPER,
+} from './constants/stockStyles.constant';
 import {
 	useEffect,
 	useMemo,
@@ -24,6 +28,7 @@ import {
 import { Link } from 'react-router';
 import type { ColDef } from 'ag-grid-community';
 import { toast } from 'sonner';
+import { NumberInputWithSteppers } from './component/NumberInputWithSteppers';
 import { InventoryDataGrid } from './component/InventoryDataGrid';
 import { Pagination } from './component/admin/Pagination';
 import { OrderCharts } from './component/admin/OrderCharts';
@@ -97,6 +102,20 @@ export default function OrdersPage() {
 		pricing.isSuccess,
 	);
 	const { lines, nextId, bayiId } = draft.value;
+	const comparisonDays = draft.value.comparisonDays ?? 30;
+	const [comparisonInput, setComparisonInput] = useState<number | ''>(
+		comparisonDays,
+	);
+	const [syncedComparison, setSyncedComparison] = useState(comparisonDays);
+	if (syncedComparison !== comparisonDays) {
+		setSyncedComparison(comparisonDays);
+		setComparisonInput(comparisonDays);
+	}
+	const comparisonValid =
+		typeof comparisonInput === 'number' &&
+		Number.isInteger(comparisonInput) &&
+		comparisonInput >= 1 &&
+		comparisonInput <= 36500;
 	const setLines = (action: SetStateAction<DraftLine[]>) =>
 		draft.setValue((current) => ({
 			...current,
@@ -208,6 +227,7 @@ export default function OrdersPage() {
 			lines: [initialLine(nextId)],
 			nextId: nextId + 1,
 			bayiId,
+			comparisonDays,
 		});
 		setCollapsedRows(new Set());
 	}
@@ -240,19 +260,22 @@ export default function OrdersPage() {
 	});
 	const complete = lines.length > 0 && totals.every((n) => n !== null);
 	const warningPayload = JSON.stringify({
+		comparisonDays,
 		bayiId,
 		lines: lines.flatMap((line) => {
 			const unitPrice = effectivePrice(line);
 			return typeof unitPrice === 'number' &&
 				Number.isFinite(unitPrice) &&
 				unitPrice >= 0 &&
-				unitPrice <= 1_000_000
+				unitPrice <= 1_000_000 &&
+				Number(line.quantity) > 0
 				? [
 						{
 							type: line.type,
 							memoryGb: line.memoryGb,
 							quantityUnit: line.quantityUnit,
 							unitPrice: Math.round(unitPrice * 1000000) / 1000000,
+							quantity: Number(line.quantity),
 						},
 					]
 				: [];
@@ -261,7 +284,7 @@ export default function OrdersPage() {
 	const checkWarnings = purchaseWarnings.mutate;
 	const warningEntries = (
 		JSON.parse(warningPayload).lines as Parameters<typeof warningInputKey>[1][]
-	).map((line) => warningCache[warningInputKey(bayiId, line)]);
+	).map((line) => warningCache[warningInputKey(bayiId, line, comparisonDays)]);
 	const warningStatus = {
 		risks: warningEntries.flatMap((entry) => (entry?.risk ? [entry.risk] : [])),
 		missingPrices: warningEntries.flatMap((entry) =>
@@ -270,6 +293,7 @@ export default function OrdersPage() {
 	};
 	useEffect(() => {
 		if (
+			!comparisonValid ||
 			!/^[a-f\d]{24}$/i.test(bayiId) ||
 			!JSON.parse(warningPayload).lines.length
 		)
@@ -280,12 +304,19 @@ export default function OrdersPage() {
 		);
 		warningTimerRef.current = timer;
 		return () => clearTimeout(timer);
-	}, [bayiId, warningPayload, checkWarnings]);
+	}, [bayiId, warningPayload, checkWarnings, comparisonValid]);
 	const total =
 		Math.round(totals.reduce<number>((s, n) => s + (n ?? 0), 0) * 100) / 100;
 	async function saveOrder() {
 		if (submittingRef.current) return;
+		if (!comparisonValid) {
+			toast.error(
+				'Karşılaştırma süresi 1–36500 gün arasında tam sayı olmalıdır.',
+			);
+			return;
+		}
 		const parsed = createOrderSchema.safeParse({
+			comparisonDays,
 			bayiId,
 			lines: lines.map((line) => ({
 				type: line.type,
@@ -326,6 +357,7 @@ export default function OrdersPage() {
 				draft.clear({
 					lines: [initialLine(nextId)],
 					nextId: nextId + 1,
+					comparisonDays,
 					bayiId,
 				});
 				setWarningCache({});
@@ -545,6 +577,42 @@ export default function OrdersPage() {
 						tarihli kaydedilmemiş alış verileri yüklendi.
 					</p>
 				)}
+				<label className='mb-3 flex flex-wrap items-center gap-2 text-xs'>
+					Zarar kontrolü · son kaç günün satışları?
+					<NumberInputWithSteppers
+						id='purchase-comparison-days'
+						ariaLabel='Satış karşılaştırma süresi (gün)'
+						disableWheel
+						value={comparisonInput}
+						steppers={[
+							{ amount: 1, label: '+1' },
+							{ amount: 7, label: '+7' },
+						]}
+						onChange={(change) => {
+							const next =
+								typeof change === 'function' ? change(comparisonInput) : change;
+							setComparisonInput(next);
+							if (
+								typeof next === 'number' &&
+								Number.isInteger(next) &&
+								next >= 1 &&
+								next <= 36500
+							)
+								draft.setValue((current) => ({
+									...current,
+									comparisonDays: next,
+								}));
+						}}
+						className={STOCK_NUMBER_CONTROL}
+						stepperClassName={STOCK_STEPPER}
+					/>
+					<span>gün (1–36500)</span>
+				</label>
+				{!comparisonValid && (
+					<p role='alert' className='mb-3 text-xs text-red-500'>
+						1–36500 arasında tam gün sayısı girin.
+					</p>
+				)}
 				{Boolean(warningStatus?.risks?.length) && (
 					<div
 						role='status'
@@ -562,9 +630,9 @@ export default function OrdersPage() {
 				)}
 				{Boolean(warningStatus?.missingPrices?.length) && (
 					<p role='status' className='mb-3 text-xs text-text/70'>
-						Henüz gerçekleşen satış olmadığı için zarar kontrolü yapılamıyor:{' '}
-						{warningStatus!.missingPrices!.join(', ')}. İlk satış kaydından
-						sonra gerçekleşen ortalama satış fiyatıyla karşılaştırılır.
+						Son {comparisonDays} günde satış olmadığı için zarar kontrolü
+						yapılamıyor: {warningStatus!.missingPrices!.join(', ')}. Yalnızca bu
+						dönemdeki satışların ağırlıklı ortalama fiyatı kullanılır.
 					</p>
 				)}
 				{purchaseWarnings.isError && (
@@ -663,6 +731,7 @@ export default function OrdersPage() {
 					<button
 						className={`${button} font-semibold`}
 						disabled={
+							!comparisonValid ||
 							!complete ||
 							!bayiId ||
 							save.isPending ||

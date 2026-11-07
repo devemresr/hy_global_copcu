@@ -106,7 +106,9 @@ export function singleOrderDocument(
 ): TDocumentDefinitions {
 	const signedMoney = (amount: number) =>
 		`${amount > 0 ? '+' : ''}${formatOrderMoney(amount)}`;
-	const adjustments = singleOrderReport(order).adjustments ?? [];
+	const adjustments = (singleOrderReport(order).adjustments ?? []).filter(
+		(line) => line.unitPrice > line.originalUnitPrice,
+	);
 	const missingListPrice = order.lines.some(
 		(line) => line.originalUnitPrice == null,
 	);
@@ -183,7 +185,7 @@ export function singleOrderDocument(
 							margin: [0, 12, 0, 8],
 						} satisfies Content,
 						{
-							text: 'alış fiyatı alış anında kaydedilen fiyattır. Birim fark uygulanan fiyat ile alış fiyatı arasındaki farktır.',
+							text: 'Liste alış fiyatı, alış anındaki katalog fiyatıdır. Yalnızca bu fiyatın üzerindeki alış istisnaları gösterilir. Birim fark, gerçek alış fiyatı ile liste alış fiyatı arasındaki farktır.',
 							color: '#555555',
 							margin: [0, 0, 0, 8],
 						} satisfies Content,
