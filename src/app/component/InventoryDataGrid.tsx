@@ -1,11 +1,20 @@
 import { forwardRef } from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import type { ColDef } from 'ag-grid-community';
+import type {
+	ColDef,
+	GridState,
+	ModelUpdatedEvent,
+	StateUpdatedEvent,
+} from 'ag-grid-community';
 import {
 	ModuleRegistry,
 	TextFilterModule,
 	NumberFilterModule,
 	ClientSideRowModelModule,
+	ClientSideRowModelApiModule,
+	CellStyleModule,
+	TooltipModule,
+	GridStateModule,
 	themeQuartz,
 	colorSchemeDark,
 } from 'ag-grid-community';
@@ -16,11 +25,18 @@ ModuleRegistry.registerModules([
 	ClientSideRowModelModule, // needed for basic rowData rendering
 	TextFilterModule, // for Brand/Model text filters
 	NumberFilterModule, // for numbering filtering
+	ClientSideRowModelApiModule,
+	CellStyleModule,
+	TooltipModule,
+	GridStateModule,
 ]);
 
 type InventoryDataGridProps = {
 	rowData: Record<string, unknown>[];
 	columnDefs: ColDef[];
+	initialState?: GridState;
+	onStateUpdated?: (event: StateUpdatedEvent) => void;
+	onModelUpdated?: (event: ModelUpdatedEvent) => void;
 };
 
 // Shared AG Grid setup for anywhere the inventory catalog is browsed - the
@@ -30,7 +46,10 @@ type InventoryDataGridProps = {
 export const InventoryDataGrid = forwardRef<
 	AgGridReact,
 	InventoryDataGridProps
->(function InventoryDataGrid({ rowData, columnDefs }, ref) {
+>(function InventoryDataGrid(
+	{ rowData, columnDefs, initialState, onStateUpdated, onModelUpdated },
+	ref,
+) {
 	const { theme } = useTheme();
 	const gridTheme =
 		theme === 'dark' ? themeQuartz.withPart(colorSchemeDark) : themeQuartz;
@@ -42,6 +61,9 @@ export const InventoryDataGrid = forwardRef<
 				theme={gridTheme}
 				rowData={rowData}
 				columnDefs={columnDefs}
+				initialState={initialState}
+				onStateUpdated={onStateUpdated}
+				onModelUpdated={onModelUpdated}
 				// Below tablet width, columns stay at their own explicit width
 				// (see columnDefsBySheet) so mobile gets a compact, predictable
 				// layout - overflowing content scrolls within its own cell (see

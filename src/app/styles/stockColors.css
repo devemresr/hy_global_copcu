@@ -1,0 +1,187 @@
+/* Stock/report accents. Edit palette values here; previews use these same tokens.
+ * Composition: https://www.radix-ui.com/colors/docs/palette-composition/composing-a-palette
+ * Tol muted accents: https://sronpersonalpages.nl/~pault/ (Figure 4).
+ */
+:root {
+	--stock-tint: 3%;
+	--stock-border: 24%;
+	--stock-text-mix: 45%;
+	--stock-icon-mix: 10%;
+}
+:root,
+[data-stock-palette='ink'] {
+	--stock-emmc: #2563eb;
+	--stock-emcp: #946b57;
+	--stock-iphone: #6c7d68;
+	--stock-tablet: #9a814b;
+	--stock-quantity: #2563eb;
+	--stock-cost: #8b7055;
+	--stock-income: #52765b;
+	--stock-loss: #a14f48;
+	--stock-dealer: #6c707f;
+}
+[data-stock-palette='earth'] {
+	--stock-emmc: #69764b;
+	--stock-emcp: #c2410c;
+	--stock-iphone: #607d8b;
+	--stock-tablet: #aa8a4b;
+	--stock-quantity: #687466;
+	--stock-cost: #94734a;
+	--stock-income: #55734d;
+	--stock-loss: #a25548;
+	--stock-dealer: #7c7065;
+}
+[data-stock-palette='bronze'] {
+	--stock-emmc: #5b7778;
+	--stock-emcp: #c65d2d;
+	--stock-iphone: #7b8060;
+	--stock-tablet: #978365;
+	--stock-quantity: #6e7880;
+	--stock-cost: #92734e;
+	--stock-income: #55796d;
+	--stock-loss: #a35454;
+	--stock-dealer: #7c7180;
+}
+[data-stock-palette='tol'] {
+	--stock-emmc: #332288;
+	--stock-emcp: #cc6677;
+	--stock-iphone: #44aa99;
+	--stock-tablet: #ddcc77;
+	--stock-quantity: #332288;
+	--stock-cost: #999933;
+	--stock-income: #117733;
+	--stock-loss: #882255;
+	--stock-dealer: #aa4499;
+}
+[data-stock-palette='cobalt'] {
+	--stock-emmc: #2563eb;
+	--stock-emcp: #f97316;
+	--stock-iphone: #64748b;
+	--stock-tablet: #a16207;
+	--stock-quantity: #2563eb;
+	--stock-cost: #c2410c;
+	--stock-income: #15803d;
+	--stock-loss: #dc2626;
+	--stock-dealer: #1d4ed8;
+	--stock-tint: 6%;
+	--stock-border: 42%;
+}
+[data-stock-palette='forest'] {
+	--stock-emmc: #15803d;
+	--stock-emcp: #f06445;
+	--stock-iphone: #64748b;
+	--stock-tablet: #b78b3d;
+	--stock-quantity: #15803d;
+	--stock-cost: #b45309;
+	--stock-income: #15803d;
+	--stock-loss: #dc2626;
+	--stock-dealer: #2563eb;
+	--stock-tint: 6%;
+	--stock-border: 42%;
+}
+.dark {
+	--stock-tint: 5%;
+	--stock-border: 30%;
+	--stock-text-mix: 55%;
+	--stock-icon-mix: 30%;
+}
+.stock-emmc {
+	--stock-accent: var(--stock-emmc);
+}
+.stock-emcp {
+	--stock-accent: var(--stock-emcp);
+}
+.stock-iphone {
+	--stock-accent: var(--stock-iphone);
+}
+.stock-tablet {
+	--stock-accent: var(--stock-tablet);
+}
+.stock-quantity {
+	--stock-accent: var(--stock-quantity);
+}
+.stock-cost {
+	--stock-accent: var(--stock-cost);
+}
+.stock-income {
+	--stock-accent: var(--stock-income);
+}
+.stock-loss {
+	--stock-accent: var(--stock-loss);
+}
+.stock-dealer {
+	--stock-accent: var(--stock-dealer);
+}
+.stock-product,
+.stock-value {
+	border-color: color-mix(
+		in srgb,
+		var(--stock-accent) var(--stock-border),
+		transparent
+	);
+	background-color: color-mix(
+		in srgb,
+		var(--stock-accent) var(--stock-tint),
+		transparent
+	);
+	color: var(--color-text);
+}
+.stock-text-quantity {
+	color: color-mix(
+		in srgb,
+		var(--stock-quantity),
+		var(--color-text) var(--stock-text-mix)
+	);
+}
+.stock-text-cost {
+	color: color-mix(
+		in srgb,
+		var(--stock-cost),
+		var(--color-text) var(--stock-text-mix)
+	);
+}
+.stock-text-income {
+	color: color-mix(
+		in srgb,
+		var(--stock-income),
+		var(--color-text) var(--stock-text-mix)
+	);
+}
+.stock-text-loss {
+	color: color-mix(
+		in srgb,
+		var(--stock-loss),
+		var(--color-text) var(--stock-text-mix)
+	);
+}
+
+.stock-product > svg,
+.stock-value > svg,
+.stock-value dt svg {
+	color: color-mix(
+		in srgb,
+		var(--stock-accent),
+		var(--color-text) var(--stock-icon-mix)
+	);
+}
+.stock-product {
+	border-inline-start-color: color-mix(
+		in srgb,
+		var(--stock-accent) 75%,
+		transparent
+	);
+}
+.stock-income dd,
+.stock-loss dd {
+	color: color-mix(
+		in srgb,
+		var(--stock-accent),
+		var(--color-text) var(--stock-text-mix)
+	);
+}
+.stock-palette-swatches > span {
+	width: 1.25rem;
+	height: 1.25rem;
+	border-radius: 999px;
+	border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+}

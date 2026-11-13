@@ -1,7 +1,7 @@
-import { ORDER_PRODUCT_TYPE_ORDER } from '../constants/orderProducts.constant';
+import { PURCHASE_PRODUCT_TYPE_ORDER } from '../constants/purchaseProducts.constant';
 
 type Position = {
-	type: (typeof ORDER_PRODUCT_TYPE_ORDER)[number];
+	type: (typeof PURCHASE_PRODUCT_TYPE_ORDER)[number];
 	memoryGb: number | null;
 	quantityUnit: 'piece' | 'kg';
 	quantity: number;
@@ -27,8 +27,8 @@ export function compareStockProducts(
 	b: Pick<Position, 'type' | 'memoryGb' | 'quantityUnit'>,
 ) {
 	return (
-		ORDER_PRODUCT_TYPE_ORDER.indexOf(a.type) -
-			ORDER_PRODUCT_TYPE_ORDER.indexOf(b.type) ||
+		PURCHASE_PRODUCT_TYPE_ORDER.indexOf(a.type) -
+			PURCHASE_PRODUCT_TYPE_ORDER.indexOf(b.type) ||
 		(a.memoryGb ?? 0) - (b.memoryGb ?? 0) ||
 		a.quantityUnit.localeCompare(b.quantityUnit)
 	);

@@ -1,3 +1,4 @@
+import { initializeStockPalette } from './hooks/useStockPalette';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App.tsx';
@@ -12,6 +13,7 @@ import { Toaster } from 'sonner';
 import type { CSSProperties } from 'react';
 import { setupApiClient } from './config/apiClient.config';
 
+initializeStockPalette();
 setupApiClient();
 
 const queryClient = new QueryClient({
