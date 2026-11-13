@@ -1,3 +1,4 @@
+import type { ReportKind } from '../constants/reportKinds.constant';
 import { z } from 'zod';
 
 export const NUMERIC_FIELDS = {
@@ -64,11 +65,11 @@ export const numericFilterSchema = z
 		'Bellek boyutu için eMMC veya eMCP seçin.',
 	);
 export type NumericFilter = z.infer<typeof numericFilterSchema>;
-export function numericFieldsFor(context: 'orders' | 'stock' | 'finance') {
+export function numericFieldsFor(reportKind: ReportKind) {
 	return fields.filter((field) =>
-		context === 'finance'
+		reportKind === 'balance'
 			? field === 'total'
-			: context === 'orders'
+			: reportKind === 'purchase'
 				? !['purchaseCost', 'revenue', 'profit', 'margin'].includes(field) &&
 					!field.startsWith('sellingPrice')
 				: !field.startsWith('originalUnitPrice') &&
@@ -100,10 +101,11 @@ export function numericFilterLabel(filter: NumericFilter) {
 	return `${scope} → ${NUMERIC_FIELDS[filter.field]}: ${filter.min?.toLocaleString('tr-TR', { maximumFractionDigits: 6 }) ?? 'Alt sınır yok'} – ${filter.max?.toLocaleString('tr-TR', { maximumFractionDigits: 6 }) ?? 'Üst sınır yok'}`;
 }
 export function reportFilterParams<
-	T extends { numericFilters?: NumericFilter[] },
+	T extends { numericFilters?: NumericFilter[]; bayiIds?: string[] },
 >(filters: T) {
 	return {
 		...filters,
+		bayiIds: filters.bayiIds?.length ? filters.bayiIds.join(',') : undefined,
 		numericFilters: filters.numericFilters?.length
 			? JSON.stringify(filters.numericFilters)
 			: undefined,

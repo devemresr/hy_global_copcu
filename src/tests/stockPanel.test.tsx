@@ -1,14 +1,20 @@
+import StockPage from '../app/Stock';
+import {
+	chooseBayiOption,
+	openBayiMenu,
+	closeBayiMenu,
+} from './bayiMenu.helpers';
 import SalesPage from '../app/Sales';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { StockManagementSection } from '../app/component/admin/StockManagementPanel';
+import AnalysisPage from '../app/Analysis';
 import { BAYI_ROUTES, STOCK_ROUTES } from '../app/constants/routes.constant';
 import { PAGE_PATHS } from '../app/constants/pagePaths.constant';
 import { fakeJwt, jsonResponse, mockFetch } from './helpers';
-import { orderDraftKey } from '../app/helpers/orderDraft.helper';
+import { purchaseDraftKey } from '../app/helpers/purchaseDraft.helper';
 import { toast } from 'sonner';
 
 vi.mock('sonner', () => ({
@@ -40,7 +46,33 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 	vi.clearAllMocks();
 });
+const bayiA = '000000000000000000000031';
+const bayiB = '000000000000000000000032';
 const data = {
+	bayiReports: [
+		{
+			bayiId: bayiA,
+			bayiName: 'Store A',
+			currentBayiName: null,
+			purchaseCost: 13500,
+			costOfGoods: 13500,
+			revenue: 16000,
+			profit: 2500,
+			products: [
+				{
+					type: 'EMMC',
+					memoryGb: 64,
+					quantityUnit: 'piece',
+					purchasedQuantity: 40,
+					soldQuantity: 40,
+					purchaseCost: 13500,
+					costOfGoods: 13500,
+					revenue: 16000,
+					profit: 2500,
+				},
+			],
+		},
+	],
 	positions: [
 		{
 			key: 'EMMC:64:piece',
@@ -50,6 +82,7 @@ const data = {
 			quantity: 40,
 			averagePurchaseCost: 337.5,
 			averageSellingPrice: 400,
+			suppliers: [{ bayiId: bayiA, bayiName: 'Store A', quantity: 40 }],
 			listPurchasePrices: [
 				{ currency: 'TRY', unitPrice: 300, hasExceptions: false },
 			],
@@ -106,7 +139,7 @@ const data = {
 	movementPages: 1,
 	reportTotals: { purchaseCost: 13500, revenue: 16000, profit: 2500 },
 };
-async function mount(sales = false) {
+async function mount(sales = false, inventory = false) {
 	container = document.createElement('div');
 	document.body.append(container);
 	root = createRoot(container);
@@ -114,29 +147,44 @@ async function mount(sales = false) {
 	await act(async () =>
 		root!.render(
 			<QueryClientProvider client={client}>
-				<MemoryRouter initialEntries={[sales ? PAGE_PATHS.SALES : '/']}>
+				<MemoryRouter
+					initialEntries={[
+						sales ? PAGE_PATHS.SALES : inventory ? PAGE_PATHS.STOCK : '/',
+					]}
+				>
 					<Routes>
+						<Route path={PAGE_PATHS.STOCK} element={<StockPage />} />
 						<Route path={PAGE_PATHS.SALES} element={<SalesPage />} />
-						<Route path='*' element={<StockManagementSection />} />
+						<Route path='*' element={<AnalysisPage />} />
 					</Routes>
 				</MemoryRouter>
 			</QueryClientProvider>,
 		),
 	);
 }
-async function openPanel() {
+async function waitForData() {
 	await act(async () => {
-		await new Promise((resolve) => setTimeout(resolve, 30));
-	});
-	await act(async () => {
-		const details = container.querySelector('details')!;
-		details.open = true;
-		details.dispatchEvent(new Event('toggle'));
-	});
-	await act(async () => {
-		await new Promise((resolve) => setTimeout(resolve, 30));
+		await new Promise((resolve) => setTimeout(resolve, 60));
 	});
 }
+function chooseSupplier(row: number, name: string) {
+	act(() =>
+		container
+			.querySelector<HTMLButtonElement>(
+				'[aria-label="' + row + '. satır stok kaynağı"]',
+			)!
+			.click(),
+	);
+	act(() =>
+		[...document.querySelectorAll<HTMLButtonElement>('[role=menuitemradio]')]
+			.find((option) => option.textContent?.startsWith(name + ' ('))!
+			.click(),
+	);
+}
+function chooseBayi() {
+	chooseBayiOption('Rapor bayi filtresi', 'Store A');
+}
+
 function input(element: HTMLInputElement, value: string) {
 	Object.getOwnPropertyDescriptor(
 		HTMLInputElement.prototype,
@@ -162,13 +210,14 @@ describe('stock panel', () => {
 			[STOCK_ROUTES.SALES]: () => jsonResponse(201, { operation: {} }),
 		});
 		await mount();
-		await openPanel();
+		await waitForData();
 		await openSalePage();
 		act(() =>
 			[...container.querySelectorAll('[aria-label="Satış türü"] button')]
 				.find((button) => button.textContent === 'Kısmi satış')!
 				.dispatchEvent(new MouseEvent('click', { bubbles: true })),
 		);
+		chooseSupplier(1, 'Store A');
 		act(() =>
 			input(
 				container.querySelector<HTMLInputElement>(
@@ -185,7 +234,7 @@ describe('stock panel', () => {
 				'200',
 			),
 		);
-		const key = orderDraftKey('sale')!,
+		const key = purchaseDraftKey('sale')!,
 			saved = JSON.parse(localStorage.getItem(key)!);
 		expect(saved.data.rows[0].quantity).toBe(5);
 		act(() => root!.unmount());
@@ -193,7 +242,7 @@ describe('stock panel', () => {
 		client.clear();
 		container.remove();
 		await mount(true);
-		await openPanel();
+		await waitForData();
 		expect(
 			container.querySelector<HTMLInputElement>(
 				'[aria-label="1. satır miktar"]',
@@ -245,7 +294,7 @@ describe('stock panel', () => {
 			[STOCK_ROUTES.SALES]: () => jsonResponse(201, { operation: {} }),
 		});
 		await mount();
-		await openPanel();
+		await waitForData();
 		await openSalePage();
 		const form = container.querySelector(
 			'section[aria-labelledby="new-sale"] form',
@@ -270,7 +319,7 @@ describe('stock panel', () => {
 		)!;
 		expect(JSON.parse(call[1]!.body as string).lines[0].revenue).toBe(12000);
 	});
-	it('shows each report preset and clears dealer filters before requesting restocks or profit', async () => {
+	it('shows each report preset and preserves selected dealer IDs across sales and profit views', async () => {
 		const purchase = {
 			id: 'purchase:0',
 			kind: 'purchase',
@@ -298,7 +347,7 @@ describe('stock panel', () => {
 			const { pathname, searchParams } = new URL(url);
 			if (pathname === BAYI_ROUTES.LIST)
 				return jsonResponse(200, {
-					bayiler: [{ _id: 'bayi-a', name: 'Store A', phone: '+905551234567' }],
+					bayiler: [{ _id: bayiA, name: 'Store A', phone: '+905551234567' }],
 				});
 			if (pathname !== STOCK_ROUTES.LIST)
 				throw new Error(`Unexpected request: ${pathname}`);
@@ -308,11 +357,11 @@ describe('stock panel', () => {
 				)
 			)
 				return jsonResponse(400, { message: 'Unset filters must be omitted' });
-			const kind = searchParams.get('movementType') ?? 'all';
+			const kind = searchParams.get('movementType') ?? 'all-movements';
 			const movements =
-				kind === 'purchase'
+				kind === 'purchase-entries'
 					? [purchase]
-					: kind === 'restock'
+					: kind === 'all-sales'
 						? [restock]
 						: [purchase, restock];
 			return jsonResponse(200, {
@@ -323,14 +372,12 @@ describe('stock panel', () => {
 		});
 		vi.stubGlobal('fetch', fetchMock);
 		await mount();
-		await openPanel();
-		const report = container.querySelector(
-			'[aria-label="Stok hareketleri ve kârlılık"]',
-		)!;
+		await waitForData();
+		const report = container;
 		const preset = (label: string) =>
 			[
 				...report.querySelectorAll<HTMLButtonElement>(
-					'[aria-label="Stok raporu hazır filtreleri"] button',
+					'[aria-label="Analiz hazır raporları"] button',
 				),
 			].find((button) => button.textContent === label)!;
 		async function choose(label: string) {
@@ -339,17 +386,9 @@ describe('stock panel', () => {
 				await new Promise((resolve) => setTimeout(resolve, 30));
 			});
 		}
-		await choose('Bayi bazlı stok girişleri');
-		expect(report.textContent).toContain(
-			'eMMC – 64 GB · Alış / stok girişi · Store A',
-		);
-		act(() => {
-			const select = report.querySelector<HTMLSelectElement>(
-				'select[id$="-bayi"]',
-			)!;
-			select.value = 'Store A';
-			select.dispatchEvent(new Event('change', { bubbles: true }));
-		});
+		await choose('Bayi bazlı analiz');
+		expect(report.textContent).toContain('Bayi: Store A');
+		chooseBayi();
 		await act(async () =>
 			report
 				.querySelector('form')!
@@ -358,21 +397,29 @@ describe('stock panel', () => {
 				),
 		);
 		await choose('Satışlar');
-		expect(report.textContent).toContain(
-			'eMMC – 64 GB · Stok sifirlayan satış',
-		);
+		expect(report.textContent).toContain('Stok sifirlayan satış');
+		openBayiMenu('Rapor bayi filtresi');
 		expect(
-			report.querySelector<HTMLSelectElement>('select[id$="-bayi"]')!.value,
-		).toBe('');
-		await choose('Gerçekleşen kâr');
+			document.querySelector('[role=menuitemcheckbox][aria-checked=true]')!
+				.textContent,
+		).toBe('Store A');
+		closeBayiMenu();
 		expect(
-			report.querySelector('[aria-label="Kâr gruplaması"]'),
+			new URL(
+				fetchMock.mock.calls
+					.filter(([url]) => new URL(url).pathname === STOCK_ROUTES.LIST)
+					.at(-1)![0],
+			).searchParams.get('bayiIds'),
+		).toBe(bayiA);
+		await choose('Bayi bazlı analiz');
+		expect(
+			report.querySelector('[aria-label="Bayi bazlı analiz"]'),
 		).not.toBeNull();
 		expect(report.textContent).toContain('2.500,00');
 		expect(report.textContent).not.toContain(
 			'Bu filtrelerle kayıtlı satış yok.',
 		);
-		// Applying other filters must not restore the cleared dealer draft.
+		// Applying other filters must preserve the selected permanent dealer ID.
 		await act(async () =>
 			report
 				.querySelector('form')!
@@ -380,55 +427,47 @@ describe('stock panel', () => {
 					new Event('submit', { bubbles: true, cancelable: true }),
 				),
 		);
-		expect(preset('Gerçekleşen kâr').getAttribute('aria-pressed')).toBe('true');
-		await choose('Tüm hareketler');
-		expect(report.textContent).toContain(
-			'eMMC – 64 GB · Alış / stok girişi · Store A',
+		expect(preset('Bayi bazlı analiz').getAttribute('aria-pressed')).toBe(
+			'true',
 		);
-		expect(report.textContent).toContain(
-			'eMMC – 64 GB · Stok sifirlayan satış',
-		);
+		await choose('Tüm stok hareketleri');
+		expect(report.textContent).toContain('Bayi: Store A');
+		expect(report.textContent).toContain('Stok sifirlayan satış');
 		for (const [url] of fetchMock.mock.calls) {
 			const params = new URL(url).searchParams;
 			expect([...params.values()]).not.toContain('undefined');
 			expect([...params.values()]).not.toContain('null');
 		}
 	});
-	it('collapses product fields without losing entered values', async () => {
+	it('shows shared product fields and one trash icon while preserving entered values', async () => {
 		mockFetch({ [STOCK_ROUTES.LIST]: () => jsonResponse(200, data) });
-		await mount();
-		await openPanel();
-		await openSalePage();
+		await mount(true);
+		await waitForData();
 		const revenue = container.querySelector<HTMLInputElement>(
 			'[aria-label="1. satır toplam fiyatı"]',
 		)!;
 		act(() => input(revenue, '16000'));
-		const toggle = container.querySelector<HTMLButtonElement>(
-			'section[aria-labelledby="new-sale"] button[aria-controls]',
-		)!;
-		expect(
-			container.querySelectorAll(
-				'section[aria-labelledby="new-sale"] button[aria-controls]',
-			),
-		).toHaveLength(1);
 		const remove = container.querySelector<HTMLButtonElement>(
-			'button[aria-label="1. satırı sil"]',
+			'[aria-label="1. satırı sil"]',
 		)!;
 		expect(
-			container.querySelectorAll('button[aria-label="1. satırı sil"]'),
+			container.querySelectorAll('[aria-label="1. satırı sil"]'),
 		).toHaveLength(1);
 		expect(remove.querySelector('svg')).not.toBeNull();
 		expect(remove.textContent).toBe('');
-		act(() => toggle.click());
-		expect(toggle.getAttribute('aria-expanded')).toBe('false');
-		expect(
-			document
-				.getElementById(toggle.getAttribute('aria-controls')!)!
-				.className.includes('hidden'),
-		).toBe(true);
-		act(() => toggle.click());
-		expect(toggle.getAttribute('aria-expanded')).toBe('true');
+		chooseSupplier(1, 'Store A');
 		expect(revenue.value).toBe('16000');
+		expect(
+			container.querySelector<HTMLInputElement>(
+				'[aria-label="1. satır miktar"]',
+			)!.value,
+		).toBe('40');
+		expect(
+			[...container.querySelectorAll('label')].filter(
+				(label) =>
+					label.textContent === 'Ürün' && !label.className.includes('sr-only'),
+			),
+		).toHaveLength(1);
 	});
 	it('filters by product type and sorts by numeric size, quantity and total cost', async () => {
 		const positions = [
@@ -440,6 +479,7 @@ describe('stock panel', () => {
 				quantity: 10,
 				averagePurchaseCost: 50,
 				sellingPrice: 70,
+				suppliers: [{ bayiId: bayiB, bayiName: 'Store B', quantity: 10 }],
 			},
 			{
 				key: 'EMMC:128:piece',
@@ -463,8 +503,8 @@ describe('stock panel', () => {
 		mockFetch({
 			[STOCK_ROUTES.LIST]: () => jsonResponse(200, { ...data, positions }),
 		});
-		await mount();
-		await openPanel();
+		await mount(false, true);
+		await waitForData();
 		const stock = container.querySelector('[aria-label="Mevcut stok"]')!;
 		const headings = () =>
 			[...stock.querySelectorAll('details > summary h4')].map(
@@ -508,6 +548,7 @@ describe('stock panel', () => {
 					quantity: 10,
 					averagePurchaseCost: 50,
 					sellingPrice: 70,
+					suppliers: [{ bayiId: bayiB, bayiName: 'Store B', quantity: 10 }],
 				},
 			];
 			const fetchMock = mockFetch({
@@ -515,7 +556,7 @@ describe('stock panel', () => {
 				[STOCK_ROUTES.SALES]: () => jsonResponse(201, { operation: {} }),
 			});
 			await mount();
-			await openPanel();
+			await waitForData();
 			await openSalePage();
 			const form = container.querySelector(
 				'section[aria-labelledby="new-sale"] form',
@@ -538,6 +579,10 @@ describe('stock panel', () => {
 					.find((button) => button.textContent === '+ Satır ekle')!
 					.click(),
 			);
+			if (mode === 'partial') {
+				chooseSupplier(1, 'Store B');
+				chooseSupplier(2, 'Store A');
+			}
 			act(() => {
 				input(
 					form.querySelector<HTMLInputElement>(
@@ -583,6 +628,7 @@ describe('stock panel', () => {
 					type: 'EMCP',
 					memoryGb: 8,
 					quantityUnit: 'piece',
+					...(mode === 'partial' ? { bayiId: bayiB } : {}),
 					quantity: mode === 'complete' ? 10 : 5,
 					revenue: 16000,
 				},
@@ -590,29 +636,32 @@ describe('stock panel', () => {
 					type: 'EMMC',
 					memoryGb: 64,
 					quantityUnit: 'piece',
+					...(mode === 'partial' ? { bayiId: bayiA } : {}),
 					quantity: mode === 'complete' ? 40 : 2,
 					revenue: 700,
 				},
 			]);
 		},
 	);
-	it('loads when opened and reuses the purchase route for adding stock', async () => {
+	it('loads analysis on entry and links to the purchase route for adding stock', async () => {
 		const fetchMock = mockFetch({
 			[STOCK_ROUTES.LIST]: () => jsonResponse(200, data),
 		});
 		await mount();
-		expect(fetchMock).not.toHaveBeenCalled();
-		await openPanel();
+		await waitForData();
+		expect(
+			fetchMock.mock.calls.some(
+				([url]) => new URL(url).pathname === STOCK_ROUTES.LIST,
+			),
+		).toBe(true);
 		expect(container.querySelector('a')?.getAttribute('href')).toBe(
-			PAGE_PATHS.ORDERS,
+			PAGE_PATHS.PURCHASES,
 		);
 		expect(
 			container.querySelector('[aria-label="Stok hareketleri ve kârlılık"]')
 				?.textContent,
 		).toContain('2.500,00');
-		expect(
-			container.querySelector('[aria-label="Mevcut stok"]')?.textContent,
-		).toContain('40 adet');
+		expect(container.querySelector('[aria-label="Mevcut stok"]')).toBeNull();
 	});
 	it('records the full current stock and sales revenue without requiring supplier sales data', async () => {
 		const fetchMock = mockFetch({
@@ -620,7 +669,7 @@ describe('stock panel', () => {
 			[STOCK_ROUTES.SALES]: () => jsonResponse(201, { operation: {} }),
 		});
 		await mount();
-		await openPanel();
+		await waitForData();
 		await openSalePage();
 		const form = container.querySelector(
 			'section[aria-labelledby="new-sale"] form',
@@ -629,6 +678,12 @@ describe('stock panel', () => {
 			form.querySelector<HTMLInputElement>('[aria-label="1. satır miktar"]')!
 				.value,
 		).toBe('40');
+		expect(
+			form.querySelector<HTMLSelectElement>(
+				'select[aria-label="1. satır ürün ve bellek"]',
+			)!.selectedOptions[0].textContent,
+		).toContain('(40 adet)');
+		expect(form.textContent).not.toContain('Mevcut stok:');
 		act(() =>
 			input(
 				form.querySelector<HTMLInputElement>(
@@ -663,40 +718,39 @@ describe('stock panel', () => {
 		const fetchMock = mockFetch({
 			[BAYI_ROUTES.LIST]: () =>
 				jsonResponse(200, {
-					bayiler: [{ _id: 'bayi-a', name: 'Store A', phone: '+905551234567' }],
+					bayiler: [{ _id: bayiA, name: 'Store A', phone: '+905551234567' }],
 				}),
 			[STOCK_ROUTES.LIST]: () => jsonResponse(200, data),
 		});
 		await mount();
-		await openPanel();
-		act(() => {
-			const select = container.querySelector<HTMLSelectElement>(
-				'select[id$="-bayi"]',
-			)!;
-			select.value = 'Store A';
-			select.dispatchEvent(new Event('change', { bubbles: true }));
-		});
+		await waitForData();
+		chooseBayi();
 		await act(async () =>
 			container
-				.querySelector('select[id$="-bayi"]')!
-				.closest('form')!
+				.querySelector('form')!
 				.dispatchEvent(
 					new Event('submit', { bubbles: true, cancelable: true }),
 				),
 		);
 		expect(
 			fetchMock.mock.calls.some(
-				([url]) => new URL(url).searchParams.get('bayiName') === 'Store A',
+				([url]) => new URL(url).searchParams.get('bayiIds') === bayiA,
 			),
 		).toBe(true);
 		expect(container.querySelector('#stock-selling-product')).toBeNull();
+		expect(container.querySelector('[aria-label="Mevcut stok"]')).toBeNull();
+		act(() => root!.unmount());
+		client.clear();
+		container.remove();
+		await mount(false, true);
+		await waitForData();
 		const inventory = container.querySelector('[aria-label="Mevcut stok"]')!;
-		expect(inventory.textContent).toMatch(/Liste alış fiyatı: .*300,00/);
+		expect(inventory.textContent).toMatch(/Liste alış fiyatı.*300,00/);
 		expect(inventory.textContent).toMatch(
-			/Ortalama gerçek alış fiyatı: .*337,50/,
+			/Ortalama gerçek alış fiyatı.*337,50/,
 		);
 		expect(inventory.textContent).toMatch(
-			/Ortalama gerçek satış fiyatı: .*400,00/,
+			/Ortalama gerçek satış fiyatı.*400,00/,
 		);
 	});
 	it('switches unified report presets and groups profit by size across memory types', async () => {
@@ -704,19 +758,25 @@ describe('stock panel', () => {
 			[STOCK_ROUTES.LIST]: () => jsonResponse(200, data),
 		});
 		await mount();
-		await openPanel();
-		await act(async () =>
-			[
-				...container.querySelectorAll(
-					'[aria-label="Stok raporu hazır filtreleri"] button',
-				),
-			]
-				.find((button) => button.textContent === 'Gerçekleşen kâr')!
-				.dispatchEvent(new MouseEvent('click', { bubbles: true })),
-		);
+		await waitForData();
+		act(() => {
+			const view = container.querySelector<HTMLSelectElement>(
+				'[aria-label="Stok raporu görünümü"]',
+			)!;
+			view.value = 'profits';
+			view.dispatchEvent(new Event('change', { bubbles: true }));
+		});
+		await act(async () => {
+			const type = container.querySelector<HTMLSelectElement>(
+				'[aria-label="Stok hareket türü"]',
+			)!;
+			type.value = 'all-sales';
+			type.dispatchEvent(new Event('change', { bubbles: true }));
+		});
 		expect(
 			fetchMock.mock.calls.some(
-				([url]) => new URL(url).searchParams.get('movementType') === 'restock',
+				([url]) =>
+					new URL(url).searchParams.get('movementType') === 'all-sales',
 			),
 		).toBe(true);
 		expect(

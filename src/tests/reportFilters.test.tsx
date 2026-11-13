@@ -1,14 +1,26 @@
+import { openBayiMenu, closeBayiMenu } from './bayiMenu.helpers';
+vi.mock('../app/hooks/api/endpoints/useInvestors', () => ({
+	useInvestors: () => ({ data: { investors: [] }, isError: false }),
+}));
 import { afterEach, expect, it, vi } from 'vitest';
 import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { OrderHistoryFilters } from '../app/component/admin/OrderHistoryFilters';
-import type { OrderFilters } from '../app/schemas/order.schema';
-import { orderPresetRange } from '../app/helpers/orderPeriod.helper';
-import { orderRangeLabel } from '../app/helpers/orderPeriod.helper';
+import { ReportFilters } from '../app/component/admin/ReportFilters';
+import type { PurchaseFilters } from '../app/schemas/purchase.schema';
+import { purchasePresetRange } from '../app/helpers/purchasePeriod.helper';
+import { purchaseRangeLabel } from '../app/helpers/purchasePeriod.helper';
 import { numericFilterLabel } from '../app/helpers/numericFilters.helper';
 
 vi.mock('../app/hooks/api/endpoints/useBayiler', () => ({
-	useBayiler: () => ({ data: { bayiler: [] }, isError: false }),
+	useBayiler: () => ({
+		data: {
+			bayiler: [
+				{ _id: '000000000000000000000001', name: 'Birinci' },
+				{ _id: '000000000000000000000002', name: 'İkinci' },
+			],
+		},
+		isError: false,
+	}),
 }));
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: Root;
@@ -33,8 +45,14 @@ it('selects a product and memory size before applying a unit-price condition and
 			select.value = value;
 			select.dispatchEvent(new Event('change', { bubbles: true }));
 		});
-	choose('select[aria-label="1. koşul ürünü"]', 'EMMC');
-	choose('select[aria-label="1. koşul bellek boyutu"]', '16');
+	choose('select[aria-label="1. koşul ürünü"]', 'EMMC:16');
+	expect(
+		[
+			...container.querySelectorAll<HTMLOptionElement>(
+				'select[id$="-field-0"] option',
+			),
+		].map((option) => option.value),
+	).not.toContain('memoryGb');
 	choose('select[id$="-field-0"]', 'unitPricePiece');
 	const min = container.querySelector<HTMLInputElement>('input[id$="-min-0"]')!;
 	act(() => {
@@ -66,16 +84,16 @@ it('selects a product and memory size before applying a unit-price condition and
 	);
 });
 function mount(
-	initial: OrderFilters = {},
-	context: 'orders' | 'stock' | 'finance' = 'orders',
+	initial: PurchaseFilters = {},
+	reportKind: 'purchase' | 'stock' | 'balance' = 'purchase',
 ) {
 	const changed = vi.fn();
 	function Harness() {
 		const [value, setValue] = useState(initial);
 		return (
-			<OrderHistoryFilters
+			<ReportFilters
 				value={value}
-				context={context}
+				reportKind={reportKind}
 				onChange={(next) => {
 					setValue(next);
 					changed(next);
@@ -94,7 +112,7 @@ it('keeps exact preset dates off by default and toggles their visibility without
 	const today = container.querySelector<HTMLButtonElement>(
 		'button[aria-label="Bugün"]',
 	)!;
-	const date = orderRangeLabel(orderPresetRange('today'));
+	const date = purchaseRangeLabel(purchasePresetRange('today'));
 	expect(today.textContent).not.toContain(date);
 	const toggle = container.querySelector<HTMLButtonElement>(
 		'button[role="switch"]',
@@ -109,7 +127,7 @@ it('shows active filter conditions and opens and focuses the filter panel from i
 		{
 			numericFilters: [{ field: 'profit', min: -100, max: 0 }],
 			movementType: 'restock',
-		} as OrderFilters,
+		} as PurchaseFilters,
 		'stock',
 	);
 	expect(container.querySelector('[role="status"]')?.textContent).toContain(
@@ -159,4 +177,116 @@ it('applies signed decimal ranges and resolves stepper updates to numbers', () =
 	expect(changed).toHaveBeenLastCalledWith({
 		numericFilters: [{ field: 'profit', min: 97.5, max: 100 }],
 	});
+});
+
+it('removes each active purchase condition immediately while preserving other filters', () => {
+	const changed = mount({
+		bayiName: 'Store',
+		from: '2026-11-01',
+		until: '2026-11-12',
+		minTotal: 10,
+		maxTotal: 100,
+		numericFilters: [
+			{ field: 'quantityPiece', min: 2 },
+			{ field: 'lineTotal', max: 50 },
+		],
+	});
+	const remove = (prefix: string) =>
+		act(() =>
+			[
+				...container.querySelectorAll<HTMLButtonElement>(
+					'[role="status"] li button',
+				),
+			]
+				.find((button) =>
+					button.getAttribute('aria-label')!.startsWith(prefix),
+				)!
+				.click(),
+		);
+	remove('Tüm ürünler → Ürün miktarı');
+	expect(changed.mock.lastCall![0]).toMatchObject({
+		bayiName: 'Store',
+		minTotal: 10,
+		numericFilters: [{ field: 'lineTotal', max: 50 }],
+	});
+	remove('Dönem:');
+	expect(changed.mock.lastCall![0]).not.toHaveProperty('from');
+	expect(changed.mock.lastCall![0]).not.toHaveProperty('until');
+	remove('Bayi:');
+	expect(changed.mock.lastCall![0]).not.toHaveProperty('bayiName');
+	expect(container.querySelector('select[id$="-bayi"]')).toBeNull();
+	remove('İşlem geneli → İşlem toplamı');
+	expect(changed.mock.lastCall![0]).not.toHaveProperty('minTotal');
+	expect(changed.mock.lastCall![0]).not.toHaveProperty('maxTotal');
+	remove('Tüm ürünler → Ürün toplamı');
+	expect(container.querySelector('[role="status"]')!.textContent).toContain(
+		'etkin filtre yok',
+	);
+});
+it.each([
+	[
+		'stock',
+		{ movementType: 'all-sales', productType: 'EMMC', memoryGb: 8 },
+		['Hareket:', 'Ürün:', 'Bellek:'],
+	],
+	[
+		'balance',
+		{ direction: 'income', group: 'investment', categoryId: 'custom' },
+		['İşlem kaynağı:', 'Ana tür:', 'Alt tür:'],
+	],
+] as const)(
+	'removes extended %s filters instead of restoring them',
+	(kind, extra, labels) => {
+		const changed = mount({ ...extra, from: '2026-11-01' }, kind);
+		for (const label of labels) {
+			act(() =>
+				[
+					...container.querySelectorAll<HTMLButtonElement>(
+						'[role="status"] li button',
+					),
+				]
+					.find((button) =>
+						button.getAttribute('aria-label')!.startsWith(label),
+					)!
+					.click(),
+			);
+		}
+		expect(changed.mock.lastCall![0]).toEqual({ from: '2026-11-01' });
+	},
+);
+
+it('applies selected bayi checkboxes together and removes just one active bayi', () => {
+	const changed = mount();
+	openBayiMenu('Rapor bayi filtresi');
+	const bayis = [
+		...document.querySelectorAll<HTMLButtonElement>('[role=menuitemcheckbox]'),
+	];
+	expect(bayis).toHaveLength(2);
+	expect(
+		bayis.every((option) => option.getAttribute('aria-checked') === 'false'),
+	).toBe(true);
+	act(() => bayis[0].click());
+	act(() => bayis[1].click());
+	expect(
+		document.querySelectorAll('[role=menuitemcheckbox][aria-checked=true]'),
+	).toHaveLength(2);
+	closeBayiMenu();
+	expect(changed).not.toHaveBeenCalled();
+	act(() =>
+		container
+			.querySelector('form')!
+			.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })),
+	);
+	expect(changed).toHaveBeenLastCalledWith(
+		expect.objectContaining({
+			bayiIds: ['000000000000000000000001', '000000000000000000000002'],
+		}),
+	);
+	const remove = container.querySelector<HTMLButtonElement>(
+		'button[aria-label="Bayi: Birinci filtresini kaldır"]',
+	)!;
+	act(() => remove.click());
+	expect(changed).toHaveBeenLastCalledWith(
+		expect.objectContaining({ bayiIds: ['000000000000000000000002'] }),
+	);
 });

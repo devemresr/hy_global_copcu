@@ -1,85 +1,59 @@
-import { useState } from 'react';
-import { AdminSummary } from './AdminCollapseHeading';
-import { OrderHistoryFilters } from './OrderHistoryFilters';
-import { Pagination } from './Pagination';
+import { BayiAnalysisReport } from './BayiAnalysisReport';
+import { StockMovementHistory } from './StockMovementHistory';
 import {
-	ORDER_MEMORY_SIZES,
-	ORDER_PRODUCT_TYPE_ORDER,
-	ORDER_PRODUCT_TYPES,
-	ORDER_QUANTITY_UNIT_LABELS,
-} from '../../constants/orderProducts.constant';
-import { STOCK_CONTROL } from '../../constants/stockStyles.constant';
+	Package,
+	ShoppingCart,
+	Banknote,
+	TrendingUp,
+	Coins,
+} from 'lucide-react';
+import { StockProductTag, StockMetric } from './StockDisplay';
+import { STOCK_PRODUCT_COLORS } from '../../constants/stockPresentation.constant';
+import { StockSellingPriceInfo } from './StockSellingPriceInfo';
+import { AdminSummary } from './AdminCollapseHeading';
+import {
+	PURCHASE_PRODUCT_TYPE_ORDER,
+	PURCHASE_QUANTITY_UNIT_LABELS,
+} from '../../constants/purchaseProducts.constant';
 import type {
-	StockFilters,
 	StockResponse,
+	StockFilters,
 } from '../../hooks/api/endpoints/useStock';
-import { formatOrderProduct } from '../../helpers/orderProduct.helper';
-
 const money = (value: number | null) =>
 	value === null
 		? '—'
 		: value.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
 const quantity = (value: number) =>
 	value.toLocaleString('tr-TR', { maximumFractionDigits: 6 });
-const kindLabels = {
-	purchase: 'Alış / stok girişi',
-	complete: 'Stok sifirlayan satış',
-	partial: 'Kısmi satış',
-};
-const presets = [
-	{
-		id: 'all',
-		label: 'Tüm hareketler',
-		movementType: 'all',
-		view: 'movements',
-	},
-	{
-		id: 'profit',
-		label: 'Gerçekleşen kâr',
-		movementType: 'restock',
-		view: 'profits',
-	},
-	{
-		id: 'purchase',
-		label: 'Bayi bazlı stok girişleri',
-		movementType: 'purchase',
-		view: 'movements',
-	},
-	{
-		id: 'restock',
-		label: 'Satışlar',
-		movementType: 'restock',
-		view: 'movements',
-	},
-] as const;
-
 export function StockReport({
 	data,
-	filters,
-	onChange,
 	page,
 	pageSize,
 	onPageChange,
 	onPageSizeChange,
 	loading,
+	view = 'movements',
+	groupBy = 'product',
+	filters = {},
+	saleSelection,
 }: {
 	data?: StockResponse;
-	filters: StockFilters;
-	onChange: (filters: StockFilters) => void;
+	saleSelection?: { excludedIds: string[]; onToggle: (id: string) => void };
 	page: number;
 	pageSize: number;
 	onPageChange: (page: number) => void;
 	onPageSizeChange: (size: number) => void;
 	loading: boolean;
+	view?: 'movements' | 'profits' | 'bayi';
+	filters?: StockFilters;
+	groupBy?: 'product' | 'memory';
 }) {
-	const [view, setView] = useState<'movements' | 'profits'>('movements');
-	const [groupBy, setGroupBy] = useState<'product' | 'memory'>('product');
 	const profits =
 		(groupBy === 'memory' ? data?.profitsByMemory : data?.profits) ?? [];
 	const sortedProfits = [...profits].sort(
 		(a, b) =>
-			(a.type === null ? 0 : ORDER_PRODUCT_TYPE_ORDER.indexOf(a.type)) -
-				(b.type === null ? 0 : ORDER_PRODUCT_TYPE_ORDER.indexOf(b.type)) ||
+			(a.type === null ? 0 : PURCHASE_PRODUCT_TYPE_ORDER.indexOf(a.type)) -
+				(b.type === null ? 0 : PURCHASE_PRODUCT_TYPE_ORDER.indexOf(b.type)) ||
 			(a.memoryGb ?? 0) - (b.memoryGb ?? 0) ||
 			a.quantityUnit.localeCompare(b.quantityUnit),
 	);
@@ -90,157 +64,7 @@ export function StockReport({
 			aria-label='Stok hareketleri ve kârlılık'
 		>
 			<AdminSummary index={1}>Stok hareketleri ve kârlılık</AdminSummary>
-			<OrderHistoryFilters
-				value={filters}
-				context='stock'
-				onChange={(next) => {
-					if (next.bayiName) setView('movements');
-					onChange({
-						...next,
-						movementType: next.bayiName ? 'purchase' : filters.movementType,
-						productType: filters.productType,
-						memoryGb: filters.memoryGb,
-					});
-				}}
-			>
-				<div
-					className='flex flex-wrap gap-2'
-					role='group'
-					aria-label='Stok raporu hazır filtreleri'
-				>
-					{presets.map((preset) => (
-						<button
-							type='button'
-							key={preset.id}
-							aria-pressed={
-								view === preset.view &&
-								(filters.movementType ?? 'all') === preset.movementType
-							}
-							onClick={() => {
-								setView(preset.view);
-								onChange({
-									...filters,
-									bayiName:
-										preset.movementType === 'purchase'
-											? filters.bayiName
-											: undefined,
-									movementType: preset.movementType,
-								});
-							}}
-							className={`min-h-9 rounded-full border px-3 py-1 text-xs ${view === preset.view && (filters.movementType ?? 'all') === preset.movementType ? 'border-text bg-text text-bg' : 'border-border bg-button-bg hover:bg-button-hover-bg'}`}
-						>
-							{preset.label}
-						</button>
-					))}
-				</div>
-				<div className='flex flex-wrap items-end gap-3'>
-					<label className='space-y-1 text-xs'>
-						Hareket türü
-						<select
-							aria-label='Stok hareket türü'
-							className={`${STOCK_CONTROL} w-auto!`}
-							value={filters.movementType ?? 'all'}
-							onChange={(event) =>
-								onChange({
-									...filters,
-									bayiName: undefined,
-									movementType: event.target
-										.value as StockFilters['movementType'],
-								})
-							}
-						>
-							<option value='all'>Tüm hareketler</option>
-							<option value='purchase'>Alış girişleri</option>
-							<option value='restock'>Tüm satışlar</option>
-							<option value='complete'>Tüm stok satışı</option>
-							<option value='partial'>Kısmi satış</option>
-						</select>
-					</label>
-					<label className='space-y-1 text-xs'>
-						Ürün türü
-						<select
-							aria-label='Rapor ürün türü'
-							className={`${STOCK_CONTROL} w-auto!`}
-							value={filters.productType ?? ''}
-							onChange={(event) =>
-								onChange({
-									...filters,
-									productType:
-										(event.target.value as StockFilters['productType']) ||
-										undefined,
-								})
-							}
-						>
-							<option value=''>Tüm türler</option>
-							{ORDER_PRODUCT_TYPE_ORDER.map((type) => (
-								<option key={type} value={type}>
-									{ORDER_PRODUCT_TYPES[type].label}
-								</option>
-							))}
-						</select>
-					</label>
-					<label className='space-y-1 text-xs'>
-						Hafıza boyutu
-						<select
-							aria-label='Rapor hafıza boyutu'
-							className={`${STOCK_CONTROL} w-auto!`}
-							value={filters.memoryGb ?? ''}
-							onChange={(event) =>
-								onChange({
-									...filters,
-									memoryGb: event.target.value
-										? Number(event.target.value)
-										: undefined,
-								})
-							}
-						>
-							<option value=''>Tüm boyutlar</option>
-							{ORDER_MEMORY_SIZES.map((size) => (
-								<option key={size} value={size}>
-									{size} GB
-								</option>
-							))}
-						</select>
-					</label>
-					<label className='space-y-1 text-xs'>
-						Görünüm
-						<select
-							aria-label='Stok raporu görünümü'
-							className={`${STOCK_CONTROL} w-auto!`}
-							value={view}
-							onChange={(event) => setView(event.target.value as typeof view)}
-						>
-							<option value='movements'>Hareket kayıtları</option>
-							<option value='profits'>Gerçekleşen kâr</option>
-						</select>
-					</label>
-					{view === 'profits' && (
-						<label className='space-y-1 text-xs'>
-							Gruplama
-							<select
-								aria-label='Kâr gruplaması'
-								className={`${STOCK_CONTROL} w-auto!`}
-								value={groupBy}
-								onChange={(event) =>
-									setGroupBy(event.target.value as typeof groupBy)
-								}
-							>
-								<option value='product'>Ürün türü + hafıza boyutu</option>
-								<option value='memory'>
-									Hafıza boyutu · tüm bellek tipleri
-								</option>
-							</select>
-						</label>
-					)}
-				</div>
-				<p className='text-xs text-text/70'>
-					Tarih ve işlem toplamı, alışın veya satışın tamamına uygulanır. Diğer
-					sayısal alanlar ürün satırlarını filtreler. Ürün ve boyut seçimi
-					işlemin ilgili satırlarını gösterir. Bayi seçimi alış girişlerini
-					gösterir; satışlar belirli bir bayiye ait değildir. Güncel stok ve
-					fiyat ortalamaları rapor filtrelerinden bağımsızdır.
-				</p>
-			</OrderHistoryFilters>
+
 			{loading && (
 				<p role='status' className='text-xs text-text/70'>
 					Stok raporu güncelleniyor...
@@ -248,19 +72,51 @@ export function StockReport({
 			)}
 			{data && (
 				<>
-					<div
-						className='flex flex-wrap gap-3 rounded-lg border border-border p-3 text-xs'
+					<dl
+						className='grid min-w-0 gap-2 sm:grid-cols-2 xl:grid-cols-4'
 						aria-label='Stok raporu toplamları'
 					>
-						<span>
-							Alış toplamı: {money(data.reportTotals?.purchaseCost ?? 0)}
-						</span>
-						<span>Satış geliri: {money(data.reportTotals?.revenue ?? 0)}</span>
-						<span>
-							Gerçekleşen kâr: {money(data.reportTotals?.profit ?? 0)}
-						</span>
-					</div>
-					{view === 'profits' ? (
+						<StockMetric
+							label='Alış toplamı'
+							value={money(data.reportTotals?.purchaseCost ?? 0)}
+							tone='cost'
+							icon={ShoppingCart}
+						/>
+						<StockMetric
+							label='Satılan mal maliyeti'
+							value={money(
+								data.reportTotals?.costOfGoods ??
+									data.profits.reduce((sum, row) => sum + row.costOfGoods, 0),
+							)}
+							tone='cost'
+							icon={Coins}
+						/>
+						<StockMetric
+							label='Satış geliri'
+							value={money(data.reportTotals?.revenue ?? 0)}
+							tone='income'
+							icon={Banknote}
+						/>
+						<StockMetric
+							label='Gerçekleşen kâr'
+							value={money(data.reportTotals?.profit ?? 0)}
+							tone={(data.reportTotals?.profit ?? 0) < 0 ? 'loss' : 'income'}
+							icon={TrendingUp}
+						/>
+					</dl>
+					<p className='text-xs text-text/70'>
+						Gerçekleşen brüt kâr = satış geliri − satılan mal maliyeti. Alış
+						toplamı, seçili dönemde kaydedilen stok girişlerini gösterir;
+						dönemin kârından ayrıca düşülmez. Diğer gelir ve giderler Bakiye
+						analizinde izlenir.
+					</p>
+
+					{view === 'bayi' ? (
+						<BayiAnalysisReport
+							rows={data.bayiReports ?? []}
+							filters={filters}
+						/>
+					) : view === 'profits' ? (
 						<>
 							<p className='text-xs text-text/70'>
 								Kâr, kaydedilen satış gelirinden işlem anında sabitlenen maliyet
@@ -277,49 +133,92 @@ export function StockReport({
 									<details
 										open
 										key={`${row.type}:${row.memoryGb}:${row.quantityUnit}`}
-										className='min-w-0 space-y-3 rounded-xl border border-border p-3'
+										className={
+											'min-w-0 space-y-3 rounded-xl border p-3 ' +
+											(row.type
+												? STOCK_PRODUCT_COLORS[row.type]
+												: 'border-border')
+										}
 									>
 										<AdminSummary index={index}>
-											{row.type === null
-												? `${row.memoryGb} GB · Tüm bellek tipleri`
-												: formatOrderProduct({
-														type: row.type,
-														memoryGb: row.memoryGb,
-													})}
+											{row.type === null ? (
+												`${row.memoryGb} GB · Tüm bellek tipleri`
+											) : (
+												<StockProductTag
+													type={row.type}
+													memoryGb={row.memoryGb}
+												/>
+											)}
 											{row.quantityUnit !== 'piece' &&
-												` · ${ORDER_QUANTITY_UNIT_LABELS[row.quantityUnit]}`}
+												` · ${PURCHASE_QUANTITY_UNIT_LABELS[row.quantityUnit]}`}
 										</AdminSummary>
-										<dl className='grid grid-cols-2 gap-3 text-xs'>
-											{[
-												[
-													'Satılan miktar',
-													`${quantity(row.quantity)} ${ORDER_QUANTITY_UNIT_LABELS[row.quantityUnit]}`,
-												],
-												[
-													'Ortalama gerçek alış fiyatı',
-													money(row.averagePurchaseCost),
-												],
-												[
-													'Ortalama gerçek satış fiyatı',
-													money(row.averageSellingPrice),
-												],
-												['Satış geliri', money(row.revenue)],
-												['Satılan ürün maliyeti', money(row.costOfGoods)],
-												['Gerçekleşen kâr', money(row.profit)],
-												[
-													'Kâr marjı',
+										<dl className='grid min-w-0 grid-cols-2 gap-2'>
+											<StockMetric
+												label='Satılan miktar'
+												value={
+													quantity(row.quantity) +
+													' ' +
+													PURCHASE_QUANTITY_UNIT_LABELS[row.quantityUnit]
+												}
+												tone='quantity'
+												icon={Package}
+											/>
+											<StockMetric
+												label='Ortalama gerçek alış fiyatı'
+												value={
+													money(row.averagePurchaseCost) +
+													' / ' +
+													PURCHASE_QUANTITY_UNIT_LABELS[row.quantityUnit]
+												}
+												tone='cost'
+												icon={ShoppingCart}
+											/>
+											<StockMetric
+												label={
+													<span className='inline-flex items-center gap-1'>
+														Ortalama gerçek satış fiyatı{' '}
+														<StockSellingPriceInfo />
+													</span>
+												}
+												value={
+													money(row.averageSellingPrice) +
+													' / ' +
+													PURCHASE_QUANTITY_UNIT_LABELS[row.quantityUnit]
+												}
+												tone='income'
+												icon={Coins}
+											/>
+											<StockMetric
+												label='Satış geliri'
+												value={money(row.revenue)}
+												tone='income'
+												icon={Banknote}
+											/>
+											<StockMetric
+												label='Satılan ürün maliyeti'
+												value={money(row.costOfGoods)}
+												tone='cost'
+												icon={ShoppingCart}
+											/>
+											<StockMetric
+												label='Gerçekleşen kâr'
+												value={money(row.profit)}
+												tone={row.profit < 0 ? 'loss' : 'income'}
+												icon={TrendingUp}
+											/>
+											<StockMetric
+												label='Kâr marjı'
+												value={
 													row.margin === null
 														? '—'
-														: `%${row.margin.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}`,
-												],
-											].map(([label, value]) => (
-												<div key={label} className='min-w-0'>
-													<dt className='text-text/70'>{label}</dt>
-													<dd className='mt-1 break-words font-medium'>
-														{value}
-													</dd>
-												</div>
-											))}
+														: '%' +
+															row.margin.toLocaleString('tr-TR', {
+																maximumFractionDigits: 2,
+															})
+												}
+												tone={(row.margin ?? 0) < 0 ? 'loss' : 'income'}
+												icon={TrendingUp}
+											/>
 										</dl>
 									</details>
 								))}
@@ -327,70 +226,13 @@ export function StockReport({
 						</>
 					) : (
 						<>
-							{!data.movements?.length && (
-								<p className='text-sm text-text/70'>
-									Filtrelere uygun stok hareketi yok.
-								</p>
-							)}
-							<div className='grid min-w-0 gap-3 sm:grid-cols-2'>
-								{data.movements?.map((row, index) => (
-									<details
-										key={row.id}
-										className='min-w-0 space-y-3 rounded-xl border border-border p-3 text-sm'
-									>
-										<AdminSummary index={index}>
-											<span className='min-w-0 break-words'>
-												{formatOrderProduct(row)} · {kindLabels[row.kind]}
-												{row.bayiName && ` · ${row.bayiName}`}
-												<span className='mt-1 block text-xs text-text/70'>
-													{new Date(row.createdAt).toLocaleString('tr-TR', {
-														timeZone: 'Europe/Istanbul',
-													})}{' '}
-													· {quantity(row.quantity)}{' '}
-													{ORDER_QUANTITY_UNIT_LABELS[row.quantityUnit]}
-												</span>
-											</span>
-										</AdminSummary>
-										<p>
-											Miktar: {quantity(row.quantity)}{' '}
-											{ORDER_QUANTITY_UNIT_LABELS[row.quantityUnit]}
-										</p>
-										<p>Alış maliyeti: {money(row.purchaseCost)}</p>
-										<p>
-											Ortalama gerçek alış fiyatı:{' '}
-											{money(
-												row.quantity > 0
-													? row.purchaseCost / row.quantity
-													: null,
-											)}
-										</p>
-										{row.revenue !== null && (
-											<>
-												<p>
-													Ortalama gerçek satış fiyatı:{' '}
-													{money(
-														row.quantity > 0
-															? row.revenue / row.quantity
-															: null,
-													)}
-												</p>
-												<p>
-													Satış geliri: {money(row.revenue)} · Kâr:{' '}
-													{money(row.profit)}
-												</p>
-											</>
-										)}
-									</details>
-								))}
-							</div>
-							<Pagination
-								hideNavWhenSinglePage
+							<StockMovementHistory
+								saleSelection={saleSelection}
+								data={data}
 								page={page}
-								totalPages={data.movementPages ?? 1}
 								pageSize={pageSize}
 								onPageChange={onPageChange}
 								onPageSizeChange={onPageSizeChange}
-								summary={`${data.movementCount ?? 0} stok hareketi`}
 							/>
 						</>
 					)}

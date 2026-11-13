@@ -1,14 +1,17 @@
 import type { Content } from 'pdfmake/interfaces';
-import type { OrderChartImage } from './orderReport.helper';
-import { ORDER_CHART_TITLES } from '../constants/orderReports.constant';
-import { ORDER_PDF_CONTENT_WIDTH, pdfWrapText } from './orderPdfLayout.helper';
+import type { PurchaseChartImage } from './purchaseReport.helper';
+import { PURCHASE_CHART_TITLES } from '../constants/purchaseReports.constant';
+import {
+	PURCHASE_PDF_CONTENT_WIDTH,
+	pdfWrapText,
+} from './purchasePdfLayout.helper';
 
-export function pdfChartsSection(charts: OrderChartImage[]): Content[] {
+export function pdfChartsSection(charts: PurchaseChartImage[]): Content[] {
 	if (!charts.length) return [];
 	const rows: Content[] = [];
-	const halfWidth = (ORDER_PDF_CONTENT_WIDTH - 16) / 2;
+	const halfWidth = (PURCHASE_PDF_CONTENT_WIDTH - 16) / 2;
 	const tile = (
-		{ title, image, legend = [] }: OrderChartImage,
+		{ title, image, legend = [] }: PurchaseChartImage,
 		width: number,
 		fullWidth = false,
 	) => ({
@@ -62,7 +65,7 @@ export function pdfChartsSection(charts: OrderChartImage[]): Content[] {
 			})),
 		],
 	});
-	let pending: OrderChartImage[] = [];
+	let pending: PurchaseChartImage[] = [];
 	const flush = () => {
 		if (!pending.length) return;
 		const columns = pending.map((chart) => tile(chart, halfWidth));
@@ -77,11 +80,11 @@ export function pdfChartsSection(charts: OrderChartImage[]): Content[] {
 	};
 	for (const chart of charts) {
 		if (!chart.image) continue;
-		if (chart.kind === 'daily' || chart.title === ORDER_CHART_TITLES.daily) {
+		if (chart.kind === 'daily' || chart.title === PURCHASE_CHART_TITLES.daily) {
 			flush();
 			rows.push({
 				unbreakable: true,
-				stack: tile(chart, ORDER_PDF_CONTENT_WIDTH, true).stack,
+				stack: tile(chart, PURCHASE_PDF_CONTENT_WIDTH, true).stack,
 				margin: [0, 8, 0, 16],
 			} as Content);
 		} else {
