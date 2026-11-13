@@ -3,7 +3,7 @@ import {
 	purchasePdfTable,
 	pdfWrapText,
 } from './purchasePdfLayout.helper';
-import { pdfChartsSection } from './pdfCharts.helper';
+// import { pdfChartsSection } from './pdfCharts.helper';
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import type {
 	Purchase,
@@ -105,7 +105,7 @@ export function singlePurchaseReport(order: Purchase): PurchasesResponse {
 
 export function singlePurchaseDocument(
 	order: Purchase,
-	charts: PurchaseChartImage[],
+	_charts: PurchaseChartImage[],
 ): TDocumentDefinitions {
 	const signedMoney = (amount: number) =>
 		`${amount > 0 ? '+' : ''}${formatPurchaseMoney(amount)}`;
@@ -204,7 +204,7 @@ export function singlePurchaseDocument(
 						),
 					]
 				: []),
-			...pdfChartsSection(charts),
+			// ...pdfChartsSection(charts), // Graphs temporarily disabled.
 		],
 		footer: (page, pages) => ({
 			text: `${page} / ${pages}`,

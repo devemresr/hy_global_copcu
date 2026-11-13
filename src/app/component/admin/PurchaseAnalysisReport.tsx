@@ -19,7 +19,8 @@ import {
 } from '../../helpers/purchaseProduct.helper';
 import { InventoryDataGrid } from '../InventoryDataGrid';
 import { AdminSummary } from './AdminCollapseHeading';
-import { PurchaseCharts } from './PurchaseCharts';
+// Graphs temporarily disabled; keep the implementation for later restoration.
+// import { PurchaseCharts } from './PurchaseCharts';
 import { PurchaseReportPdfModal } from './PurchaseReportPdfModal';
 import { CreatedPurchasePdfModal } from './CreatedPurchasePdfModal';
 import { Pagination } from './Pagination';
@@ -41,8 +42,8 @@ export function PurchaseAnalysisReport({
 		settings?: PurchaseChartSettings;
 		action?: 'download' | 'share';
 	} | null>(null);
-	const [exportActionsTarget, setExportActionsTarget] =
-		useState<HTMLDivElement | null>(null);
+	// const [exportActionsTarget, setExportActionsTarget] =
+	// useState<HTMLDivElement | null>(null);
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(20);
 	const historyOpen = true;
@@ -282,7 +283,32 @@ export function PurchaseAnalysisReport({
 										/>
 										<span>Filtreye uyan tüm alışları rapora dahil et</span>
 									</label>
-									<div ref={setExportActionsTarget} className='min-w-0' />
+									<div className='flex min-w-0 flex-wrap gap-2'>
+										{(['download', 'share'] as const).map((action) => (
+											<button
+												key={action}
+												type='button'
+												className={button}
+												disabled={
+													reportRefreshing || !reportData || selectedCount === 0
+												}
+												onClick={() => {
+													if (reportData)
+														setHistoryPdf({
+															data: reportData,
+															filters: { ...filters },
+															action,
+														});
+												}}
+											>
+												{action === 'download'
+													? 'Seçilenleri tek PDF olarak indir (' +
+														selectedCount +
+														')'
+													: 'Paylaş'}
+											</button>
+										))}
+									</div>
 									<p
 										className='text-xs text-text/70 lg:col-span-2'
 										role='status'
@@ -335,7 +361,8 @@ export function PurchaseAnalysisReport({
 											</button>
 										</p>
 									)}
-								{reportData && (
+								{/* Graph analysis temporarily disabled.
+{reportData && (
 									<PurchaseCharts
 										exportActionsTarget={exportActionsTarget}
 										downloadLabel={
@@ -355,6 +382,7 @@ export function PurchaseAnalysisReport({
 										refreshing={reportRefreshing}
 									/>
 								)}
+*/}
 								{history.data.summary.count === 0 ? (
 									<p className='p-4 text-sm opacity-70'>
 										Bu aralıkta alış bulunamadı.

@@ -157,7 +157,7 @@ describe('order PDF report', () => {
 			'alis-raporu_2026-11-01_2026-11-30.pdf',
 		);
 	});
-	it('includes applied filters, full-result totals, and all chart images and breakdowns', () => {
+	it('keeps filters, full-result totals and breakdowns while temporarily excluding chart images', () => {
 		const document = purchaseReportDocument(
 			report,
 			{ from: '2026-01-01', until: '2026-04-30', minTotal: 0, maxTotal: 1000 },
@@ -181,10 +181,10 @@ describe('order PDF report', () => {
 			if (value === 'Alt sınır yok') expect(content).not.toContain(value);
 			else expect(content).toContain(value);
 		}
-		expect(content.match(/data:image\/png/g)).toHaveLength(3);
+		expect(content).not.toContain('data:image/png');
 		expect(content).toContain('0,00');
 	});
-	it('generates a valid multipage PDF containing chart images and embedded Turkish fonts', async () => {
+	it('generates a valid chart-free multipage PDF with embedded Turkish fonts', async () => {
 		pdfMake.addVirtualFileSystem(fonts);
 		const document = purchaseReportDocument(report, {}, [
 			{ title: 'Tarihlere göre alış tutarı', image },
@@ -192,7 +192,7 @@ describe('order PDF report', () => {
 		const buffer = await pdfMake.createPdf(document).getBuffer();
 		expect(buffer.subarray(0, 5).toString()).toBe('%PDF-');
 		const body = buffer.toString('latin1');
-		expect(body).toContain('/Subtype /Image');
+		expect(body).not.toContain('/Subtype /Image');
 		expect(body).toContain('/FontFile2');
 		expect((body.match(/\/Type \/Page\b/g) ?? []).length).toBeGreaterThan(1);
 	}, 20000);

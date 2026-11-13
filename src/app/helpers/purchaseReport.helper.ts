@@ -4,8 +4,8 @@ import {
 	PURCHASE_PDF_PAGE,
 	purchasePdfTable,
 } from './purchasePdfLayout.helper';
-import { pdfChartsSection } from './pdfCharts.helper';
-import { purchaseDatePdf } from './purchaseDatePdf.helper';
+// import { pdfChartsSection } from './pdfCharts.helper';
+// import { purchaseDatePdf } from './purchaseDatePdf.helper';
 import type { PurchaseDateViewType } from '../constants/purchaseReports.constant';
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import type {
@@ -35,7 +35,7 @@ export type PurchaseChartImage = {
 export function purchaseReportDocument(
 	data: PurchasesResponse,
 	filters: PurchaseFilters,
-	charts: PurchaseChartImage[],
+	_charts: PurchaseChartImage[],
 ): TDocumentDefinitions {
 	const range = purchaseReportRange(data, filters);
 	const table = (
@@ -101,6 +101,7 @@ export function purchaseReportDocument(
 				fontSize: 16,
 				margin: [0, 10, 0, 4],
 			},
+			/* Graph content temporarily disabled.
 			...(charts.length
 				? [
 						{
@@ -110,14 +111,17 @@ export function purchaseReportDocument(
 						} satisfies Content,
 					]
 				: []),
+*/
 			...(filters.numericFilters ?? []).map((filter) => ({
 				text: numericFilterLabel(filter),
 				margin: [0, 0, 0, 4] as [number, number, number, number],
 			})),
+			/* Graphs and date visualizations temporarily disabled.
 			...pdfChartsSection(charts),
 			...charts
 				.filter((chart) => chart.kind === 'daily' && chart.view)
 				.flatMap((chart) => purchaseDatePdf(data.timeline ?? [], chart.view!)),
+*/
 			...(missingListPrices.length
 				? [
 						...table(

@@ -140,9 +140,10 @@ describe('order report selection', () => {
 		expect(JSON.parse(selectionRequest[1]!.body as string).excludeIds).toBe(
 			orders[0]._id,
 		);
-		expect(
-			container.querySelector('[data-testid=report-count]')?.textContent,
-		).toBe('1');
+		expect(container.querySelector('[role=status]')?.textContent).toContain(
+			'1 / 2 alış rapora',
+		);
+		expect(container.querySelector('[data-testid=report-count]')).toBeNull();
 		act(() =>
 			container
 				.querySelector<HTMLButtonElement>(
