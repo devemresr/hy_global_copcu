@@ -50,6 +50,7 @@ const items: InventoryItemRecord[] = [
 		depolama: 1,
 		depolamaBirimi: 'TB',
 		fiyat: 123.5,
+		fiyatBirimi: 'kg',
 		paraBirimi: 'USD',
 	},
 ];
@@ -101,9 +102,10 @@ describe('customer export formats', () => {
 					'Depolama Birimi',
 					'Fiyat',
 					'Para Birimi',
+					'Fiyat Birimi',
 				],
-				['00123', 'eMMC', 64, 'GB', 0, 'TRY'],
-				['Türkçe, "İşlemci"', 'eMCP', 1, 'TB', 123.5, 'USD'],
+				['00123', 'eMMC', 64, 'GB', 0, 'TRY', 'adet'],
+				['Türkçe, "İşlemci"', 'eMCP', 1, 'TB', 123.5, 'USD', 'kg'],
 			]);
 		},
 	);

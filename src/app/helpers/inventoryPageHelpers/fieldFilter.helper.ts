@@ -75,6 +75,8 @@ export function matchesFieldFilter(
 	row: Record<string, unknown>,
 	filter: FieldFilter,
 ): boolean {
+	if (filter.field === 'fiyatBirimi' && row.fiyatBirimi == null)
+		row = { ...row, fiyatBirimi: 'piece' };
 	const hasValue = fieldHasValue(row, filter.field);
 
 	switch (filter.op) {

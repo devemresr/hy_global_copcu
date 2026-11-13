@@ -145,9 +145,20 @@ async function download() {
 }
 
 describe('export-only inventory pricing', () => {
+	it('keeps unit-specific price overrides and customer groups separate', () => {
+		const piece = items[0],
+			weight = { ...piece, fiyatBirimi: 'kg' as const };
+		expect(customerPriceGroups([piece, weight])).toHaveLength(2);
+		const priced = applyCustomerPrices([piece, weight], {
+			[customerItemKey(piece)]: 50,
+		});
+		expect(priced[0].fiyat).toBe(50);
+		expect(priced[1].fiyat).toBe(piece.fiyat);
+	});
+
 	it('keeps edits inside the modal and exports them without mutating source inventory', async () => {
 		mount();
-		input('EMMC 64 GB TRY yeni fiyat', '75');
+		input('EMMC 64 GB TRY / adet yeni fiyat', '75');
 		click('Tüm fiyat');
 		expect(container.textContent).toContain('yalnızca indirilecek dosya');
 		expect(items.map((item) => item.fiyat)).toEqual([100, 120, null]);
@@ -182,7 +193,7 @@ describe('export-only inventory pricing', () => {
 	});
 	it('collects entered table prices on download without requiring an Apply click', async () => {
 		mount();
-		input('EMMC 64 GB TRY yeni fiyat', '60');
+		input('EMMC 64 GB TRY / adet yeni fiyat', '60');
 		await download();
 		expect(downloadInventory).toHaveBeenCalledWith(
 			[
@@ -195,8 +206,8 @@ describe('export-only inventory pricing', () => {
 	});
 	it('keeps existing prices for empty or cleared inputs', async () => {
 		mount();
-		input('EMMC 64 GB TRY yeni fiyat', '75');
-		input('EMMC 64 GB TRY yeni fiyat', '');
+		input('EMMC 64 GB TRY / adet yeni fiyat', '75');
+		input('EMMC 64 GB TRY / adet yeni fiyat', '');
 		await download();
 		expect(downloadInventory).toHaveBeenCalledExactlyOnceWith(
 			items.slice(0, 2),
@@ -266,8 +277,8 @@ describe('export-only inventory pricing', () => {
 		expect(
 			container.querySelector('section[aria-label="Özel fiyatlar"]'),
 		).not.toBeNull();
-		input('EMMC 64 GB TRY yeni fiyat', '75');
-		input('EMMC 64 GB TRY Özel modeller yeni fiyat', '110');
+		input('EMMC 64 GB TRY / adet yeni fiyat', '75');
+		input('EMMC 64 GB TRY / adet Özel modeller yeni fiyat', '110');
 		await download();
 		expect(downloadInventory).toHaveBeenLastCalledWith(
 			[

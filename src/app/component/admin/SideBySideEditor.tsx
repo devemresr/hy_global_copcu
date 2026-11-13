@@ -1,3 +1,4 @@
+import { PRICE_UNIT_LABELS } from '../../constants/priceUnits.constant';
 import { AdminCollapseButton } from './AdminCollapseHeading';
 import { useMemo, useState } from 'react';
 import type { ItemDto } from '../../hooks/api/endpoints/useItems';
@@ -177,9 +178,9 @@ export function SideBySideEditor({
 					</label>
 					<p className='text-xs opacity-70'>
 						Her satır bir depolama grubudur. En sık kullanılan değer başlangıç
-						olarak gösterilir; fiyatlar para birimine göre ayrılır. Tümünü
-						uygula yalnızca düzenlediğiniz satırları kaydeder. Kuralla çelişen
-						değerler ayrıca onay ister.
+						olarak gösterilir; fiyatlar para birimi ve adet/kg/g birimine göre
+						ayrılır. Tümünü uygula yalnızca düzenlediğiniz satırları kaydeder.
+						Kuralla çelişen değerler ayrıca onay ister.
 					</p>
 					<div className='grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-2'>
 						{(['eMMC', 'eMCP'] as const).map((type) => (
@@ -219,8 +220,21 @@ export function SideBySideEditor({
 														<span className='mb-1 block text-xs opacity-60 sm:hidden'>
 															En sık {meta.label.toLowerCase()}
 														</span>
-														<DisplayValue value={group.commonValue} />{' '}
+														<DisplayValue
+															value={
+																meta.options?.find(
+																	(option) =>
+																		option.value === group.commonValue,
+																)?.label ?? group.commonValue
+															}
+														/>{' '}
 														{group.currency}
+														{group.priceUnit
+															? ' / ' +
+																PRICE_UNIT_LABELS[
+																	group.priceUnit as keyof typeof PRICE_UNIT_LABELS
+																]
+															: ''}
 														<div className='text-xs opacity-60'>
 															{group.commonCount}/{group.items.length} ürün
 														</div>

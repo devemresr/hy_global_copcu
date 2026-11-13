@@ -1,3 +1,4 @@
+import { PRICE_UNIT_LABELS } from '../constants/priceUnits.constant';
 import { ModalCloseButton } from './ModalCloseButton';
 import { useModalDismiss } from '../hooks/useModalDismiss';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -322,12 +323,17 @@ export function CustomerPriceEditor({
 																								? current[0].fiyat
 																								: 'Farklı fiyatlar'}{' '}
 																							<span className='text-xs opacity-70'>
-																								{group.currency}
+																								{group.currency} /{' '}
+																								{
+																									PRICE_UNIT_LABELS[
+																										group.priceUnit
+																									]
+																								}
 																							</span>
 																						</td>
 																						<td className='p-2'>
 																							<CustomerPriceInput
-																								label={`${type} ${group.label} ${group.currency}${group.ruleName ? ` ${group.ruleName}` : ''} yeni fiyat`}
+																								label={`${type} ${group.label} ${group.currency} / ${PRICE_UNIT_LABELS[group.priceUnit]}${group.ruleName ? ` ${group.ruleName}` : ''} yeni fiyat`}
 																								value={drafts[group.id] ?? ''}
 																								limit={customerPriceLimit(
 																									group.items,

@@ -1,3 +1,4 @@
+import { PRICE_UNIT_LABELS } from '../../constants/priceUnits.constant';
 import type { InventoryItemRecord } from '../../types';
 
 export type CustomerPrices = Record<string, number | null>;
@@ -34,6 +35,9 @@ export function customerItemKey(item: InventoryItemRecord): string {
 		item.depolama,
 		item.depolamaBirimi,
 		item.paraBirimi,
+		...(item.fiyatBirimi && item.fiyatBirimi !== 'piece'
+			? [item.fiyatBirimi]
+			: []),
 	]);
 }
 
@@ -105,6 +109,7 @@ export function customerPriceGroups(
 			capacity: number | null;
 			label: string;
 			currency: string;
+			priceUnit: keyof typeof PRICE_UNIT_LABELS;
 			items: InventoryItemRecord[];
 			ruleId?: string;
 			ruleName?: string;
@@ -119,7 +124,13 @@ export function customerPriceGroups(
 				? null
 				: item.depolama * (item.depolamaBirimi === 'TB' ? 1024 : 1);
 		const rule = rulesByKey.get(customerItemKey(item));
-		const id = JSON.stringify([type, capacity, rule?.ruleId ?? null]);
+		const priceUnit = item.fiyatBirimi ?? 'piece';
+		const id = JSON.stringify([
+			type,
+			capacity,
+			rule?.ruleId ?? null,
+			...(priceUnit !== 'piece' ? [priceUnit] : []),
+		]);
 		if (!groups.has(id))
 			groups.set(id, {
 				id,
@@ -127,6 +138,7 @@ export function customerPriceGroups(
 				capacity,
 				label: capacity === null ? 'Depolama belirtilmemiş' : `${capacity} GB`,
 				currency: item.paraBirimi,
+				priceUnit,
 				items: [],
 				...(rule
 					? {
@@ -161,14 +173,20 @@ export function inventoryExportData(
 			'Bellek Türü',
 			'Depolama',
 			'Depolama Birimi',
-			...(includePrices ? ['Fiyat', 'Para Birimi'] : []),
+			...(includePrices ? ['Fiyat', 'Para Birimi', 'Fiyat Birimi'] : []),
 		],
 		...pricedInventoryItems(items).map((item) => [
 			item.model,
 			item.bellekTipi ?? '',
 			item.depolama ?? null,
 			item.depolamaBirimi,
-			...(includePrices ? [item.fiyat, item.paraBirimi] : []),
+			...(includePrices
+				? [
+						item.fiyat,
+						item.paraBirimi,
+						PRICE_UNIT_LABELS[item.fiyatBirimi ?? 'piece'],
+					]
+				: []),
 		]),
 	];
 }
@@ -210,7 +228,7 @@ export async function downloadInventory(
 		{ wch: 16 },
 		{ wch: 12 },
 		{ wch: 18 },
-		...(includePrices ? [{ wch: 14 }, { wch: 14 }] : []),
+		...(includePrices ? [{ wch: 14 }, { wch: 14 }, { wch: 14 }] : []),
 	];
 	sheet['!autofilter'] = { ref: sheet['!ref']! };
 	const workbook = XLSX.utils.book_new();

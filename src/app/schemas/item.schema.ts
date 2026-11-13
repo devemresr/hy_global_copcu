@@ -4,6 +4,10 @@ export const CURRENCY_VALUES = ['TRY', 'USD'] as const;
 export const currencySchema = z.enum(CURRENCY_VALUES);
 export type Currency = z.infer<typeof currencySchema>;
 
+export const PRICE_UNIT_VALUES = ['piece', 'kg', 'g'] as const;
+export const priceUnitSchema = z.enum(PRICE_UNIT_VALUES);
+export type PriceUnit = z.infer<typeof priceUnitSchema>;
+
 export const STORAGE_UNIT_VALUES = ['GB', 'TB'] as const;
 export const storageUnitSchema = z.enum(STORAGE_UNIT_VALUES);
 export type StorageUnit = z.infer<typeof storageUnitSchema>;
@@ -36,6 +40,7 @@ export const editableInventoryItemSchema = z.object({
 		.nonnegative('Geçerli bir fiyat girin')
 		.nullable(),
 	paraBirimi: currencySchema,
+	fiyatBirimi: priceUnitSchema.optional(),
 });
 
 // A PATCH (single-field or bulk edit) only ever sends the fields it's

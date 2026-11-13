@@ -1,3 +1,4 @@
+import { PRICE_UNIT_LABELS } from './priceUnits.constant';
 import type { ColDef } from 'ag-grid-community';
 import { HighlightCellRenderer } from '../component/HighlightCellRenderer';
 import { CURRENCY_OPTIONS } from './currency.constant';
@@ -72,10 +73,16 @@ function depolamaToGb(value: unknown, unit: unknown): number {
 
 type InventoryValueParams = {
 	value: unknown;
-	data?: { depolamaBirimi?: string; paraBirimi?: string };
+	data?: { depolamaBirimi?: string; paraBirimi?: string; fiyatBirimi?: string };
 };
 type InventoryNode =
-	| { data?: { depolamaBirimi?: string; paraBirimi?: string } }
+	| {
+			data?: {
+				depolamaBirimi?: string;
+				paraBirimi?: string;
+				fiyatBirimi?: string;
+			};
+	  }
 	| null
 	| undefined;
 
@@ -122,13 +129,26 @@ export function fiyatComparator(
 		currencyRank(nodeB?.data?.paraBirimi);
 	if (rankDiff !== 0) return rankDiff;
 
-	return a - b;
+	const unitRank = (unit?: string) =>
+		['piece', 'kg', 'g'].indexOf(unit ?? 'piece');
+	const unitDifference =
+		unitRank(nodeA?.data?.fiyatBirimi) - unitRank(nodeB?.data?.fiyatBirimi);
+	return unitDifference || a - b;
 }
 
 export function fiyatValueFormatter(params: InventoryValueParams): string {
 	const { value, data } = params;
 	if (value === null || value === undefined || value === '') return '';
-	return data?.paraBirimi ? `${value} ${data.paraBirimi}` : String(value);
+	const price = data?.paraBirimi
+		? `${value} ${data.paraBirimi}`
+		: String(value);
+	return (
+		price +
+		' / ' +
+		PRICE_UNIT_LABELS[
+			(data?.fiyatBirimi ?? 'piece') as keyof typeof PRICE_UNIT_LABELS
+		]
+	);
 }
 
 export function depolamaComparator(

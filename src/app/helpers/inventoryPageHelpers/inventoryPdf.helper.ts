@@ -32,7 +32,7 @@ export function inventoryPdfDocument(
 						'auto',
 						'auto',
 						'auto',
-						...(includePrices ? ['auto', 'auto'] : []),
+						...(includePrices ? ['auto', 'auto', 'auto'] : []),
 					],
 					body: [
 						headers.map((header) => ({

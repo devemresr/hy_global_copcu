@@ -9,6 +9,7 @@ export type StorageEditGroup = {
 	capacityGb: number | null;
 	label: string;
 	currency: string;
+	priceUnit: string;
 	items: ItemDto[];
 	commonValue: string | number | null;
 	commonCount: number;
@@ -29,7 +30,8 @@ export function buildStorageEditGroups(
 				: item.depolama * (item.depolamaBirimi === 'TB' ? 1024 : 1);
 		// Prices in different currencies must never share a modal value.
 		const currency = field === 'fiyat' ? item.paraBirimi : '';
-		const id = `${type}:${capacityGb ?? 'empty'}:${currency}${field === 'depolama' ? `:${item.depolamaBirimi}` : ''}`;
+		const priceUnit = field === 'fiyat' ? (item.fiyatBirimi ?? 'piece') : '';
+		const id = `${type}:${capacityGb ?? 'empty'}:${currency}${priceUnit && priceUnit !== 'piece' ? ':' + priceUnit : ''}${field === 'depolama' ? `:${item.depolamaBirimi}` : ''}`;
 		if (!groups.has(id))
 			groups.set(id, {
 				id,
@@ -42,6 +44,7 @@ export function buildStorageEditGroups(
 							? `${capacityGb / 1024} TB`
 							: `${capacityGb} GB`,
 				currency,
+				priceUnit,
 				items: [],
 				commonValue: null,
 				commonCount: 0,
@@ -51,7 +54,10 @@ export function buildStorageEditGroups(
 	for (const group of groups.values()) {
 		const counts = new Map<string | number | null, number>();
 		for (const item of group.items) {
-			const value = item[field] ?? null;
+			const value =
+				field === 'fiyatBirimi'
+					? (item.fiyatBirimi ?? 'piece')
+					: (item[field] ?? null);
 			counts.set(value, (counts.get(value) ?? 0) + 1);
 		}
 		// Resolve ties by value so refetch ordering cannot change a row's default.
@@ -95,7 +101,12 @@ export function planStorageEdit(
 			skipped++;
 			return false;
 		}
-		return fields[field] !== (item[field] ?? null);
+		return (
+			fields[field] !==
+			(field === 'fiyatBirimi'
+				? (item.fiyatBirimi ?? 'piece')
+				: (item[field] ?? null))
+		);
 	});
 	return { group, fields, items, skipped };
 }

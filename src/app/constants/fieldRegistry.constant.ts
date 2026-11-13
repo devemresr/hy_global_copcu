@@ -2,6 +2,7 @@ import type { FieldFilterOp } from '../helpers/inventoryPageHelpers/fieldFilter.
 import { editableInventoryItemSchema } from '../schemas/item.schema';
 import type { EditableField } from '../types';
 import type { Steppers } from '../component/NumberInputWithSteppers';
+import { PRICE_UNIT_OPTIONS } from './priceUnits.constant';
 import { CURRENCY_OPTIONS } from './currency.constant';
 import { STORAGE_UNIT_OPTIONS } from './storageUnit.constant';
 
@@ -54,6 +55,11 @@ export const FIELD_REGISTRY = {
 			{ amount: 10, label: '+10' },
 			{ amount: 100, label: '+100' },
 		],
+	},
+	fiyatBirimi: {
+		label: 'Fiyatlandırma birimi',
+		kind: 'enum',
+		options: PRICE_UNIT_OPTIONS,
 	},
 	paraBirimi: {
 		label: 'Para Birimi',

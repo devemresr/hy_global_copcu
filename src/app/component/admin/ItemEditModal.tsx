@@ -1,3 +1,4 @@
+import { PRICE_UNIT_OPTIONS } from '../../constants/priceUnits.constant';
 import { ModalCloseButton } from '../ModalCloseButton';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useState, type SetStateAction } from 'react';
@@ -15,6 +16,31 @@ import {
 } from '../../helpers/adminPageHelpers/itemRules.helper';
 import { useModalHotkeys } from '../../hooks/useModalHotkeys';
 import { NumberInputWithSteppers } from '../NumberInputWithSteppers';
+import {
+	PurchaseProductSelect,
+	type PurchaseProductChoice,
+} from './PurchaseProductSelect';
+import { purchaseChoices } from '../../helpers/purchaseChoices.helper';
+
+const PRODUCT_FIELDS = new Set<EditableField>([
+	'bellekTipi',
+	'depolama',
+	'depolamaBirimi',
+]);
+
+function initialProduct(item: EditableInventoryItem): PurchaseProductChoice {
+	const memoryGb =
+		item.depolama == null
+			? null
+			: item.depolama * (item.depolamaBirimi === 'TB' ? 1024 : 1);
+	return (
+		purchaseChoices().find(
+			(choice) =>
+				choice.type === item.bellekTipi?.toUpperCase() &&
+				choice.memoryGb === memoryGb,
+		) ?? purchaseChoices()[0]
+	);
+}
 
 type ItemEditModalProps = {
 	item: EditableInventoryItem;
@@ -39,24 +65,43 @@ export function ItemEditModal({
 	mode = 'edit',
 	rules = [],
 }: ItemEditModalProps) {
-	const [draft, setDraft] = useState<EditableInventoryItem>({ ...item });
+	const [draft, setDraft] = useState<EditableInventoryItem>({
+		...item,
+		fiyatBirimi: item.fiyatBirimi ?? 'piece',
+	});
 	const [overrides, setOverrides] = useState<Set<EditableField>>(new Set());
+	const [product, setProduct] = useState(() => initialProduct(item));
 	const [error, setError] = useState<string | null>(null);
 	const [previousItem, setPreviousItem] = useState(item);
 	if (item !== previousItem) {
 		setPreviousItem(item);
-		setDraft({ ...item });
+		setDraft({ ...item, fiyatBirimi: item.fiyatBirimi ?? 'piece' });
 		setOverrides(new Set());
+		setProduct(initialProduct(item));
 		setError(null);
 	}
 
 	// Keep manual values separate: removing a match restores the user's draft.
 	// Display and submission always use the same resolved item.
+	const productDraft: EditableInventoryItem = {
+		...draft,
+		bellekTipi: product.type,
+		depolama: product.memoryGb,
+		depolamaBirimi: 'GB',
+		ram: product.requiresMemorySize ? draft.ram : null,
+	};
 	const resolved: RuleResolution =
 		mode === 'create'
-			? resolveItemRules(draft, rules, overrides)
+			? resolveItemRules(
+					productDraft,
+					rules,
+					new Set([...overrides, ...PRODUCT_FIELDS]),
+				)
 			: { item: draft, sources: {} };
 	const values = resolved.item;
+	const fields = EDITABLE_FIELD_KEYS.filter(
+		(field) => mode !== 'create' || !PRODUCT_FIELDS.has(field),
+	);
 	function updateField(field: EditableField, value: string | number | null) {
 		if (isSaving || (resolved.sources[field] && !overrides.has(field))) return;
 		setDraft((current) => ({ ...current, [field]: value }));
@@ -124,8 +169,59 @@ export function ItemEditModal({
 					<ModalCloseButton onClick={onClose} disabled={isSaving} />
 				</div>
 				<div className='flex flex-col gap-3 text-sm'>
-					{EDITABLE_FIELD_KEYS.map((field) => {
+					{mode === 'create' && (
+						<>
+							<fieldset disabled={isSaving} className='flex flex-col gap-2'>
+								<legend className='mb-2 text-text/70'>Bellek bilgisi</legend>
+								{[true, false].map((hasMemory) => (
+									<label
+										key={String(hasMemory)}
+										className='flex items-center gap-2'
+									>
+										<input
+											type='radio'
+											name='item-memory-info'
+											checked={product.requiresMemorySize === hasMemory}
+											onChange={() => {
+												setProduct(
+													purchaseChoices().find(
+														(choice) => choice.requiresMemorySize === hasMemory,
+													)!,
+												);
+												setError(null);
+											}}
+										/>
+										{hasMemory ? 'Bellek bilgisi var' : 'Bellek bilgisi yok'}
+									</label>
+								))}
+							</fieldset>
+							<div className='flex flex-col gap-1'>
+								<label htmlFor='item-create-product' className='text-text/70'>
+									Ürün
+								</label>
+								<PurchaseProductSelect
+									id='item-create-product'
+									value={product}
+									onChange={(choice) => {
+										setProduct(choice);
+										setError(null);
+									}}
+									disabled={isSaving}
+									rowNumber={1}
+									requiresMemorySize={product.requiresMemorySize}
+								/>
+							</div>
+						</>
+					)}
+					{fields.map((field) => {
 						const meta = fieldMeta(field);
+						const options =
+							field === 'bellekTipi'
+								? [
+										{ value: 'EMCP', label: 'eMCP' },
+										{ value: 'EMMC', label: 'eMMC' },
+									]
+								: meta.options;
 						const rule = resolved.sources[field];
 						const custom = overrides.has(field);
 						const locked = Boolean(rule && !custom);
@@ -151,7 +247,34 @@ export function ItemEditModal({
 										</label>
 									)}
 								</div>
-								{meta.options ? (
+								{field === 'fiyatBirimi' ? (
+									<div
+										id={id}
+										role='group'
+										aria-label={meta.label}
+										className='flex gap-1'
+									>
+										{PRICE_UNIT_OPTIONS.map((option) => (
+											<button
+												key={option.value}
+												type='button'
+												disabled={locked || isSaving}
+												aria-pressed={
+													(values.fiyatBirimi ?? 'piece') === option.value
+												}
+												onClick={() => updateField(field, option.value)}
+												className={
+													'min-h-9 rounded-full border border-border px-3 py-1.5 text-xs ' +
+													((values.fiyatBirimi ?? 'piece') === option.value
+														? 'bg-text text-bg'
+														: 'bg-button-bg')
+												}
+											>
+												{option.label}
+											</button>
+										))}
+									</div>
+								) : options ? (
 									<select
 										id={id}
 										aria-describedby={rule ? `${id}-rule` : undefined}
@@ -160,7 +283,22 @@ export function ItemEditModal({
 										onChange={(event) => updateField(field, event.target.value)}
 										className='rounded-xl bg-button-bg px-2 py-1.5 disabled:opacity-60'
 									>
-										{meta.options.map((option) => (
+										{field === 'bellekTipi' &&
+											!options.some(
+												(option) =>
+													option.value === String(values[field] ?? ''),
+											) && (
+												<option
+													value={String(values[field] ?? '')}
+													disabled
+													hidden
+												>
+													{values[field]
+														? String(values[field])
+														: 'Bellek türü seçin'}
+												</option>
+											)}
+										{options.map((option) => (
 											<option key={option.value} value={option.value}>
 												{option.label}
 											</option>
@@ -199,6 +337,12 @@ export function ItemEditModal({
 										}
 										className='rounded-xl bg-button-bg px-2 py-1.5 outline-none disabled:opacity-60'
 									/>
+								)}
+								{field === 'fiyatBirimi' && (
+									<p className='text-xs text-text/60'>
+										Fiyat seçilen birim başınadır. Birimi değiştirmek fiyat
+										tutarını veya geçmiş stok kayıtlarını dönüştürmez.
+									</p>
 								)}
 								{rule && (
 									<p

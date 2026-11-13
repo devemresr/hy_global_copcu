@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import type {
 	Currency as SchemaCurrency,
 	StorageUnit,
+	PriceUnit,
 	EditableInventoryItemInput,
 } from './schemas/item.schema';
 // A single parsed row from the Excel sheet. Keys are the exact column headers
@@ -52,6 +53,7 @@ export type InventoryItemRecord = {
 	depolamaBirimi: StorageUnit;
 	fiyat: number | null;
 	paraBirimi: Currency;
+	fiyatBirimi?: PriceUnit;
 };
 
 // The fields an admin can change through ItemEditModal/FieldEditModal/

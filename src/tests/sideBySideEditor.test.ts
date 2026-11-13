@@ -104,6 +104,19 @@ function tableInput(type = 'eMMC') {
 }
 
 describe('storage group bulk edits', () => {
+	it('separates price groups by quantity basis and permits changing the basis for a size', () => {
+		const variants = [
+			{ ...items[0], fiyatBirimi: 'piece' as const },
+			{ ...items[0], _id: 'weight', fiyatBirimi: 'kg' as const },
+		];
+		expect(buildStorageEditGroups(variants, 'fiyat')).toHaveLength(2);
+		const group = buildStorageEditGroups(variants, 'fiyatBirimi')[0];
+		const plan = planStorageEdit(group, 'fiyatBirimi', 'g', [], false);
+		expect(plan.items).toHaveLength(2);
+		expect(plan.fields).toEqual({ fiyatBirimi: 'g' });
+		expect(variants[0].fiyat).toBe(items[0].fiyat);
+	});
+
 	it('groups by IC type and capacity, with separate prices for each currency', () => {
 		const groups = buildStorageEditGroups(
 			[
