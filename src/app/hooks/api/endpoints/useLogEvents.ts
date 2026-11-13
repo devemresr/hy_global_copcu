@@ -9,8 +9,10 @@ export type LogEventFieldChange = {
 };
 
 export type LogEntityType =
+	| 'bayi'
 	| 'finance_entry'
 	| 'finance_category'
+	| 'investor'
 	| 'item'
 	| 'item_rule'
 	| 'site_maintenance'
@@ -32,6 +34,17 @@ export type LogEventDto = {
 	// Null for site settings.
 	entityId: string | null;
 	entityKey: string;
+	bayis?: {
+		bayiId?: string | null;
+		bayiName: string;
+		currentBayiName?: string | null;
+	}[];
+	bayiId?: string | null;
+	bayiName?: string | null;
+	currentBayiName?: string | null;
+	investorId?: string | null;
+	investorName?: string | null;
+	currentInvestorName?: string | null;
 	fields: LogEventFieldChange[];
 	createdAt: string;
 	// Shared by every row a single bulk edit touched (see the server's
@@ -57,14 +70,24 @@ export function useGetLogEvents(
 	types: LogEntityType[] = [],
 	model = '',
 	caseSensitive = false,
+	party: { bayiId?: string; investorId?: string } = {},
 ) {
 	const typesParam = [...types].sort().join(',');
 	return useApiQuery<LogEventsResponse>({
 		url: LOG_EVENT_ROUTES.LIST,
-		queryKey: ['logEvents', page, pageSize, typesParam, model, caseSensitive],
+		queryKey: [
+			'logEvents',
+			page,
+			pageSize,
+			typesParam,
+			model,
+			caseSensitive,
+			party,
+		],
 		params: {
 			page,
 			pageSize,
+			...party,
 			...(typesParam && { types: typesParam }),
 			...(model && { model, caseSensitive }),
 		},

@@ -1,3 +1,4 @@
+import { chooseBayiOption, openBayiMenu } from './bayiMenu.helpers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -65,21 +66,25 @@ function change(input: HTMLInputElement, value: string) {
 	)!.set!.call(input, value);
 	input.dispatchEvent(new Event('input', { bubbles: true }));
 }
+function addBayi() {
+	openBayiMenu('Bayi seçin');
+	act(() =>
+		[...document.querySelectorAll<HTMLButtonElement>('[role=menuitem]')]
+			.find((option) => option.textContent === 'Bayi ekle')!
+			.click(),
+	);
+}
 describe('bayi picker', () => {
 	it('retains trimming but rejects invalid long phone numbers before requesting a save', async () => {
 		const fetchMock = mockFetch({
 			[BAYI_ROUTES.LIST]: () => jsonResponse(200, { bayiler: [] }),
 		});
 		await mount();
-		const select = container.querySelector('select')!;
-		act(() => {
-			select.value = '__add_bayi__';
-			select.dispatchEvent(new Event('change', { bubbles: true }));
-		});
-		const phone = container.querySelector<HTMLInputElement>('input[type=tel]')!;
+		addBayi();
+		const phone = document.querySelector<HTMLInputElement>('input[type=tel]')!;
 		act(() => {
 			change(
-				container.querySelector<HTMLInputElement>(
+				document.querySelector<HTMLInputElement>(
 					'input[autocomplete=organization]',
 				)!,
 				'Test bayi',
@@ -88,13 +93,13 @@ describe('bayi picker', () => {
 		});
 		expect(phone.value).toHaveLength(17);
 		await act(async () =>
-			container
+			document
 				.querySelector('dialog form')!
 				.dispatchEvent(
 					new Event('submit', { bubbles: true, cancelable: true }),
 				),
 		);
-		expect(container.querySelector('[role=alert]')?.textContent).toContain(
+		expect(document.querySelector('[role=alert]')?.textContent).toContain(
 			'Geçerli bir telefon',
 		);
 		expect(
@@ -111,18 +116,23 @@ describe('bayi picker', () => {
 		);
 		mockFetch({ [BAYI_ROUTES.LIST]: () => jsonResponse(200, { bayiler }) });
 		await mount();
-		const select = container.querySelector<HTMLSelectElement>(
-			'select[aria-label="Bayi seçin"]',
-		)!;
+		openBayiMenu('Bayi seçin');
 		expect(
-			[...select.options]
-				.filter((option) => /^[a-f\d]{24}$/i.test(option.value))
-				.map((option) => option.textContent),
+			[...document.querySelectorAll('[role=menuitemradio]')].map(
+				(option) => option.textContent,
+			),
 		).toEqual(['Adana', 'Bolu', 'Çankaya', 'Zonguldak']);
-		expect(select.options[select.options.length - 1].textContent).toBe(
-			'+ Bayi ekle',
-		);
-		expect(select.options[0].hidden).toBe(true);
+		expect(
+			[...document.querySelectorAll('[role=menuitem]')].at(-1)!.textContent,
+		).toBe('Bayi ekle');
+		expect(
+			[...document.querySelectorAll('[role=menuitemradio]')].some(
+				(option) => option.textContent === 'Tüm bayiler',
+			),
+		).toBe(false);
+		expect(
+			document.querySelectorAll('button[title="Bayiyi düzenle"]'),
+		).toHaveLength(4);
 	});
 	it('shows only names in options, requires a phone, and auto-selects a matching existing entry', async () => {
 		const fetchMock = mockFetch({
@@ -138,32 +148,29 @@ describe('bayi picker', () => {
 					: jsonResponse(200, { bayiler: [existing] }),
 		});
 		await mount();
-		const select = container.querySelector<HTMLSelectElement>(
-			'select[aria-label="Bayi seçin"]',
-		)!;
-		expect(
-			[...select.options].find((option) => option.value === existing._id)
-				?.textContent,
-		).toBe('Örnek Bayi');
-		act(() => {
-			select.value = '__add_bayi__';
-			select.dispatchEvent(new Event('change', { bubbles: true }));
-		});
-		const name = container.querySelector<HTMLInputElement>(
+		const trigger = openBayiMenu('Bayi seçin');
+		expect(document.querySelector('[role=menuitemradio]')!.textContent).toBe(
+			existing.name,
+		);
+		expect(document.querySelector('[role=menu]')!.textContent).not.toContain(
+			existing.phone,
+		);
+		addBayi();
+		const name = document.querySelector<HTMLInputElement>(
 			'dialog input[autocomplete=organization]',
 		)!;
-		const phone = container.querySelector<HTMLInputElement>(
+		const phone = document.querySelector<HTMLInputElement>(
 			'dialog input[type=tel]',
 		)!;
 		act(() => change(name, 'Yeni bayi'));
 		await act(async () =>
-			container
+			document
 				.querySelector('dialog form')!
 				.dispatchEvent(
 					new Event('submit', { bubbles: true, cancelable: true }),
 				),
 		);
-		expect(container.querySelector('[role=alert]')?.textContent).toContain(
+		expect(document.querySelector('[role=alert]')?.textContent).toContain(
 			'Telefon',
 		);
 		expect(
@@ -172,7 +179,7 @@ describe('bayi picker', () => {
 		act(() => change(phone, '0555 abc123-45 67'));
 		expect(phone.value).toBe('05551234567');
 		await act(async () =>
-			container
+			document
 				.querySelector('dialog form')!
 				.dispatchEvent(
 					new Event('submit', { bubbles: true, cancelable: true }),
@@ -181,14 +188,74 @@ describe('bayi picker', () => {
 		await act(async () => {
 			await new Promise((resolve) => setTimeout(resolve, 25));
 		});
-		expect(container.querySelector('dialog')).toBeNull();
-		expect(select.value).toBe(existing._id);
+		expect(document.querySelector('dialog')).toBeNull();
+		expect(trigger.textContent).toBe(existing.name);
 		expect(container.textContent).not.toContain(`Telefon: ${existing.phone}`);
-		expect(container.querySelector('[role=status]')?.textContent).toContain(
+		expect(document.querySelector('[role=status]')?.textContent).toContain(
 			'Bu telefon Örnek Bayi',
 		);
-		expect(container.querySelector('[role=status]')?.textContent).toContain(
+		expect(document.querySelector('[role=status]')?.textContent).toContain(
 			'Seçilen bayi: Örnek Bayi',
 		);
 	});
+});
+
+it('edits an unselected bayi from its pencil without replacing the selected bayi', async () => {
+	const second = {
+		...existing,
+		_id: '000000000000000000000022',
+		name: 'İkinci bayi',
+		phone: '+905551234568',
+	};
+	const fetchMock = mockFetch({
+		[BAYI_ROUTES.LIST]: () =>
+			jsonResponse(200, { bayiler: [existing, second] }),
+		[BAYI_ROUTES.UPDATE(second._id)]: (init) => {
+			Object.assign(second, JSON.parse(init.body as string));
+			return jsonResponse(200, { bayi: second });
+		},
+	});
+	await mount();
+	chooseBayiOption('Bayi seçin', existing.name);
+	const trigger = openBayiMenu('Bayi seçin');
+	act(() =>
+		document
+			.querySelector<HTMLButtonElement>(
+				'[aria-label="İkinci bayi bayisini düzenle"]',
+			)!
+			.click(),
+	);
+	expect(document.querySelector('dialog')!.textContent).toContain(
+		'Bayiyi düzenle',
+	);
+	act(() =>
+		change(
+			document.querySelector<HTMLInputElement>(
+				'dialog input[autocomplete=organization]',
+			)!,
+			'Yeni isim',
+		),
+	);
+	await act(async () =>
+		document
+			.querySelector('dialog form')!
+			.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })),
+	);
+	expect(
+		fetchMock.mock.calls.some(
+			([url, init]) =>
+				new URL(url).pathname === BAYI_ROUTES.UPDATE(second._id) &&
+				init?.method === 'PATCH',
+		),
+	).toBe(true);
+	expect(trigger.textContent).toBe(existing.name);
+	openBayiMenu('Bayi seçin');
+	expect(
+		[...document.querySelectorAll('[role=menuitemradio]')].some(
+			(option) => option.textContent === 'Yeni isim',
+		),
+	).toBe(true);
+	expect(document.querySelector('[role=menu]')!.textContent).not.toContain(
+		'Başka bayiden sat',
+	);
 });

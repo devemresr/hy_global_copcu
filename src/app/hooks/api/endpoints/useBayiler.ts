@@ -44,7 +44,8 @@ export function useSaveBayi() {
 			}),
 		onSuccess: ({ bayi }) => {
 			cache([bayi]);
-			void client.invalidateQueries({ queryKey: ['bayiler'] });
+			for (const key of ['bayiler', 'orders', 'stock', 'finance', 'logEvents'])
+				void client.invalidateQueries({ queryKey: [key] });
 		},
 		onError: (error) => {
 			const conflict = bayiConflictSchema.safeParse(error.details);

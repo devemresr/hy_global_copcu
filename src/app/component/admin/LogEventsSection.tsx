@@ -1,3 +1,7 @@
+import { PartyName } from './PartyName';
+import { useBayiler } from '../../hooks/api/endpoints/useBayiler';
+import { useInvestors } from '../../hooks/api/endpoints/useInvestors';
+import { STOCK_CONTROL } from '../../constants/stockStyles.constant';
 import { AdminCollapseButton } from './AdminCollapseHeading';
 import { useState } from 'react';
 import {
@@ -25,9 +29,14 @@ import { Pagination } from './Pagination';
 // LogEvent model comment), so this covers both action sets rather than
 // assuming every entry is an item edit.
 const ACTION_LABELS: Record<string, string> = {
+	'bayi:create': 'Bayi eklendi',
+	'bayi:update': 'Bayi güncellendi',
+	'finance:investor_create': 'Yatırımcı eklendi',
+	'finance:investor_update': 'Yatırımcı güncellendi',
 	'finance:entry_create': 'Gelir / gider eklendi',
 	'finance:entry_void': 'Gelir / gider iptal edildi',
 	'finance:category_create': 'Bakiye alt türü eklendi',
+	'finance:category_update': 'Bakiye alt türü güncellendi',
 	'stock:purchase_create': 'Alım / stok girişi kaydedildi',
 	'stock:restock_complete': 'Tam satış kaydedildi',
 	'stock:restock_partial': 'Kısmi satış kaydedildi',
@@ -48,9 +57,14 @@ const ACTION_LABELS: Record<string, string> = {
 type ActionKind = 'create' | 'update' | 'delete' | 'maintenance' | 'notice';
 
 const ACTION_KIND: Record<string, ActionKind> = {
+	'bayi:create': 'create',
+	'bayi:update': 'update',
+	'finance:investor_create': 'create',
+	'finance:investor_update': 'update',
 	'finance:entry_create': 'create',
 	'finance:entry_void': 'delete',
 	'finance:category_create': 'create',
+	'finance:category_update': 'update',
 	'stock:purchase_create': 'create',
 	'stock:restock_complete': 'create',
 	'stock:restock_partial': 'create',
@@ -168,7 +182,11 @@ function actionLabel(event: LogEventDto): string {
 }
 
 const LOG_FILTERS: { types: LogEntityType[]; label: string }[] = [
-	{ types: ['finance_entry', 'finance_category'], label: 'Bakiye işlemleri' },
+	{ types: ['bayi'], label: 'Bayiler' },
+	{
+		types: ['finance_entry', 'finance_category', 'investor'],
+		label: 'Bakiye işlemleri',
+	},
 	{
 		types: ['stock_restock', 'stock_price', 'stock_purchase'],
 		label: 'Stok işlemleri',
@@ -183,11 +201,27 @@ const LOG_FILTERS: { types: LogEntityType[]; label: string }[] = [
 // A field outside FIELD_REGISTRY (none currently, but any future one) falls
 // back to its raw name instead of throwing.
 function fieldLabel(field: string, entityType?: LogEntityType): string {
-	if (entityType === 'finance_entry' || entityType === 'finance_category')
+	if (entityType === 'bayi')
+		return (
+			(
+				{ name: 'Bayi adı', phone: 'Telefon numarası' } as Record<
+					string,
+					string
+				>
+			)[field] ?? field
+		);
+	if (
+		entityType === 'finance_entry' ||
+		entityType === 'finance_category' ||
+		entityType === 'investor'
+	)
 		return (
 			(
 				{
 					amount: 'Tutar (TL)',
+					investor: 'Yatırımcı',
+					name: 'Yatırımcı adı',
+					phone: 'Telefon numarası',
 					description: 'Açıklama',
 					group: 'Ana tür',
 				} as Record<string, string>
@@ -320,7 +354,13 @@ function LogEventCard({ event }: { event: LogEventDto }) {
 					{actionLabel(event)}
 				</span>
 				{!SITE_ENTITY_TYPES.includes(event.entityType) && (
-					<span className='font-medium'>{event.entityKey}</span>
+					<span className='font-medium'>
+						{event.entityType === 'bayi'
+							? (event.currentBayiName ?? event.entityKey)
+							: event.entityType === 'investor'
+								? (event.currentInvestorName ?? event.entityKey)
+								: event.entityKey}
+					</span>
 				)}
 				<span className='opacity-60'>· {event.adminUsername}</span>
 				<span className='ml-auto text-xs opacity-50'>
@@ -328,6 +368,26 @@ function LogEventCard({ event }: { event: LogEventDto }) {
 				</span>
 			</div>
 
+			<div className='flex flex-wrap gap-3 text-sm'>
+				<PartyName
+					label='Bayi'
+					name={event.bayiName}
+					currentName={event.currentBayiName}
+				/>
+				<PartyName
+					label='Yatırımcı'
+					name={event.investorName}
+					currentName={event.currentInvestorName}
+				/>
+				{event.bayis?.map((bayi, index) => (
+					<PartyName
+						key={(bayi.bayiId ?? 'legacy') + ':' + index}
+						label='Bayi'
+						name={bayi.bayiName}
+						currentName={bayi.currentBayiName}
+					/>
+				))}
+			</div>
 			{changedFields.length > 0 && (
 				<div className='flex flex-col gap-1 pl-1 text-xs'>
 					{changedFields.map((f, i) => (
@@ -442,6 +502,10 @@ function BulkGroupCard({
 }
 
 export function LogEventsSection() {
+	const bayiler = useBayiler();
+	const investors = useInvestors();
+	const [bayiId, setBayiId] = useState('');
+	const [investorId, setInvestorId] = useState('');
 	const [modelDraft, setModelDraft] = useState('');
 	const [modelSearch, setModelSearch] = useState('');
 	const [caseSensitive, setCaseSensitive] = useState(false);
@@ -461,6 +525,7 @@ export function LogEventsSection() {
 		types,
 		showModelSearch ? modelSearch : '',
 		caseSensitive,
+		{ bayiId: bayiId || undefined, investorId: investorId || undefined },
 	);
 	const events = data?.events ?? [];
 	const totalPages = data?.totalPages ?? 1;
@@ -501,6 +566,48 @@ export function LogEventsSection() {
 	return (
 		<>
 			<h2 className='text-lg font-semibold mt-8 mb-2'>Değişiklik Geçmişi</h2>
+			<div className='mb-3 flex flex-wrap gap-3'>
+				<label className='flex flex-col gap-1 text-xs'>
+					Bayi
+					<select
+						aria-label='Kayıt bayi filtresi'
+						className={STOCK_CONTROL}
+						value={bayiId}
+						onChange={(event) => {
+							setBayiId(event.target.value);
+							setInvestorId('');
+							setPage(1);
+						}}
+					>
+						<option value=''>Tüm bayiler</option>
+						{(bayiler.data?.bayiler ?? []).map((row) => (
+							<option key={row._id} value={row._id}>
+								{row.name}
+							</option>
+						))}
+					</select>
+				</label>
+				<label className='flex flex-col gap-1 text-xs'>
+					Yatırımcı
+					<select
+						aria-label='Kayıt yatırımcı filtresi'
+						className={STOCK_CONTROL}
+						value={investorId}
+						onChange={(event) => {
+							setInvestorId(event.target.value);
+							setBayiId('');
+							setPage(1);
+						}}
+					>
+						<option value=''>Tüm yatırımcılar</option>
+						{(investors.data?.investors ?? []).map((row) => (
+							<option key={row._id} value={row._id}>
+								{row.name}
+							</option>
+						))}
+					</select>
+				</label>
+			</div>
 			{showModelSearch && (
 				<form
 					className='mb-3 flex flex-wrap items-center gap-2 text-sm'

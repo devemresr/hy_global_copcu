@@ -1,3 +1,9 @@
+vi.mock('../app/hooks/api/endpoints/useBayiler', () => ({
+	useBayiler: () => ({ data: { bayiler: [] }, isError: false }),
+}));
+vi.mock('../app/hooks/api/endpoints/useInvestors', () => ({
+	useInvestors: () => ({ data: { investors: [] }, isError: false }),
+}));
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';

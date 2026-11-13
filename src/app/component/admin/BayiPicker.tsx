@@ -1,6 +1,6 @@
-import { ModalCloseButton } from '../ModalCloseButton';
-import { useModalDismiss } from '../../hooks/useModalDismiss';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { BayiMenu, type BayiMenuOption } from './BayiMenu';
+import { RecordEditorModal } from './RecordEditorModal';
+import { useId, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
 	useBayiler,
@@ -9,12 +9,9 @@ import {
 } from '../../hooks/api/endpoints/useBayiler';
 import {
 	bayiConflictSchema,
-	bayiInputSchema,
 	type BayiConflict,
 } from '../../schemas/bayi.schema';
 
-const control =
-	'min-h-10 w-full min-w-0 rounded-lg border border-border bg-button-bg px-3 py-2 text-sm text-text';
 const button =
 	'min-h-9 rounded-lg border border-border bg-button-bg px-3 py-2 text-xs text-text hover:bg-button-hover-bg disabled:opacity-40';
 
@@ -29,124 +26,75 @@ function BayiEditor({
 	onSaved: (bayi: Bayi) => void;
 	onConflict: (conflict: BayiConflict, message: string) => void;
 }) {
-	const dialogRef = useRef<HTMLDialogElement>(null);
-	const id = useId();
-	const [name, setName] = useState(bayi?.name ?? '');
-	const [phone, setPhone] = useState((bayi?.phone ?? '').replace(/\D/g, ''));
-	const [error, setError] = useState('');
 	const save = useSaveBayi();
-	const dismiss = useModalDismiss(onClose, { disabled: save.isPending });
-	useEffect(() => {
-		const dialog = dialogRef.current;
-		dialog?.showModal();
-		return () => dialog?.close();
-	}, []);
-	async function submit() {
-		const parsed = bayiInputSchema.safeParse({ name, phone });
-		if (!parsed.success) {
-			const message = parsed.error.issues[0].message;
-			setError(message);
-			toast.error(message);
-			return;
-		}
-		setError('');
-		try {
-			const result = await save.mutateAsync({
-				id: bayi?._id,
-				input: parsed.data,
-			});
-			onSaved(result.bayi);
-			toast.success(bayi ? 'Bayi güncellendi' : 'Bayi eklendi');
-		} catch (failure) {
-			const apiError = failure as { message?: string; details?: unknown };
-			const conflict = bayiConflictSchema.safeParse(apiError.details);
-			if (conflict.success) {
-				onConflict(conflict.data, apiError.message ?? 'Bu bayi zaten kayıtlı.');
-				toast.info('Mevcut bayi seçildi', { description: apiError.message });
-				return;
-			}
-			const message = apiError.message ?? 'Bayi kaydedilemedi.';
-			setError(message);
-			toast.error('Bayi kaydedilemedi', { description: message });
-		}
-	}
 	return (
-		<dialog
-			ref={dialogRef}
-			aria-labelledby={`${id}-title`}
-			{...dismiss}
-			className='m-auto max-h-[90dvh] w-[calc(100%_-_1.5rem)] max-w-md overflow-y-auto rounded-2xl border border-border bg-modal-bg p-4 text-text backdrop:bg-black/60 sm:p-6'
-		>
-			<div className='mb-4 flex items-center justify-between gap-3'>
-				<h3 id={`${id}-title`} className='text-lg font-semibold'>
-					{bayi ? 'Bayiyi düzenle' : 'Bayi ekle'}
-				</h3>
-				<ModalCloseButton onClick={onClose} disabled={save.isPending} />
-			</div>
-			<form
-				className='space-y-3'
-				noValidate
-				onSubmit={(event) => {
-					event.preventDefault();
-					void submit();
-				}}
-			>
-				<label className='flex flex-col gap-1 text-sm' htmlFor={`${id}-name`}>
-					Bayi adı
-					<input
-						id={`${id}-name`}
-						className={control}
-						autoFocus
-						autoComplete='organization'
-						required
-						maxLength={120}
-						value={name}
-						disabled={save.isPending}
-						onChange={(event) => setName(event.target.value)}
-					/>
-				</label>
-				<label className='flex flex-col gap-1 text-sm' htmlFor={`${id}-phone`}>
-					Telefon numarası
-					<input
-						id={`${id}-phone`}
-						className={`${control} font-mono tracking-wider tabular-nums`}
-						type='tel'
-						inputMode='numeric'
-						autoComplete='tel'
-						required
-						maxLength={17}
-						placeholder='05551234567'
-						value={phone}
-						disabled={save.isPending}
-						onChange={(event) =>
-							setPhone(event.target.value.replace(/\D/g, '').slice(0, 17))
-						}
-					/>
-				</label>
-				{error && (
-					<p role='alert' className='text-sm text-red-500'>
-						{error}
-					</p>
-				)}
-				<div className='flex flex-wrap gap-2 pt-1'>
-					<button type='submit' className={button} disabled={save.isPending}>
-						{save.isPending ? 'Kaydediliyor...' : 'Kaydet'}
-					</button>
-				</div>
-			</form>
-		</dialog>
+		<RecordEditorModal
+			title={bayi ? 'Bayiyi düzenle' : 'Bayi ekle'}
+			initialValues={{
+				name: bayi?.name ?? '',
+				phone: (bayi?.phone ?? '').replace(/\D/g, ''),
+			}}
+			fields={[
+				{ key: 'name', label: 'Bayi adı', autoComplete: 'organization' },
+				{
+					key: 'phone',
+					label: 'Telefon numarası',
+					type: 'phone',
+					autoComplete: 'tel',
+				},
+			]}
+			onClose={onClose}
+			onSave={async (values) => {
+				try {
+					const result = await save.mutateAsync({
+						id: bayi?._id,
+						input: { name: values.name, phone: values.phone },
+					});
+					onSaved(result.bayi);
+					toast.success(bayi ? 'Bayi güncellendi' : 'Bayi eklendi');
+				} catch (failure) {
+					const apiError = failure as { message?: string; details?: unknown };
+					const conflict = bayiConflictSchema.safeParse(apiError.details);
+					if (conflict.success) {
+						onConflict(
+							conflict.data,
+							apiError.message ?? 'Bu bayi zaten kayıtlı.',
+						);
+						toast.info('Mevcut bayi seçildi', {
+							description: apiError.message,
+						});
+						return;
+					}
+					throw failure;
+				}
+			}}
+		/>
 	);
 }
 
-export function BayiPicker({
-	value,
-	onChange,
-	disabled,
-}: {
-	value: string;
-	onChange: (id: string) => void;
-	disabled: boolean;
-}) {
+type BayiSelection =
+	| { multiple: true; value: string[]; onChange: (ids: string[]) => void }
+	| { multiple?: false; value: string; onChange: (id: string) => void };
+type BayiPickerProps = BayiSelection & {
+	disabled?: boolean;
+	id?: string;
+	label?: string;
+	compact?: boolean;
+	options?: BayiMenuOption[];
+	addOptions?: BayiMenuOption[];
+	canAdd?: boolean;
+	onAdd?: (id: string) => void;
+};
+export function BayiPicker(props: BayiPickerProps) {
+	const {
+		disabled = false,
+		label = 'Bayi seçin',
+		compact = false,
+		options,
+		addOptions,
+		canAdd,
+		onAdd,
+	} = props;
 	const list = useBayiler();
 	const bayiler = useMemo(
 		() =>
@@ -155,62 +103,87 @@ export function BayiPicker({
 			),
 		[list.data],
 	);
-	const id = useId();
+	const generatedId = useId();
+	const id = props.id ?? generatedId + '-bayi';
 	const [editor, setEditor] = useState<{ bayi: Bayi | null } | null>(null);
 	const [notice, setNotice] = useState<{
 		conflict: BayiConflict;
 		message: string;
 	} | null>(null);
-	const selected = bayiler.find((bayi) => bayi._id === value);
+	const menuOptions =
+		options ?? bayiler.map((bayi) => ({ id: bayi._id, label: bayi.name }));
+	function select(id: string) {
+		setNotice(null);
+		if (props.multiple) {
+			props.onChange(
+				props.value.includes(id) ? props.value : [...props.value, id],
+			);
+		} else props.onChange(id);
+	}
+	function saved(bayi: Bayi) {
+		// Editing an unselected option must not replace the current purchase, supplier or report selection.
+		if (
+			!editor?.bayi &&
+			(!options || options.some((option) => option.id === bayi._id))
+		)
+			select(bayi._id);
+		setNotice(null);
+		setEditor(null);
+	}
 	return (
-		<div className='mb-4 w-full min-w-0 max-w-lg space-y-2'>
-			<label htmlFor={`${id}-bayi`} className='block text-sm font-medium'>
-				Bayi
-			</label>
-			<div className='flex min-w-0 flex-wrap items-center gap-2'>
-				<select
-					id={`${id}-bayi`}
-					aria-label='Bayi seçin'
-					className={`${control} flex-1 basis-48`}
-					value={value}
-					disabled={disabled || list.isPending || (!list.data && list.isError)}
-					onChange={(event) => {
-						if (event.target.value === '__add_bayi__') {
-							setEditor({ bayi: null });
-							return;
-						}
+		<div
+			className={
+				compact ? 'min-w-0 space-y-2' : 'mb-4 w-full min-w-0 max-w-lg space-y-2'
+			}
+		>
+			{!compact && (
+				<label htmlFor={id} className='block text-sm font-medium'>
+					Bayi
+				</label>
+			)}
+			<BayiMenu
+				id={id}
+				label={label}
+				value={props.multiple ? '' : props.value}
+				options={menuOptions}
+				selectedIds={props.multiple ? props.value : undefined}
+				allLabel={
+					list.isPending && !options
+						? 'Bayiler yükleniyor...'
+						: props.multiple
+							? 'Bayi seçin · filtre yok'
+							: 'Bayi seçin'
+				}
+				disabled={disabled || (list.isPending && !options)}
+				onChange={select}
+				onToggle={(id) => {
+					if (props.multiple) {
 						setNotice(null);
-						onChange(event.target.value);
-					}}
-				>
-					<option value='' disabled hidden>
-						{list.isPending ? 'Bayiler yükleniyor...' : 'Bayi seçin'}
-					</option>
-					{bayiler.map((bayi) => (
-						<option key={bayi._id} value={bayi._id}>
-							{bayi.name}
-						</option>
-					))}
-					<option value='__add_bayi__'>+ Bayi ekle</option>
-				</select>
-				{selected && (
-					<button
-						type='button'
-						className={button}
-						disabled={disabled}
-						onClick={() => setEditor({ bayi: selected })}
-					>
-						Bayiyi düzenle
-					</button>
-				)}
-			</div>
-			{list.isSuccess && !list.data.bayiler.length && (
+						props.onChange(
+							props.value.includes(id)
+								? props.value.filter((selected) => selected !== id)
+								: [...props.value, id],
+						);
+					}
+				}}
+				onClear={props.multiple ? () => props.onChange([]) : undefined}
+				onEdit={(id) => {
+					const bayi = bayiler.find((bayi) => bayi._id === id);
+					if (bayi) setEditor({ bayi });
+				}}
+				canEdit={(id) => bayiler.some((bayi) => bayi._id === id)}
+				onCreate={() => setEditor({ bayi: null })}
+				addOptions={addOptions}
+				canAdd={canAdd}
+				onAdd={onAdd}
+			/>
+			{list.isSuccess && !bayiler.length && !options && (
 				<p className='text-xs opacity-70'>
 					Henüz bayi yok. Listeden “Bayi ekle”yi seçin.
 				</p>
 			)}
 			{list.isError && (
-				<p role='alert' className='text-sm text-red-500'>
+				<p role='alert' className='text-xs text-red-500'>
 					Bayiler yüklenemedi.{' '}
 					<button
 						type='button'
@@ -229,8 +202,16 @@ export function BayiPicker({
 					<p>{notice.message}</p>
 					<p className='font-medium'>
 						Seçilen bayi:{' '}
-						{notice.conflict.matches.find((match) => match.bayi._id === value)
-							?.bayi.name ?? selected?.name}
+						{(props.multiple ? props.value : [props.value])
+							.map(
+								(id) =>
+									bayiler.find((bayi) => bayi._id === id)?.name ??
+									notice.conflict.matches.find((match) => match.bayi._id === id)
+										?.bayi.name ??
+									id,
+							)
+							.filter(Boolean)
+							.join(', ')}
 					</p>
 					{notice.conflict.matches.length > 1 && (
 						<div className='flex flex-wrap gap-2'>
@@ -239,9 +220,9 @@ export function BayiPicker({
 									type='button'
 									key={bayi._id}
 									className={button}
-									onClick={() => onChange(bayi._id)}
+									onClick={() => select(bayi._id)}
 								>
-									{bayi.name} · {bayi.phone}
+									{bayi.name}
 								</button>
 							))}
 						</div>
@@ -252,14 +233,15 @@ export function BayiPicker({
 				<BayiEditor
 					bayi={editor.bayi}
 					onClose={() => setEditor(null)}
-					onSaved={(bayi) => {
-						setNotice(null);
-						onChange(bayi._id);
-						setEditor(null);
-					}}
+					onSaved={saved}
 					onConflict={(conflict, message) => {
+						if (
+							!editor.bayi &&
+							(!options ||
+								options.some((option) => option.id === conflict.selectedBayiId))
+						)
+							select(conflict.selectedBayiId);
 						setNotice({ conflict, message });
-						onChange(conflict.selectedBayiId);
 						setEditor(null);
 					}}
 				/>
