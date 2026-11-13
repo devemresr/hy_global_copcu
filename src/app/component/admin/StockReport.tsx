@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { BayiAnalysisReport } from './BayiAnalysisReport';
 import { StockMovementHistory } from './StockMovementHistory';
 import {
@@ -36,8 +37,10 @@ export function StockReport({
 	groupBy = 'product',
 	filters = {},
 	saleSelection,
+	controls,
 }: {
 	data?: StockResponse;
+	controls?: ReactNode;
 	saleSelection?: { excludedIds: string[]; onToggle: (id: string) => void };
 	page: number;
 	pageSize: number;
@@ -111,6 +114,20 @@ export function StockReport({
 						analizinde izlenir.
 					</p>
 
+					<p className='text-xs text-text/70'>
+						Kâr, kaydedilen satış gelirinden işlem anında sabitlenen maliyet
+						çıkarılarak hesaplanır. Ortalamalar miktarla ağırlıklandırılır;
+						farklı birimler birleştirilmez.
+					</p>
+					{controls && (
+						<section
+							aria-label='Rapor görünümü seçenekleri'
+							className='space-y-3 rounded-xl border border-border bg-button-bg/30 p-3'
+						>
+							{controls}
+						</section>
+					)}
+
 					{view === 'bayi' ? (
 						<BayiAnalysisReport
 							rows={data.bayiReports ?? []}
@@ -118,11 +135,6 @@ export function StockReport({
 						/>
 					) : view === 'profits' ? (
 						<>
-							<p className='text-xs text-text/70'>
-								Kâr, kaydedilen satış gelirinden işlem anında sabitlenen maliyet
-								çıkarılarak hesaplanır. Ortalamalar miktarla ağırlıklandırılır;
-								farklı birimler birleştirilmez.
-							</p>
 							{!sortedProfits.length && (
 								<p className='text-sm text-text/70'>
 									Bu filtrelerle kayıtlı satış yok.

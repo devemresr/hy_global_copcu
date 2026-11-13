@@ -35,7 +35,6 @@ export function StockReportFields({
 						}
 					>
 						<option value='all-movements'>Tüm hareketler</option>
-						<option value='purchase-entries'>Alış girişleri</option>
 						<option value='all-sales'>Tüm satışlar</option>
 						<option value='full-stock-sales'>Tüm stok satışı</option>
 						<option value='partial-sales'>Kısmi satış</option>

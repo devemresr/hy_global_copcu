@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import {
 	useStock,
@@ -16,6 +16,7 @@ export function SelectableStockReport({
 	...report
 }: {
 	data: StockResponse;
+	controls?: ReactNode;
 	filters: StockFilters;
 	loading: boolean;
 	view: 'movements' | 'profits' | 'bayi';
@@ -59,9 +60,9 @@ export function SelectableStockReport({
 		);
 	}
 	return (
-		<div className='space-y-3'>
+		<div className='min-w-0 max-w-full space-y-3'>
 			<div className='flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-button-bg/30 p-3'>
-				<div className='space-y-1'>
+				<div className='min-w-0 flex-1 space-y-1'>
 					<label className='flex items-center gap-2 text-sm'>
 						<input
 							type='checkbox'

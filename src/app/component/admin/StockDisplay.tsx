@@ -126,9 +126,11 @@ export function StockQuantity({
 	unit: string;
 }) {
 	return (
-		<span className='inline-flex items-center gap-1.5 text-sm font-semibold tabular-nums'>
+		<span className='inline-flex min-w-0 max-w-full items-start gap-1.5 text-sm font-semibold tabular-nums'>
 			<Package size={15} className='shrink-0 stock-text-quantity' aria-hidden />
-			{value} {unit}
+			<span className='min-w-0 [overflow-wrap:anywhere]'>
+				{value} {unit}
+			</span>
 		</span>
 	);
 }

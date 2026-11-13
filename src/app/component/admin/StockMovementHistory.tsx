@@ -57,7 +57,7 @@ export function StockMovementHistory({
 		days.set(activity.date, [...(days.get(activity.date) ?? []), activity]);
 	return (
 		<div
-			className='space-y-3'
+			className='min-w-0 max-w-full space-y-3 [overflow-wrap:anywhere] [&_svg]:shrink-0'
 			aria-label='Günlere göre alış ve satış hareketleri'
 		>
 			{!activities.length && (
@@ -87,9 +87,12 @@ export function StockMovementHistory({
 						key={date}
 						className='min-w-0 space-y-3 rounded-xl border border-border p-2 sm:p-3'
 					>
-						<AdminSummary index={index}>
+						<AdminSummary
+							index={index}
+							className='flex-wrap items-start sm:items-center'
+						>
 							<CalendarDays size={16} aria-hidden />
-							<span className='min-w-0 flex-1'>
+							<span className='min-w-0 flex-1 basis-[calc(100%-5rem)] sm:basis-auto'>
 								{new Date(`${date}T12:00:00+03:00`).toLocaleDateString(
 									'tr-TR',
 									{ dateStyle: 'long', timeZone: 'Europe/Istanbul' },
@@ -99,7 +102,7 @@ export function StockMovementHistory({
 									toplamı
 								</span>
 							</span>
-							<span className='flex flex-wrap gap-2 text-xs'>
+							<span className='flex w-full min-w-0 flex-wrap gap-2 text-xs sm:w-auto'>
 								<span className='stock-value stock-cost rounded-full px-2 py-1'>
 									Alış: {money(purchase)}
 								</span>
@@ -121,7 +124,10 @@ export function StockMovementHistory({
 								key={activity.id}
 								className='min-w-0 space-y-3 rounded-lg border border-border p-2'
 							>
-								<AdminSummary index={entryIndex}>
+								<AdminSummary
+									index={entryIndex}
+									className='flex-wrap items-start sm:items-center'
+								>
 									{saleSelection && activity.kind !== 'purchase' && (
 										<input
 											type='checkbox'
@@ -147,13 +153,13 @@ export function StockMovementHistory({
 									) : (
 										<ArrowUpFromLine size={16} aria-hidden />
 									)}
-									<span className='min-w-0 flex-1'>
+									<span className='min-w-0 flex-1 basis-[calc(100%-5rem)] sm:basis-auto'>
 										{activity.kind === 'purchase'
 											? 'Alış / stok girişi'
 											: activity.kind === 'partial'
 												? 'Kısmi satış'
 												: 'Stok sifirlayan satış'}
-										<span className='ml-2 text-xs font-normal text-text/70'>
+										<span className='mt-1 block text-xs font-normal text-text/70 sm:ml-2 sm:mt-0 sm:inline'>
 											{new Date(activity.createdAt).toLocaleTimeString(
 												'tr-TR',
 												{
@@ -165,7 +171,7 @@ export function StockMovementHistory({
 											· {activity.lines.length} ürün satırı
 										</span>
 									</span>
-									<span className='text-sm tabular-nums'>
+									<span className='w-full min-w-0 break-words text-sm tabular-nums sm:w-auto'>
 										{money(
 											activity.lines.reduce(
 												(sum, row) =>
@@ -181,7 +187,7 @@ export function StockMovementHistory({
 								{activity.lines.map((row) => (
 									<div
 										key={row.id}
-										className='space-y-2 rounded-lg border border-border p-3 text-sm'
+										className='min-w-0 max-w-full space-y-2 rounded-lg border border-border p-2 text-sm sm:p-3'
 									>
 										<div className='flex flex-wrap items-center gap-2'>
 											<StockProductTag
@@ -204,7 +210,7 @@ export function StockMovementHistory({
 												/>
 											)}
 										</div>
-										<div className='flex flex-wrap gap-3 text-xs'>
+										<div className='grid min-w-0 grid-cols-1 gap-2 text-xs sm:flex sm:flex-wrap sm:gap-3'>
 											<span className='stock-value stock-cost'>
 												Alış maliyeti: {money(row.purchaseCost)}
 											</span>
@@ -228,7 +234,7 @@ export function StockMovementHistory({
 										</div>
 										{row.orderId && (
 											<Link
-												className='inline-flex items-center gap-1 text-xs font-medium underline'
+												className='inline-flex min-w-0 max-w-full flex-wrap items-center gap-1 text-xs font-medium underline'
 												to={sourcePurchaseHref(row.orderId)}
 											>
 												<ExternalLink size={13} aria-hidden />
@@ -245,10 +251,13 @@ export function StockMovementHistory({
 											return (
 												<details
 													key={supplier.bayiId ?? supplier.bayiName}
-													className='space-y-2 rounded-lg border stock-value stock-dealer p-2'
+													className='min-w-0 max-w-full space-y-2 rounded-lg border stock-value stock-dealer p-2'
 												>
-													<AdminSummary index={supplierIndex}>
-														<span className='min-w-0 flex-1'>
+													<AdminSummary
+														index={supplierIndex}
+														className='flex-wrap items-start sm:items-center'
+													>
+														<span className='min-w-0 flex-1 basis-[calc(100%-5rem)] sm:basis-auto'>
 															<PartyName
 																label='Bayi'
 																name={supplier.bayiName}
@@ -264,7 +273,7 @@ export function StockMovementHistory({
 															}
 														/>
 													</AdminSummary>
-													<p className='flex flex-wrap gap-3 px-2 text-xs'>
+													<p className='grid min-w-0 grid-cols-1 gap-2 px-2 text-xs sm:flex sm:flex-wrap sm:gap-3'>
 														<span>Gelir: {money(supplier.revenue)}</span>
 														<span>Maliyet: {money(supplier.costOfGoods)}</span>
 														<span>
@@ -276,7 +285,7 @@ export function StockMovementHistory({
 														{[...sources].map(([id, quantity]) => (
 															<li key={id}>
 																<Link
-																	className='inline-flex items-center gap-1 font-medium underline'
+																	className='inline-flex min-w-0 max-w-full flex-wrap items-center gap-1 font-medium underline'
 																	to={sourcePurchaseHref(id)}
 																>
 																	<ExternalLink size={13} aria-hidden />
