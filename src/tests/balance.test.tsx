@@ -1,3 +1,4 @@
+import { openBayiMenu } from './bayiMenu.helpers';
 import { afterEach, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -253,13 +254,12 @@ it('adds an investor from the income dropdown and submits its identifier with th
 		select.dispatchEvent(new Event('change', { bubbles: true }));
 	});
 	await settle();
-	const select = container.querySelector<HTMLSelectElement>(
-		'[aria-label="Yatırımcı seçin"]',
-	)!;
-	act(() => {
-		select.value = '__add_investor__';
-		select.dispatchEvent(new Event('change', { bubbles: true }));
-	});
+	const select = openBayiMenu('Yatırımcı seçin');
+	act(() =>
+		[...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+			.find((button) => button.textContent?.trim() === 'Yatırımcı ekle')!
+			.click(),
+	);
 	const dialog = document.querySelector<HTMLDialogElement>('dialog')!;
 	expect(dialog.closest('fieldset')).toBeNull();
 	expect(document.body.style.overflow).toBe('hidden');
@@ -280,7 +280,7 @@ it('adds an investor from the income dropdown and submits its identifier with th
 	);
 	await settle();
 	expect(document.querySelector('dialog')).toBeNull();
-	expect(select.value).toBe(investors[0]._id);
+	expect(select.textContent).toContain(investors[0].name);
 	expect(document.body.style.overflow).not.toBe('hidden');
 	type(container.querySelector('#finance-amount')!, '500');
 	await act(async () =>
@@ -402,5 +402,5 @@ it('shows full-day net totals across pages and running balances in both layouts,
 				'[aria-label="1. koşul ürünü"] option',
 			),
 		].map((option) => option.value),
-	).toEqual(['bayi', 'operation']);
+	).toEqual(['bayi', 'investor', 'operation']);
 });

@@ -31,6 +31,7 @@ export function BayiMenu({
 	canEdit,
 	onCreate,
 	onClear,
+	entityType = 'bayi',
 }: {
 	id: string;
 	label: string;
@@ -48,6 +49,7 @@ export function BayiMenu({
 	canEdit?: (id: string) => boolean;
 	onCreate?: () => void;
 	onClear?: () => void;
+	entityType?: 'bayi' | 'investor';
 }) {
 	const menuId = useId();
 	const trigger = useRef<HTMLButtonElement>(null);
@@ -205,14 +207,23 @@ export function BayiMenu({
 				: selectedIds.length + ' bayi seçildi'
 			: allLabel
 		: (options.find((option) => option.id === value)?.label ??
-			(value ? 'Seçili bayi listede bulunamadı' : allLabel));
+			(value
+				? entityType === 'bayi'
+					? 'Seçili bayi listede bulunamadı'
+					: 'Seçili yatırımcı listede bulunamadı'
+				: allLabel));
 	function editButton(option: Option) {
 		return onEdit ? (
 			<button
 				type='button'
 				role='menuitem'
-				aria-label={option.label + ' bayisini düzenle'}
-				title='Bayiyi düzenle'
+				aria-label={
+					option.label +
+					(entityType === 'bayi'
+						? ' bayisini düzenle'
+						: ' yatırımcısını düzenle')
+				}
+				title={entityType === 'bayi' ? 'Bayiyi düzenle' : 'Yatırımcıyı düzenle'}
 				disabled={canEdit && !canEdit(option.id)}
 				className='mr-1 inline-flex size-9 shrink-0 items-center justify-center rounded-lg hover:bg-button-hover-bg disabled:opacity-40'
 				onClick={() => {
@@ -270,16 +281,17 @@ export function BayiMenu({
 							className='overflow-y-auto rounded-xl border border-border bg-modal-bg p-1 text-text shadow-xl'
 							style={{ maxHeight: position.maxHeight }}
 						>
-							{selectedIds && selectedIds.length > 0 && onClear && (
-								<button
-									type='button'
-									role='menuitem'
-									className={itemClass}
-									onClick={onClear}
-								>
-									Seçimi temizle
-								</button>
-							)}
+							{(selectedIds ? selectedIds.length > 0 : Boolean(value)) &&
+								onClear && (
+									<button
+										type='button'
+										role='menuitem'
+										className={itemClass}
+										onClick={onClear}
+									>
+										Seçimi temizle
+									</button>
+								)}
 							{options.map((option) => {
 								const checked = selectedIds
 									? selectedIds.includes(option.id)
@@ -341,7 +353,7 @@ export function BayiMenu({
 										}}
 									>
 										<Plus size={16} aria-hidden />
-										Bayi ekle
+										{entityType === 'bayi' ? 'Bayi ekle' : 'Yatırımcı ekle'}
 									</button>
 								</>
 							)}

@@ -1,6 +1,6 @@
 import { RecordEditorModal } from './RecordEditorModal';
-import { Pencil } from 'lucide-react';
-import { useState } from 'react';
+import { BayiMenu } from './BayiMenu';
+import { useId, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -8,7 +8,6 @@ import {
 	type Investor,
 } from '../../hooks/api/endpoints/useInvestors';
 import { useFinanceMutation } from '../../hooks/api/endpoints/useFinance';
-import { STOCK_CONTROL } from '../../constants/stockStyles.constant';
 
 function InvestorEditor({
 	investor,
@@ -79,59 +78,56 @@ function InvestorEditor({
 export function InvestorPicker({
 	value,
 	onChange,
-	disabled,
+	disabled = false,
+	allowCreate = true,
+	compact = false,
+	label = 'Yatırımcı seçin',
+	allowClear = false,
 }: {
 	value: string;
 	onChange: (id: string) => void;
-	disabled: boolean;
+	disabled?: boolean;
+	allowCreate?: boolean;
+	compact?: boolean;
+	label?: string;
+	allowClear?: boolean;
 }) {
+	const id = useId();
 	const list = useInvestors();
 	const [editor, setEditor] = useState<{ investor: Investor | null } | null>(
 		null,
 	);
-	const selected = list.data?.investors.find(
-		(investor) => investor._id === value,
+	const investors = [...(list.data?.investors ?? [])].sort((a, b) =>
+		a.name.localeCompare(b.name, 'tr'),
 	);
 	return (
 		<div className='min-w-0 space-y-1'>
-			<label className='flex flex-col gap-1 text-xs'>
-				Yatırımcı
-				<select
-					className={`${STOCK_CONTROL} w-auto! max-w-64`}
-					aria-label='Yatırımcı seçin'
-					value={value}
-					disabled={disabled || list.isPending || list.isError}
-					required
-					onChange={(event) => {
-						if (event.target.value === '__add_investor__')
-							setEditor({ investor: null });
-						else onChange(event.target.value);
-					}}
-				>
-					<option value='' disabled hidden>
-						{list.isPending ? 'Yatırımcılar yükleniyor...' : 'Yatırımcı seçin'}
-					</option>
-					{[...(list.data?.investors ?? [])]
-						.sort((a, b) => a.name.localeCompare(b.name, 'tr'))
-						.map((investor) => (
-							<option key={investor._id} value={investor._id}>
-								{investor.name}
-							</option>
-						))}
-					<option value='__add_investor__'>+ Yatırımcı ekle</option>
-				</select>
-			</label>
-			{selected && (
-				<button
-					type='button'
-					className='inline-flex items-center gap-1 text-xs underline'
-					disabled={disabled}
-					onClick={() => setEditor({ investor: selected })}
-				>
-					<Pencil size={13} aria-hidden />
-					{selected.phone ? 'Yatırımcıyı düzenle' : 'Telefon numarası ekle'}
-				</button>
+			{!compact && (
+				<label htmlFor={id} className='block text-xs'>
+					Yatırımcı
+				</label>
 			)}
+			<BayiMenu
+				id={id}
+				entityType='investor'
+				label={label}
+				value={value}
+				options={investors.map((investor) => ({
+					id: investor._id,
+					label: investor.name,
+				}))}
+				allLabel={
+					list.isPending ? 'Yatırımcılar yükleniyor...' : 'Yatırımcı seçin'
+				}
+				disabled={disabled || list.isPending || list.isError}
+				onChange={onChange}
+				onClear={allowClear ? () => onChange('') : undefined}
+				onCreate={allowCreate ? () => setEditor({ investor: null }) : undefined}
+				onEdit={(id) => {
+					const investor = investors.find((row) => row._id === id);
+					if (investor) setEditor({ investor });
+				}}
+			/>
 			{list.isError && (
 				<p role='alert' className='text-xs text-red-500'>
 					Yatırımcılar yüklenemedi.{' '}
@@ -149,7 +145,7 @@ export function InvestorPicker({
 					investor={editor.investor}
 					onClose={() => setEditor(null)}
 					onSaved={(investor) => {
-						onChange(investor._id);
+						if (!editor.investor) onChange(investor._id);
 						setEditor(null);
 					}}
 				/>

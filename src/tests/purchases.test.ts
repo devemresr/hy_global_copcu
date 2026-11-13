@@ -636,7 +636,11 @@ describe('orders page', () => {
 		);
 		expect(url.searchParams.get('minTotal')).toBe('100');
 		expect(url.searchParams.get('maxTotal')).toBe('1000');
-		await act(async () => button('Temizle').click());
+		await act(async () =>
+			container
+				.querySelector<HTMLButtonElement>('[role="status"] > button')!
+				.click(),
+		);
 		expect(container.querySelector('input[id$="-min-0"]')).toBeNull();
 		expect(container.querySelector('input[id$="-max-0"]')).toBeNull();
 		const cleared = new URL(

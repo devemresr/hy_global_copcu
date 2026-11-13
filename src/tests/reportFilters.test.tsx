@@ -9,6 +9,8 @@ import { ReportFilters } from '../app/component/admin/ReportFilters';
 import type { PurchaseFilters } from '../app/schemas/purchase.schema';
 import { purchasePresetRange } from '../app/helpers/purchasePeriod.helper';
 import { purchaseRangeLabel } from '../app/helpers/purchasePeriod.helper';
+import type { AnalysisDefaultPeriod } from '../app/helpers/analysisPreferences.helper';
+import { analysisDefaultRange } from '../app/helpers/analysisPreferences.helper';
 import { numericFilterLabel } from '../app/helpers/numericFilters.helper';
 
 vi.mock('../app/hooks/api/endpoints/useBayiler', () => ({
@@ -86,6 +88,7 @@ it('selects a product and memory size before applying a unit-price condition and
 function mount(
 	initial: PurchaseFilters = {},
 	reportKind: 'purchase' | 'stock' | 'balance' = 'purchase',
+	defaultPeriod?: AnalysisDefaultPeriod,
 ) {
 	const changed = vi.fn();
 	function Harness() {
@@ -94,6 +97,7 @@ function mount(
 			<ReportFilters
 				value={value}
 				reportKind={reportKind}
+				defaultPeriod={defaultPeriod}
 				onChange={(next) => {
 					setValue(next);
 					changed(next);
@@ -188,7 +192,7 @@ it('removes each active purchase condition immediately while preserving other fi
 		maxTotal: 100,
 		numericFilters: [
 			{ field: 'quantityPiece', min: 2 },
-			{ field: 'lineTotal', max: 50 },
+			{ field: 'productMatch', productType: 'EMMC', memoryGb: 8 },
 		],
 	});
 	const remove = (prefix: string) =>
@@ -207,7 +211,9 @@ it('removes each active purchase condition immediately while preserving other fi
 	expect(changed.mock.lastCall![0]).toMatchObject({
 		bayiName: 'Store',
 		minTotal: 10,
-		numericFilters: [{ field: 'lineTotal', max: 50 }],
+		numericFilters: [
+			{ field: 'productMatch', productType: 'EMMC', memoryGb: 8 },
+		],
 	});
 	remove('Dönem:');
 	expect(changed.mock.lastCall![0]).not.toHaveProperty('from');
@@ -218,7 +224,7 @@ it('removes each active purchase condition immediately while preserving other fi
 	remove('İşlem geneli → İşlem toplamı');
 	expect(changed.mock.lastCall![0]).not.toHaveProperty('minTotal');
 	expect(changed.mock.lastCall![0]).not.toHaveProperty('maxTotal');
-	remove('Tüm ürünler → Ürün toplamı');
+	remove('Ürün içerir: eMMC');
 	expect(container.querySelector('[role="status"]')!.textContent).toContain(
 		'etkin filtre yok',
 	);
@@ -289,4 +295,83 @@ it('applies selected bayi checkboxes together and removes just one active bayi',
 	expect(changed).toHaveBeenLastCalledWith(
 		expect.objectContaining({ bayiIds: ['000000000000000000000002'] }),
 	);
+});
+
+it('applies a product choice without requiring numeric bounds', () => {
+	const changed = mount();
+	act(() => {
+		const scope = container.querySelector<HTMLSelectElement>(
+			'select[aria-label="1. koşul ürünü"]',
+		)!;
+		scope.value = 'EMMC:8';
+		scope.dispatchEvent(new Event('change', { bubbles: true }));
+	});
+	expect(container.querySelector('input[id$="-min-0"]')).toBeNull();
+	expect(
+		[...container.querySelectorAll('option')].map((option) => option.value),
+	).not.toContain('lineTotal');
+	act(() =>
+		container
+			.querySelector('form')!
+			.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })),
+	);
+	expect(changed).toHaveBeenLastCalledWith({
+		numericFilters: [
+			{ field: 'productMatch', productType: 'EMMC', memoryGb: 8 },
+		],
+	});
+	expect(container.querySelector('[role="status"] li')!.textContent).toContain(
+		'Ürün içerir: eMMC · 8 GB',
+	);
+});
+it('clears other conditions first and the saved default date on a second click', () => {
+	const range = analysisDefaultRange('thisMonth');
+	const changed = mount(
+		{ ...range, minTotal: 10, bayiName: 'Store' },
+		'purchase',
+		'thisMonth',
+	);
+	const clear = () =>
+		container.querySelector<HTMLButtonElement>('[role="status"] > button')!;
+	expect(clear().textContent).toBe(
+		'Varsayılan tarih filtresi hariç tüm filtreleri kaldır',
+	);
+	act(() => clear().click());
+	expect(changed).toHaveBeenLastCalledWith(range);
+	expect(clear().textContent).toBe('Tüm filtreleri kaldır');
+	act(() => clear().click());
+	expect(changed).toHaveBeenLastCalledWith({});
+	expect(clear()).toBeNull();
+	expect(container.querySelector('[role="status"]')!.textContent).toContain(
+		'Tarih filtresi yok.',
+	);
+	act(() => {
+		const scope = container.querySelector<HTMLSelectElement>(
+			'select[aria-label="1. koşul ürünü"]',
+		)!;
+		scope.value = 'EMMC:8';
+		scope.dispatchEvent(new Event('change', { bubbles: true }));
+	});
+	act(() =>
+		container
+			.querySelector('form')!
+			.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })),
+	);
+	expect(changed.mock.lastCall![0].from).toBeUndefined();
+	expect(changed.mock.lastCall![0].until).toBeUndefined();
+	expect(clear().textContent).toBe('Tüm filtreleri kaldır');
+	act(() => clear().click());
+	expect(changed).toHaveBeenLastCalledWith({});
+});
+it('warns about the all-time default and clears conditions without adding a date', () => {
+	const changed = mount({ minTotal: 10 }, 'purchase', 'allTime');
+	expect(container.querySelector('[role="status"]')!.textContent).toContain(
+		'Varsayılan dönem Tüm zamanlar',
+	);
+	const clear = container.querySelector<HTMLButtonElement>(
+		'[role="status"] > button',
+	)!;
+	expect(clear.textContent).toBe('Tüm filtreleri kaldır');
+	act(() => clear.click());
+	expect(changed).toHaveBeenLastCalledWith({});
 });

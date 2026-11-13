@@ -274,22 +274,13 @@ export default function AnalysisPage() {
 				key={preset.kind}
 				value={filters}
 				reportKind={preset.kind}
+				defaultPeriod={defaultPeriod}
 				onChange={changeFilters}
 				categoryName={
 					finance.data?.categories.find((c) => c._id === filters.categoryId)
 						?.name
 				}
 			>
-				{preset.kind === 'stock' && (
-					<StockReportFields
-						filters={filters}
-						onChange={changeFilters}
-						view={view}
-						setView={setView}
-						groupBy={groupBy}
-						setGroupBy={setGroupBy}
-					/>
-				)}
 				{preset.kind === 'balance' && (
 					<FinanceReportFields
 						filters={filters}
@@ -338,6 +329,16 @@ export default function AnalysisPage() {
 					{preset.kind === 'stock' && stock.data && (
 						<>
 							<SelectableStockReport
+								controls={
+									<StockReportFields
+										filters={filters}
+										onChange={changeFilters}
+										view={view}
+										setView={setView}
+										groupBy={groupBy}
+										setGroupBy={setGroupBy}
+									/>
+								}
 								key={JSON.stringify(filters)}
 								data={stock.data}
 								filters={filters}

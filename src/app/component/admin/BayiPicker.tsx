@@ -83,6 +83,7 @@ type BayiPickerProps = BayiSelection & {
 	options?: BayiMenuOption[];
 	addOptions?: BayiMenuOption[];
 	canAdd?: boolean;
+	allowCreate?: boolean;
 	onAdd?: (id: string) => void;
 };
 export function BayiPicker(props: BayiPickerProps) {
@@ -93,6 +94,7 @@ export function BayiPicker(props: BayiPickerProps) {
 		options,
 		addOptions,
 		canAdd,
+		allowCreate = false,
 		onAdd,
 	} = props;
 	const list = useBayiler();
@@ -172,14 +174,16 @@ export function BayiPicker(props: BayiPickerProps) {
 					if (bayi) setEditor({ bayi });
 				}}
 				canEdit={(id) => bayiler.some((bayi) => bayi._id === id)}
-				onCreate={() => setEditor({ bayi: null })}
+				onCreate={allowCreate ? () => setEditor({ bayi: null }) : undefined}
 				addOptions={addOptions}
 				canAdd={canAdd}
 				onAdd={onAdd}
 			/>
 			{list.isSuccess && !bayiler.length && !options && (
 				<p className='text-xs opacity-70'>
-					Henüz bayi yok. Listeden “Bayi ekle”yi seçin.
+					{allowCreate
+						? 'Henüz bayi yok. Listeden “Bayi ekle”yi seçin.'
+						: 'Henüz bayi yok. Alış sayfasından bayi ekleyebilirsiniz.'}
 				</p>
 			)}
 			{list.isError && (

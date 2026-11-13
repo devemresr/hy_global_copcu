@@ -112,7 +112,25 @@ it('submits permanent IDs, keeps the selection after a rename and removes identi
 	);
 	expect(changed.mock.lastCall![0].bayiIds).toBeUndefined();
 	expect(changed.mock.lastCall![0].bayiId).toBeUndefined();
-	choose('[aria-label="Rapor yatırımcı filtresi"]', parties.investors[0]._id);
+	choose('select[aria-label="1. koşul ürünü"]', 'investor');
+	const investorTrigger = openBayiMenu('Rapor yatırımcı filtresi');
+	expect(
+		investorTrigger.closest('fieldset')?.querySelector('legend')?.textContent,
+	).toBe('Filtre koşulları');
+	expect(
+		document.querySelector(
+			'[aria-label="' + parties.investors[0].name + ' yatırımcısını düzenle"]',
+		),
+	).not.toBeNull();
+	expect(document.querySelector('[role="menu"]')!.textContent).not.toContain(
+		'Yatırımcı ekle',
+	);
+	chooseBayiOption('Rapor yatırımcı filtresi', parties.investors[0].name);
+	act(() =>
+		container
+			.querySelector('form')!
+			.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })),
+	);
 	expect(changed.mock.lastCall![0].investorId).toBe(parties.investors[0]._id);
 	expect(changed.mock.lastCall![0].bayiName).toBeUndefined();
 });

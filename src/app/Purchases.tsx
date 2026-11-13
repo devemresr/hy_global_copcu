@@ -356,6 +356,7 @@ export default function PurchasesPage() {
 					Yeni alış
 				</h2>
 				<BayiPicker
+					allowCreate
 					value={bayiId}
 					onChange={setBayiId}
 					disabled={save.isPending}

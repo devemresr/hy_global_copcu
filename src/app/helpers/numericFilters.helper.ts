@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 export const NUMERIC_FIELDS = {
 	total: 'İşlem toplamı (TL)',
-	lineTotal: 'Ürün toplamı (TL)',
+	productMatch: 'Ek sayısal koşul yok',
 	recordPiece: 'Alış toplam miktarı (adet)',
 	recordKg: 'Alış toplam miktarı (kg)',
 	recordG: 'Alış toplam miktarı (g)',
@@ -43,7 +43,9 @@ export const numericFilterSchema = z
 	.strict()
 	.refine(
 		(v) =>
-			(v.min !== undefined || v.max !== undefined) &&
+			(v.field === 'productMatch'
+				? v.min === undefined && v.max === undefined
+				: v.min !== undefined || v.max !== undefined) &&
 			(v.min === undefined || v.max === undefined || v.min <= v.max),
 		'Geçerli bir sayı aralığı girin.',
 	)
@@ -98,6 +100,7 @@ export function numericFilterLabel(filter: NumericFilter) {
 			  )
 			? 'İşlem geneli'
 			: 'Tüm ürünler';
+	if (filter.field === 'productMatch') return 'Ürün içerir: ' + scope;
 	return `${scope} → ${NUMERIC_FIELDS[filter.field]}: ${filter.min?.toLocaleString('tr-TR', { maximumFractionDigits: 6 }) ?? 'Alt sınır yok'} – ${filter.max?.toLocaleString('tr-TR', { maximumFractionDigits: 6 }) ?? 'Üst sınır yok'}`;
 }
 export function reportFilterParams<
@@ -109,5 +112,69 @@ export function reportFilterParams<
 		numericFilters: filters.numericFilters?.length
 			? JSON.stringify(filters.numericFilters)
 			: undefined,
+	};
+}
+
+export function numericFilterInput(field: NumericField): {
+	decimalPlaces: number;
+	steppers: [
+		{ amount: number; label: string },
+		{ amount: number; label: string },
+	];
+} {
+	if (['recordPiece', 'quantityPiece', 'lineCount'].includes(field))
+		return {
+			decimalPlaces: 0,
+			steppers: [
+				{ amount: 1, label: '+1' },
+				{ amount: 5, label: '+5' },
+			],
+		};
+	if (['recordKg', 'quantityKg'].includes(field))
+		return {
+			decimalPlaces: 3,
+			steppers: [
+				{ amount: 0.1, label: '+0,1' },
+				{ amount: 1, label: '+1' },
+			],
+		};
+	if (['recordG', 'quantityG'].includes(field))
+		return {
+			decimalPlaces: 3,
+			steppers: [
+				{ amount: 1, label: '+1' },
+				{ amount: 10, label: '+10' },
+			],
+		};
+	if (field === 'margin')
+		return {
+			decimalPlaces: 2,
+			steppers: [
+				{ amount: 1, label: '+1' },
+				{ amount: 5, label: '+5' },
+			],
+		};
+	if (field.endsWith('G'))
+		return {
+			decimalPlaces: 6,
+			steppers: [
+				{ amount: 0.1, label: '+0,1' },
+				{ amount: 1, label: '+1' },
+			],
+		};
+	if (/(?:Piece|Kg)$/.test(field))
+		return {
+			decimalPlaces: 6,
+			steppers: [
+				{ amount: 10, label: '+10' },
+				{ amount: 100, label: '+100' },
+			],
+		};
+	return {
+		decimalPlaces: 2,
+		steppers: [
+			{ amount: 100, label: '+100' },
+			{ amount: 1000, label: '+1k' },
+		],
 	};
 }

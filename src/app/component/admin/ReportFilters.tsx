@@ -1,4 +1,9 @@
+import {
+	analysisDefaultRange,
+	type AnalysisDefaultPeriod,
+} from '../../helpers/analysisPreferences.helper';
 import { BayiPicker } from './BayiPicker';
+import { InvestorPicker } from './InvestorPicker';
 import { purchaseChoices } from '../../helpers/purchaseChoices.helper';
 import { formatPurchaseProduct } from '../../helpers/purchaseProduct.helper';
 import { useInvestors } from '../../hooks/api/endpoints/useInvestors';
@@ -19,13 +24,14 @@ import {
 import {
 	NUMERIC_FIELDS,
 	numericFieldsFor,
+	numericFilterInput,
 	numericFilterLabel,
 	type NumericField,
 } from '../../helpers/numericFilters.helper';
 import { Trash2, Plus, ListFilter, X } from 'lucide-react';
 
 type Draft = {
-	kind?: 'bayi';
+	kind?: 'bayi' | 'investor';
 	field: NumericField;
 	min: number | '';
 	max: number | '';
@@ -41,7 +47,9 @@ const recordFields = [
 ];
 const control =
 	'h-9 min-w-0 max-w-full rounded-lg border border-border bg-button-bg px-2 text-sm text-text';
-function numericRows(value: PurchaseFilters): Draft[] {
+function numericRows(
+	value: PurchaseFilters & { investorId?: string },
+): Draft[] {
 	const rows: Draft[] = (value.numericFilters ?? []).map((f) => ({
 		field: f.field,
 		productType: f.productType,
@@ -57,6 +65,8 @@ function numericRows(value: PurchaseFilters): Draft[] {
 		});
 	if (value.bayiIds?.length || value.bayiId)
 		rows.unshift({ kind: 'bayi', field: 'total', min: '', max: '' });
+	if (value.investorId)
+		rows.unshift({ kind: 'investor', field: 'total', min: '', max: '' });
 	return rows.length
 		? rows
 		: [{ kind: 'bayi', field: 'total', min: '', max: '' }];
@@ -67,12 +77,14 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 	reportKind = 'purchase',
 	children,
 	categoryName,
+	defaultPeriod,
 }: {
 	value: T;
 	onChange: (filters: T) => void;
 	reportKind?: ReportKind;
 	children?: ReactNode;
 	categoryName?: string;
+	defaultPeriod?: AnalysisDefaultPeriod;
 }) {
 	const id = useId();
 	const panel = useRef<HTMLDetailsElement>(null);
@@ -81,6 +93,8 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 	const choices = [...(bayiler.data?.bayiler ?? [])].sort((a, b) =>
 		a.name.localeCompare(b.name, 'tr'),
 	);
+	const investorId = (value as T & { investorId?: string }).investorId;
+	const [draftInvestorId, setDraftInvestorId] = useState(investorId ?? '');
 	const [rows, setRows] = useState<Draft[]>(() => numericRows(value));
 	const selectedIds = (filters: PurchaseFilters) =>
 		filters.bayiIds ?? (filters.bayiId ? [filters.bayiId] : []);
@@ -89,6 +103,7 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 	const [error, setError] = useState('');
 	if (
 		JSON.stringify([
+			(synced as T & { investorId?: string }).investorId,
 			synced.bayiIds,
 			synced.bayiId,
 			synced.numericFilters,
@@ -96,6 +111,7 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 			synced.maxTotal,
 		]) !==
 		JSON.stringify([
+			investorId,
 			value.bayiIds,
 			value.bayiId,
 			value.numericFilters,
@@ -106,13 +122,21 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 		setSynced(value);
 		setRows(numericRows(value));
 		setBayiIds(selectedIds(value));
+		setDraftInvestorId(investorId ?? '');
 	}
 	const pending =
+		draftInvestorId !== (investorId ?? '') ||
 		JSON.stringify([...bayiIds].sort()) !==
 			JSON.stringify([...selectedIds(value)].sort()) ||
-		JSON.stringify(rows.filter((r) => r.min !== '' || r.max !== '')) !==
+		JSON.stringify(
+			rows.filter(
+				(r) => r.field === 'productMatch' || r.min !== '' || r.max !== '',
+			),
+		) !==
 			JSON.stringify(
-				numericRows(value).filter((r) => r.min !== '' || r.max !== ''),
+				numericRows(value).filter(
+					(r) => r.field === 'productMatch' || r.min !== '' || r.max !== '',
+				),
 			);
 	const active: { label: string; remove: () => void }[] = [];
 	function removeKeys(...keys: string[]) {
@@ -143,7 +167,6 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 		addPill('Bayi: ' + value.bayiName, 'bayiName');
 	if (value.purchaseId)
 		addPill('Alış kaydı: #' + value.purchaseId.slice(-6), 'purchaseId');
-	const investorId = (value as T & { investorId?: string }).investorId;
 	if (investorId)
 		addPill(
 			'Yatırımcı: ' +
@@ -229,9 +252,13 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 		);
 	if (extra.categoryId)
 		addPill('Alt tür: ' + (categoryName ?? 'Seçili alt tür'), 'categoryId');
-	function apply(period: PurchaseFilters = value) {
+	function apply() {
 		const numericFilters = rows
-			.filter((r) => !r.kind && (r.min !== '' || r.max !== ''))
+			.filter(
+				(r) =>
+					!r.kind &&
+					(r.field === 'productMatch' || r.min !== '' || r.max !== ''),
+			)
 			.map((r) => ({
 				field: r.field,
 				productType: r.productType,
@@ -243,7 +270,7 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 		const total = numericFilters[totalIndex];
 		const others = numericFilters.filter((_, i) => i !== totalIndex);
 		const parsed = purchaseFiltersSchema.safeParse({
-			...period,
+			...value,
 			bayiIds: bayiIds.length ? bayiIds : undefined,
 			bayiId: undefined,
 			bayiName: undefined,
@@ -258,24 +285,33 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 			return;
 		}
 		setError('');
-		const {
-			from: _from,
-			until: _until,
-			bayiName: _bayiName,
-			bayiId: _bayiId,
-			bayiIds: _bayiIds,
-			numericFilters: _numericFilters,
-			minTotal: _minTotal,
-			maxTotal: _maxTotal,
-			...extras
-		} = value;
 		onChange({
-			...extras,
-			...(bayiIds.length ? { investorId: undefined } : {}),
-			...Object.fromEntries(
-				Object.entries(parsed.data).filter(([, v]) => v !== undefined),
-			),
-		} as T);
+			...value,
+			...parsed.data,
+			investorId: draftInvestorId || undefined,
+		});
+	}
+	const defaultRange = defaultPeriod ? analysisDefaultRange(defaultPeriod) : {};
+	const hasOtherFilters =
+		active.length > (value.from || value.until ? 1 : 0) ||
+		value.from !== defaultRange.from ||
+		value.until !== defaultRange.until;
+	const preserveDefault = Boolean(
+		(value.from || value.until) &&
+			value.from === defaultRange.from &&
+			value.until === defaultRange.until &&
+			(hasOtherFilters || pending),
+	);
+	const clearLabel = preserveDefault
+		? 'Varsayılan tarih filtresi hariç tüm filtreleri kaldır'
+		: 'Tüm filtreleri kaldır';
+	function clearFilters() {
+		const next = (preserveDefault ? defaultRange : {}) as T;
+		setRows(numericRows(next));
+		setBayiIds([]);
+		setDraftInvestorId('');
+		setError('');
+		onChange(next);
 	}
 	function update(index: number, patch: Partial<Draft>) {
 		setRows(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -321,32 +357,6 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 						apply();
 					}}
 				>
-					{reportKind === 'balance' && (
-						<label className='flex w-full max-w-64 flex-col gap-1 text-sm'>
-							Yatırımcı
-							<select
-								aria-label='Rapor yatırımcı filtresi'
-								className={control}
-								value={investorId ?? ''}
-								onChange={(event) =>
-									onChange({
-										...value,
-										investorId: event.target.value || undefined,
-										bayiId: undefined,
-										bayiIds: undefined,
-										bayiName: undefined,
-									})
-								}
-							>
-								<option value=''>Tüm yatırımcılar</option>
-								{(investors.data?.investors ?? []).map((row) => (
-									<option key={row._id} value={row._id}>
-										{row.name}
-									</option>
-								))}
-							</select>
-						</label>
-					)}
 					{bayiler.isError && (
 						<p role='alert' className='text-xs text-red-500'>
 							Bayiler yüklenemedi.{' '}
@@ -375,7 +385,7 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 						<p className='text-xs opacity-70'>
 							{reportKind === 'balance'
 								? 'Gelir ve gider hareketlerini işlem tutarına göre sınırlandırın. Sınırlar dahildir; boş sınırlar uygulanmaz.'
-								: 'Önce kapsamı, sonra özelliği seçin. Aynı ürünün koşulları birlikte uygulanır; stok raporunda farklı ürün kapsamlarından birine uyan satırlar gösterilir. Sınırlar dahildir, boş sınırlar uygulanmaz.'}
+								: 'Ürün seçimi tek başına yeterlidir. İsterseniz bir sayısal özellik ve sınır ekleyin. Aynı ürünün koşulları birlikte uygulanır; stok raporunda farklı ürün kapsamlarından birine uyan satırlar gösterilir. Sınırlar dahildir, boş sınırlar uygulanmaz.'}
 						</p>
 						{rows.map((row, index) => (
 							<div
@@ -388,8 +398,8 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 										aria-label={index + 1 + '. koşul ürünü'}
 										className={control + ' w-48'}
 										value={
-											row.kind === 'bayi'
-												? 'bayi'
+											row.kind
+												? row.kind
 												: row.productType
 													? row.memoryGb === undefined
 														? row.productType
@@ -402,9 +412,11 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 											const scope = event.target.value;
 											if (row.kind === 'bayi' && scope !== 'bayi')
 												setBayiIds([]);
-											if (scope === 'bayi') {
+											if (row.kind === 'investor' && scope !== 'investor')
+												setDraftInvestorId('');
+											if (scope === 'bayi' || scope === 'investor') {
 												update(index, {
-													kind: 'bayi',
+													kind: scope,
 													field: 'total',
 													min: '',
 													max: '',
@@ -421,12 +433,9 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 														? undefined
 														: (type as Draft['productType']),
 												memoryGb: size ? Number(size) : undefined,
-												field:
-													scope === 'operation'
-														? 'total'
-														: recordFields.includes(row.field)
-															? 'lineTotal'
-															: row.field,
+												field: scope === 'operation' ? 'total' : 'productMatch',
+												min: '',
+												max: '',
 											});
 										}}
 									>
@@ -438,6 +447,17 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 										>
 											Bayi
 										</option>
+										{reportKind === 'balance' && (
+											<option
+												value='investor'
+												disabled={rows.some(
+													(other, i) =>
+														i !== index && other.kind === 'investor',
+												)}
+											>
+												Yatırımcı
+											</option>
+										)}
 										<option value='operation'>İşlem geneli</option>
 										{reportKind !== 'balance' && (
 											<>
@@ -466,8 +486,25 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 											compact
 											multiple
 											value={bayiIds}
-											onChange={setBayiIds}
+											onChange={(ids) => {
+												setBayiIds(ids);
+												if (ids.length) setDraftInvestorId('');
+											}}
 											label='Rapor bayi filtresi'
+										/>
+									</div>
+								) : row.kind === 'investor' ? (
+									<div className='w-56 max-w-full'>
+										<InvestorPicker
+											compact
+											allowCreate={false}
+											allowClear
+											value={draftInvestorId}
+											label='Rapor yatırımcı filtresi'
+											onChange={(id) => {
+												setDraftInvestorId(id);
+												if (id) setBayiIds([]);
+											}}
 										/>
 									</div>
 								) : (
@@ -476,7 +513,9 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 											className='flex max-w-full flex-col gap-1 text-xs'
 											htmlFor={id + '-field-' + index}
 										>
-											Alan
+											{recordFields.includes(row.field)
+												? 'Alan'
+												: 'Sayısal koşul (isteğe bağlı)'}
 											<select
 												id={id + '-field-' + index}
 												className={control + ' w-56'}
@@ -484,6 +523,8 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 												onChange={(e) =>
 													update(index, {
 														field: e.target.value as NumericField,
+														min: '',
+														max: '',
 													})
 												}
 											>
@@ -501,43 +542,48 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 													))}
 											</select>
 										</label>
-										{(['min', 'max'] as const).map((bound) => (
-											<label
-												key={bound}
-												className='flex w-36 max-w-full flex-col gap-1 text-xs'
-												htmlFor={id + '-' + bound + '-' + index}
-											>
-												{row.field === 'total'
-													? bound === 'min'
-														? 'En az toplam (TL)'
-														: 'En çok toplam (TL)'
-													: bound === 'min'
-														? 'En az'
-														: 'En çok'}
-												<NumberInputWithSteppers
-													id={id + '-' + bound + '-' + index}
-													disableWheel
-													decimalPlaces={6}
-													allowNegative={
-														row.field === 'profit' ||
-														row.field === 'margin' ||
-														row.field.startsWith('priceAdjustment') ||
-														row.field === 'totalAdjustment'
-													}
-													value={row[bound]}
-													onChange={(v) =>
-														update(index, {
-															[bound]:
-																typeof v === 'function' ? v(row[bound]) : v,
-														})
-													}
-													className={
-														control + ' w-full [&_input]:w-12 [&_input]:min-w-0'
-													}
-													stepperClassName='rounded px-1 py-1'
-												/>
-											</label>
-										))}
+										{row.field !== 'productMatch' &&
+											(['min', 'max'] as const).map((bound) => (
+												<label
+													key={bound}
+													className='flex w-36 max-w-full flex-col gap-1 text-xs'
+													htmlFor={id + '-' + bound + '-' + index}
+												>
+													{row.field === 'total'
+														? bound === 'min'
+															? 'En az toplam (TL)'
+															: 'En çok toplam (TL)'
+														: bound === 'min'
+															? 'En az'
+															: 'En çok'}
+													<NumberInputWithSteppers
+														id={id + '-' + bound + '-' + index}
+														disableWheel
+														decimalPlaces={
+															numericFilterInput(row.field).decimalPlaces
+														}
+														steppers={numericFilterInput(row.field).steppers}
+														allowNegative={
+															row.field === 'profit' ||
+															row.field === 'margin' ||
+															row.field.startsWith('priceAdjustment') ||
+															row.field === 'totalAdjustment'
+														}
+														value={row[bound]}
+														onChange={(v) =>
+															update(index, {
+																[bound]:
+																	typeof v === 'function' ? v(row[bound]) : v,
+															})
+														}
+														className={
+															control +
+															' w-full [&_input]:w-12 [&_input]:min-w-0'
+														}
+														stepperClassName='rounded px-1 py-1'
+													/>
+												</label>
+											))}
 									</>
 								)}
 								<button
@@ -546,6 +592,7 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 									aria-label={'Koşulu kaldır ' + (index + 1)}
 									onClick={() => {
 										if (row.kind === 'bayi') setBayiIds([]);
+										if (row.kind === 'investor') setDraftInvestorId('');
 										setRows(rows.filter((_, i) => i !== index));
 									}}
 								>
@@ -568,18 +615,6 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 					<div className='flex flex-wrap gap-2'>
 						<button type='submit' className={control}>
 							Filtreleri uygula
-						</button>
-						<button
-							type='button'
-							className={control}
-							onClick={() => {
-								setRows([{ kind: 'bayi', field: 'total', min: '', max: '' }]);
-								setBayiIds([]);
-								setError('');
-								onChange({} as T);
-							}}
-						>
-							Temizle
 						</button>
 					</div>
 					{pending && (
@@ -604,7 +639,9 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 				role='status'
 				className={
 					'rounded-lg border p-3 text-sm ' +
-					(active.length
+					(active.length ||
+					defaultPeriod === 'allTime' ||
+					(!value.from && !value.until)
 						? 'border-amber-500/40 bg-amber-500/10'
 						: 'border-sky-500/30 bg-sky-500/5')
 				}
@@ -616,6 +653,25 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 							' filtre ile sınırlandırıldı.'
 						: 'Aşağıdaki veriler tüm kayıtları kapsar; etkin filtre yok.'}
 				</p>
+				{(defaultPeriod === 'allTime' || (!value.from && !value.until)) && (
+					<p className='mt-2 font-medium text-amber-700 dark:text-amber-300'>
+						{defaultPeriod === 'allTime'
+							? 'Varsayılan dönem Tüm zamanlar.'
+							: 'Tarih filtresi yok.'}{' '}
+						{value.from || value.until
+							? 'Seçili tarih filtresi kaldırılırsa tüm geçmiş kayıtlar gösterilir.'
+							: 'Tarih sınırı uygulanmıyor; tüm geçmiş kayıtlar rapora dahil edilebilir.'}
+					</p>
+				)}
+				{(active.length > 0 || pending) && (
+					<button
+						type='button'
+						onClick={clearFilters}
+						className={control + ' mt-2 h-auto min-h-9 py-1'}
+					>
+						{clearLabel}
+					</button>
+				)}
 				{active.length > 0 && (
 					<ul className='mt-2 flex flex-wrap gap-2 text-xs'>
 						{active.map(({ label, remove }, i) => (

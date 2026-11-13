@@ -41,7 +41,14 @@ const existing = {
 };
 function Controlled() {
 	const [value, onChange] = useState('');
-	return <BayiPicker value={value} onChange={onChange} disabled={false} />;
+	return (
+		<BayiPicker
+			allowCreate
+			value={value}
+			onChange={onChange}
+			disabled={false}
+		/>
+	);
 }
 async function mount() {
 	container = document.createElement('div');
