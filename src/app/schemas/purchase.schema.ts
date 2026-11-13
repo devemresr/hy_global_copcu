@@ -1,8 +1,8 @@
 import { numericFilterSchema } from '../helpers/numericFilters.helper';
 import { z } from 'zod';
-import { ORDER_PRODUCT_TYPES } from '../constants/orderProducts.constant';
+import { PURCHASE_PRODUCT_TYPES } from '../constants/purchaseProducts.constant';
 
-export const orderLineSchema = z
+export const purchaseLineSchema = z
 	.object({
 		type: z.enum(['EMCP', 'EMMC', 'IPHONE', 'TABLET']),
 		quantity: z.number().finite().positive().max(1_000_000).multipleOf(0.001),
@@ -40,16 +40,7 @@ export const orderLineSchema = z
 	.strict()
 	.superRefine((line, context) => {
 		if (
-			ORDER_PRODUCT_TYPES[line.type].requiresMemorySize &&
-			line.quantityUnit !== 'piece'
-		)
-			context.addIssue({
-				code: z.ZodIssueCode.custom,
-				path: ['quantityUnit'],
-				message: 'Bellek ürünleri adet ile takip edilir.',
-			});
-		if (
-			ORDER_PRODUCT_TYPES[line.type].requiresMemorySize &&
+			PURCHASE_PRODUCT_TYPES[line.type].requiresMemorySize &&
 			line.memoryGb == null
 		)
 			context.addIssue({
@@ -58,7 +49,7 @@ export const orderLineSchema = z
 				message: 'Bu ürün için bellek boyutu seçin.',
 			});
 		if (
-			!ORDER_PRODUCT_TYPES[line.type].requiresMemorySize &&
+			!PURCHASE_PRODUCT_TYPES[line.type].requiresMemorySize &&
 			line.memoryGb != null
 		)
 			context.addIssue({
@@ -73,11 +64,11 @@ export const orderLineSchema = z
 				message: 'Adet tam sayı olmalıdır.',
 			});
 	});
-export const createOrderSchema = z
+export const createPurchaseSchema = z
 	.object({
 		comparisonDays: z.number().int().min(1).max(36500).default(30),
 		bayiId: z.string().regex(/^[a-f\d]{24}$/i, 'Bir bayi seçin.'),
-		lines: z.array(orderLineSchema).min(1).max(200),
+		lines: z.array(purchaseLineSchema).min(1).max(200),
 	})
 	.strict()
 	.refine(
@@ -86,7 +77,7 @@ export const createOrderSchema = z
 				.size === value.lines.length,
 		'Aynı ürünü bir kez ekleyin; miktarını aynı satırda düzenleyin.',
 	);
-export type CreateOrderInput = z.infer<typeof createOrderSchema>;
+export type CreatePurchaseInput = z.infer<typeof createPurchaseSchema>;
 const dateSchema = z
 	.string()
 	.regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -95,9 +86,22 @@ const dateSchema = z
 			!Number.isNaN(Date.parse(value)) &&
 			new Date(value).toISOString().slice(0, 10) === value,
 	);
-export const orderFiltersSchema = z
+export const purchaseFiltersSchema = z
 	.object({
 		bayiName: z.string().trim().max(120).optional(),
+		purchaseId: z
+			.string()
+			.regex(/^[a-f\d]{24}$/i)
+			.optional(),
+		bayiIds: z
+			.array(z.string().regex(/^[a-f\d]{24}$/i))
+			.min(1)
+			.max(200)
+			.optional(),
+		bayiId: z
+			.string()
+			.regex(/^[a-f\d]{24}$/i)
+			.optional(),
 		numericFilters: z.array(numericFilterSchema).max(30).optional(),
 		from: dateSchema.optional(),
 		until: dateSchema.optional(),
@@ -115,5 +119,5 @@ export const orderFiltersSchema = z
 			value.minTotal <= value.maxTotal,
 		'Fiyat aralığı geçersiz.',
 	);
-export type OrderLine = z.input<typeof orderLineSchema>;
-export type OrderFilters = z.infer<typeof orderFiltersSchema>;
+export type PurchaseLine = z.input<typeof purchaseLineSchema>;
+export type PurchaseFilters = z.infer<typeof purchaseFiltersSchema>;

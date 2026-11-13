@@ -6,33 +6,36 @@ import {
 	useQueryClient,
 } from '@tanstack/react-query';
 import { apiFetch, type ApiError } from '../core/api-client';
-import { ORDER_ROUTES } from '../../../constants/routes.constant';
+import { PURCHASE_ROUTES } from '../../../constants/routes.constant';
 import type {
-	OrderQuantityUnit,
-	OrderUnitTotals,
-} from '../../../constants/orderProducts.constant';
+	PurchaseQuantityUnit,
+	PurchaseUnitTotals,
+} from '../../../constants/purchaseProducts.constant';
 import { toast } from 'sonner';
 import type {
-	CreateOrderInput,
-	OrderFilters,
-	OrderLine,
-} from '../../../schemas/order.schema';
-export type { OrderFilters, OrderLine } from '../../../schemas/order.schema';
+	CreatePurchaseInput,
+	PurchaseFilters,
+	PurchaseLine,
+} from '../../../schemas/purchase.schema';
+export type {
+	PurchaseFilters,
+	PurchaseLine,
+} from '../../../schemas/purchase.schema';
 
-export type SavedOrderLine = OrderLine & {
+export type SavedPurchaseLine = PurchaseLine & {
 	requiresMemorySize?: boolean;
 	unitPrice: number;
 	total: number;
 	originalUnitPrice?: number | null;
 	priceAdjustment?: number | null;
 };
-export type OrderPriceAdjustment = {
+export type PurchasePriceAdjustment = {
 	orderId: string;
 	orderName: string;
 	createdAt: string;
-	type: OrderLine['type'];
+	type: PurchaseLine['type'];
 	memoryGb?: number | null;
-	quantityUnit?: OrderQuantityUnit;
+	quantityUnit?: PurchaseQuantityUnit;
 	requiresMemorySize?: boolean;
 	quantity: number;
 	originalUnitPrice: number;
@@ -40,90 +43,96 @@ export type OrderPriceAdjustment = {
 	priceAdjustment: number;
 	totalAdjustment: number;
 };
-export type Order = {
-	unitTotals?: OrderUnitTotals;
+export type Purchase = {
+	unitTotals?: PurchaseUnitTotals;
 	bayiId?: string;
+	bayiName?: string;
+	currentBayiName?: string | null;
 	bayiPhone?: string;
 	_id: string;
 	name: string;
 	createdAt: string;
 	total: number;
 	quantity: number;
-	lines: SavedOrderLine[];
+	lines: SavedPurchaseLine[];
 };
-export type OrdersResponse = {
+export type PurchasesResponse = {
+	bayiFilterName?: string | null;
 	timeline?: Pick<
-		Order,
+		Purchase,
 		'_id' | 'name' | 'createdAt' | 'total' | 'quantity' | 'unitTotals'
 	>[];
-	orders: Order[];
+	orders: Purchase[];
 	summary: {
 		count: number;
 		total: number;
 		quantity: number;
-		unitTotals?: OrderUnitTotals;
+		unitTotals?: PurchaseUnitTotals;
 	};
 	daily: { _id: string; count: number; total: number }[];
 	page: number;
 	totalPages: number;
 	byType: {
-		_id: OrderLine['type'];
+		_id: PurchaseLine['type'];
 		total: number;
 		quantity: number;
-		unitTotals?: OrderUnitTotals;
+		unitTotals?: PurchaseUnitTotals;
 	}[];
 	byMemory: { _id: number; total: number; quantity: number }[];
 	byTypeAndMemory?: {
-		type: OrderLine['type'];
+		type: PurchaseLine['type'];
 		memoryGb?: number | null;
-		quantityUnit?: OrderQuantityUnit;
+		quantityUnit?: PurchaseQuantityUnit;
 		requiresMemorySize?: boolean;
 		quantity: number;
 		total: number;
 	}[];
-	adjustments?: OrderPriceAdjustment[];
+	adjustments?: PurchasePriceAdjustment[];
 	missingListPrices?: {
 		orderId: string;
 		orderName: string;
 		createdAt: string;
-		type: OrderLine['type'];
+		type: PurchaseLine['type'];
 		memoryGb?: number | null;
-		quantityUnit?: OrderQuantityUnit;
+		quantityUnit?: PurchaseQuantityUnit;
 		requiresMemorySize?: boolean;
 		quantity: number;
 		unitPrice: number;
 		total: number;
 	}[];
 };
-export function useOrderPricing() {
-	return useQuery<
-		{
-			prices: Record<string, Record<string, number>>;
-			productTypes?: Record<
-				OrderLine['type'],
-				{ label: string; requiresMemorySize: boolean }
-			>;
-			memorySizes?: number[];
-		},
-		ApiError
-	>({
-		queryKey: ['orderPricing'],
-		queryFn: () => apiFetch(ORDER_ROUTES.PRICING),
+export type PurchasePricing = {
+	prices: Record<string, Record<string, number>>;
+	unitPrices?: Record<
+		string,
+		Record<string, Partial<Record<'piece' | 'kg' | 'g', number>>>
+	>;
+	quantityUnits?: Record<string, Record<string, ('piece' | 'kg' | 'g')[]>>;
+	productTypes?: Record<
+		PurchaseLine['type'],
+		{ label: string; requiresMemorySize: boolean }
+	>;
+	memorySizes?: number[];
+};
+export function usePurchasePricing() {
+	return useQuery<PurchasePricing, ApiError>({
+		queryKey: ['purchasePricing'],
+		queryFn: () => apiFetch(PURCHASE_ROUTES.PRICING),
 		retry: false,
 	});
 }
-export function useOrders(
-	filters: OrderFilters,
+export function usePurchases(
+	filters: PurchaseFilters,
 	page: number,
 	pageSize: number,
 	enabled: boolean,
 	excludeIds: string[] = [],
 ) {
-	return useQuery<OrdersResponse, ApiError>({
+	return useQuery<PurchasesResponse, ApiError>({
 		queryKey: ['orders', filters, page, pageSize, excludeIds],
 		queryFn: () =>
 			excludeIds.length
-				? apiFetch(ORDER_ROUTES.REPORT, {
+				? apiFetch(PURCHASE_ROUTES.REPORT, {
 						method: 'POST',
 						body: {
 							...filters,
@@ -132,7 +141,7 @@ export function useOrders(
 							excludeIds: excludeIds.join(','),
 						},
 					})
-				: apiFetch(ORDER_ROUTES.LIST, {
+				: apiFetch(PURCHASE_ROUTES.LIST, {
 						params: { ...reportFilterParams(filters), page, pageSize },
 					}),
 		placeholderData: keepPreviousData,
@@ -140,15 +149,15 @@ export function useOrders(
 		retry: false,
 	});
 }
-export function useCreateOrder() {
+export function useCreatePurchase() {
 	const client = useQueryClient();
 	return useMutation<
-		{ order: Order; warnings?: { message: string }[] },
+		{ order: Purchase; warnings?: { message: string }[] },
 		ApiError,
-		CreateOrderInput
+		CreatePurchaseInput
 	>({
 		mutationFn: (body) =>
-			apiFetch(ORDER_ROUTES.CREATE, { method: 'POST', body }),
+			apiFetch(PURCHASE_ROUTES.CREATE, { method: 'POST', body }),
 		onSuccess: ({ warnings }) => {
 			for (const warning of warnings ?? [])
 				toast.warning('Zarar riski · Alış fiyatı yüksek', {

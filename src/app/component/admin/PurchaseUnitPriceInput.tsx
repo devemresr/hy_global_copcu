@@ -3,13 +3,13 @@ import {
 	STOCK_STEPPER,
 } from '../../constants/stockStyles.constant';
 import { NumberInputWithSteppers } from '../NumberInputWithSteppers';
-import { formatOrderMoney } from '../../constants/orderReports.constant';
+import { formatPurchaseMoney } from '../../constants/purchaseReports.constant';
 import {
-	ORDER_QUANTITY_UNIT_LABELS,
-	type OrderQuantityUnit,
-} from '../../constants/orderProducts.constant';
+	PURCHASE_QUANTITY_UNIT_LABELS,
+	type PurchaseQuantityUnit,
+} from '../../constants/purchaseProducts.constant';
 
-export function OrderUnitPriceInput({
+export function PurchaseUnitPriceInput({
 	originalPrice,
 	value,
 	onChange,
@@ -24,7 +24,7 @@ export function OrderUnitPriceInput({
 	onChange: (value: number | '' | null) => void;
 	disabled: boolean;
 	rowNumber: number;
-	quantityUnit?: OrderQuantityUnit;
+	quantityUnit?: PurchaseQuantityUnit;
 }) {
 	const listPrice = originalPrice;
 	const current = value === null ? (originalPrice ?? '') : value;
@@ -32,7 +32,7 @@ export function OrderUnitPriceInput({
 		<div className='w-fit min-w-0 space-y-1 text-left'>
 			<NumberInputWithSteppers
 				id={`unit-price-${rowNumber}`}
-				ariaLabel={`${rowNumber}. satır birim fiyat (TL/${ORDER_QUANTITY_UNIT_LABELS[quantityUnit]})`}
+				ariaLabel={`${rowNumber}. satır birim fiyat (TL/${PURCHASE_QUANTITY_UNIT_LABELS[quantityUnit]})`}
 				describedBy={
 					kind === 'purchase' && listPrice === undefined
 						? `unit-price-note-${rowNumber}`
@@ -62,7 +62,7 @@ export function OrderUnitPriceInput({
 			)}
 			{kind === 'purchase' && listPrice !== undefined && (
 				<p className='text-[11px] text-text/70'>
-					Alış fiyatı: {formatOrderMoney(listPrice)}
+					Alış fiyatı: {formatPurchaseMoney(listPrice)}
 				</p>
 			)}
 			{kind === 'purchase' && listPrice !== undefined && value !== null && (

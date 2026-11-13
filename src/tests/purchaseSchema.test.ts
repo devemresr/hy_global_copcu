@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
-	createOrderSchema,
-	orderFiltersSchema,
-} from '../app/schemas/order.schema';
+	createPurchaseSchema,
+	purchaseFiltersSchema,
+} from '../app/schemas/purchase.schema';
 
 describe('order form schemas', () => {
 	it('preserves zero price bounds and rejects invalid dates, values and ranges', () => {
-		expect(orderFiltersSchema.parse({ minTotal: 0, maxTotal: 0 })).toEqual({
+		expect(purchaseFiltersSchema.parse({ minTotal: 0, maxTotal: 0 })).toEqual({
 			minTotal: 0,
 			maxTotal: 0,
 		});
@@ -18,17 +18,17 @@ describe('order form schemas', () => {
 			{ minTotal: -1 },
 			{ minTotal: 20, maxTotal: 10 },
 		])
-			expect(orderFiltersSchema.safeParse(input).success).toBe(false);
+			expect(purchaseFiltersSchema.safeParse(input).success).toBe(false);
 	});
 	it('validates order rows before submission', () => {
 		expect(
-			createOrderSchema.safeParse({
+			createPurchaseSchema.safeParse({
 				bayiId: '000000000000000000000021',
 				lines: [{ type: 'EMCP', memoryGb: 64, quantity: 5 }],
 			}).success,
 		).toBe(true);
 		expect(
-			createOrderSchema.safeParse({
+			createPurchaseSchema.safeParse({
 				lines: [{ type: 'EMCP', memoryGb: 64, quantity: 5 }],
 			}).success,
 		).toBe(false);
@@ -37,6 +37,6 @@ describe('order form schemas', () => {
 			{ lines: [{ type: 'EMMC', memoryGb: 55, quantity: 1 }] },
 			{ lines: [{ type: 'EMMC', memoryGb: 64, quantity: 0 }] },
 		])
-			expect(createOrderSchema.safeParse(input).success).toBe(false);
+			expect(createPurchaseSchema.safeParse(input).success).toBe(false);
 	});
 });

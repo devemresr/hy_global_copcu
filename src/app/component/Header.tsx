@@ -1,3 +1,6 @@
+import { NavLink, useLocation } from 'react-router';
+import { LogOut } from 'lucide-react';
+import { useLogout } from '../hooks/api/endpoints/useAuth';
 import { Lottie } from 'lottie-react';
 import toggleThemeAnimation from '../assets/icons/DarkLightInteractiveToggle.json';
 import {
@@ -10,7 +13,6 @@ import {
 	type SetStateAction,
 } from 'react';
 import type { LottieHandle } from 'lottie-react';
-import { useLocation } from 'react-router-dom';
 import { whatsappUrl } from '../constants/url.constant';
 import { LOGO } from '../assets/photos/photos';
 import WhatsappIcon from '../assets/icons/icons8-whatsapp.svg?react';
@@ -40,6 +42,29 @@ const NAV_LINKS = [
 	{ href: '/bilgi', label: 'Kaynaklar' },
 	{ href: '/hakkimizda', label: 'Hakkımızda' },
 ];
+const ADMIN_LINKS = [
+	{ href: PAGE_PATHS.ADMIN, label: 'Yönetim' },
+	{ href: PAGE_PATHS.PURCHASES, label: 'Alış' },
+	{ href: PAGE_PATHS.SALES, label: 'Satış' },
+	{ href: PAGE_PATHS.STOCK, label: 'Stok' },
+	{ href: PAGE_PATHS.BALANCE, label: 'Bakiye' },
+	{ href: PAGE_PATHS.ANALYSIS, label: 'Analiz' },
+];
+function AdminLogoutButton() {
+	const logout = useLogout();
+	return (
+		<button
+			type='button'
+			onClick={() => logout.mutate()}
+			disabled={logout.isPending}
+			aria-label={logout.isPending ? 'Çıkış yapılıyor...' : 'Çıkış yap'}
+			title='Çıkış yap'
+			className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-text hover:bg-button-hover-bg disabled:opacity-50'
+		>
+			<LogOut size={18} aria-hidden />
+		</button>
+	);
+}
 const FRAME_RATE = 60;
 
 export function Header({
@@ -52,6 +77,9 @@ export function Header({
 	const { theme } = useTheme();
 	const [initialTheme] = useState(theme);
 	const { pathname } = useLocation();
+	const isAdminPage =
+		pathname === PAGE_PATHS.ADMIN ||
+		pathname.startsWith(PAGE_PATHS.ADMIN + '/');
 
 	const lottieThemeRef = useRef<LottieHandle>(null);
 	const isAnimatingRef = useRef(false);
@@ -171,8 +199,12 @@ export function Header({
 
 	return (
 		<header className='w-full min-w-0'>
-			<div className='h-15 top-0 px-4 sm:px-6 lg:h-20 lg:px-8 bg-header-bg flex items-center justify-between w-full border-b-2 border-border'>
-				<div className='flex min-w-0 items-center gap-3 lg:gap-4 xl:gap-6'>
+			<div
+				className={`${isAdminPage ? 'min-h-15 py-2 lg:min-h-20' : 'h-15 lg:h-20'} top-0 px-4 sm:px-6 lg:px-8 bg-header-bg flex items-center justify-between gap-2 w-full border-b-2 border-border`}
+			>
+				<div
+					className={`flex min-w-0 items-center gap-3 lg:gap-4 xl:gap-6 ${isAdminPage ? 'flex-1' : ''}`}
+				>
 					<button
 						onClick={onToggle}
 						className='sm:w-7 sm:h-7 h-5 w-5 lg:h-10 lg:w-10 shrink-0'
@@ -204,22 +236,40 @@ export function Header({
 						<span className='lg:hidden xl:inline'>GLOBAL ÇÖPÇÜ</span>
 					</a>
 					<nav
-						className={`hidden items-center gap-1 ${isOpen ? '' : 'lg:flex'}`}
+						aria-label={isAdminPage ? 'Yönetim sayfaları' : 'Site sayfaları'}
+						className={
+							isAdminPage
+								? 'flex min-w-0 flex-1 flex-wrap items-center gap-1'
+								: `hidden items-center gap-1 ${isOpen ? '' : 'lg:flex'}`
+						}
 					>
-						{NAV_LINKS.map((link) => (
-							<a
-								key={link.href}
-								href={link.href}
-								aria-current={pathname === link.href ? 'page' : undefined}
-								className={`${HEADER_LINK_TEXT} rounded-xl px-3 py-1.5 transition-colors hover:bg-button-hover-bg dark:hover:bg-button-bg ${
-									pathname === link.href
-										? 'bg-button-bg font-medium'
-										: 'opacity-80'
-								}`}
-							>
-								{link.label}
-							</a>
-						))}
+						{isAdminPage
+							? ADMIN_LINKS.map((link) => (
+									<NavLink
+										key={link.href}
+										to={link.href}
+										end
+										className={({ isActive }) =>
+											`rounded-lg px-2 py-2 text-xs font-medium text-text sm:text-sm ${isActive ? 'bg-text text-bg!' : 'hover:bg-button-hover-bg'}`
+										}
+									>
+										{link.label}
+									</NavLink>
+								))
+							: NAV_LINKS.map((link) => (
+									<a
+										key={link.href}
+										href={link.href}
+										aria-current={pathname === link.href ? 'page' : undefined}
+										className={`${HEADER_LINK_TEXT} rounded-xl px-3 py-1.5 transition-colors hover:bg-button-hover-bg dark:hover:bg-button-bg ${
+											pathname === link.href
+												? 'bg-button-bg font-medium'
+												: 'opacity-80'
+										}`}
+									>
+										{link.label}
+									</a>
+								))}
 					</nav>
 				</div>
 				<div className='flex min-w-0 items-center gap-1 md:gap-2'>
@@ -236,17 +286,21 @@ export function Header({
 							className='w-full h-full'
 						/>
 					</button>
-					<a
-						className='hover:animate-hoverFloatUp flex items-center gap-1 md:gap-2 '
-						href={whatsappUrl}
-						data-umami-event='whatsapp-click'
-						data-umami-event-location='header'
-					>
-						<span className={HEADER_LINK_TEXT}>Bizimle İletişime geçin!</span>
-						<div className='w-7 h-7 lg:h-12 lg:w-12'>
-							<WhatsappIcon className='w-full h-full  shrink-0' />
-						</div>
-					</a>
+					{isAdminPage ? (
+						<AdminLogoutButton />
+					) : (
+						<a
+							className='hover:animate-hoverFloatUp flex items-center gap-1 md:gap-2 '
+							href={whatsappUrl}
+							data-umami-event='whatsapp-click'
+							data-umami-event-location='header'
+						>
+							<span className={HEADER_LINK_TEXT}>Bizimle İletişime geçin!</span>
+							<div className='w-7 h-7 lg:h-12 lg:w-12'>
+								<WhatsappIcon className='w-full h-full  shrink-0' />
+							</div>
+						</a>
+					)}
 				</div>
 			</div>
 		</header>

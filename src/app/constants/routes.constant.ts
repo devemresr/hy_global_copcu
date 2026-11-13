@@ -3,7 +3,7 @@ export const API_BASE_PATHS = {
 	ITEMS: '/items',
 	LOG_EVENTS: '/log-events',
 	SITE: '/site',
-	ORDERS: '/orders',
+	PURCHASES: '/orders',
 	BAYILER: '/bayiler',
 } as const;
 
@@ -46,11 +46,11 @@ export const LOG_EVENT_ROUTES = {
 	LIST: `${API_BASE_PATHS.LOG_EVENTS}`,
 } as const;
 
-export const ORDER_ROUTES = {
-	REPORT: `${API_BASE_PATHS.ORDERS}/report`,
-	LIST: API_BASE_PATHS.ORDERS,
-	CREATE: API_BASE_PATHS.ORDERS,
-	PRICING: `${API_BASE_PATHS.ORDERS}/pricing`,
+export const PURCHASE_ROUTES = {
+	REPORT: `${API_BASE_PATHS.PURCHASES}/report`,
+	LIST: API_BASE_PATHS.PURCHASES,
+	CREATE: API_BASE_PATHS.PURCHASES,
+	PRICING: `${API_BASE_PATHS.PURCHASES}/pricing`,
 } as const;
 
 export const BAYI_ROUTES = {

@@ -12,10 +12,11 @@ export const PAGE_PATHS = {
 	TERMS: '/terms',
 	LOGIN: `${STAFF_BASE}/login`,
 	ADMIN: `${STAFF_BASE}/admin`,
-	ORDERS: `${STAFF_BASE}/admin/alis`,
+	PURCHASES: `${STAFF_BASE}/admin/alis`,
 	STOCK: `${STAFF_BASE}/admin/stok`,
 	SALES: `${STAFF_BASE}/admin/satis`,
 	BALANCE: `${STAFF_BASE}/admin/bakiye`,
+	ANALYSIS: `${STAFF_BASE}/admin/analiz`,
 } as const;
 
 // Staff-only pages - exempt from maintenance mode and analytics.

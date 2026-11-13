@@ -1,30 +1,32 @@
+import { chooseBayiOption } from './bayiMenu.helpers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import OrdersPage from '../app/Orders';
+import PurchasesPage from '../app/Purchases';
+import AnalysisPage from '../app/Analysis';
 import {
 	AUTH_ROUTES,
-	ORDER_ROUTES,
+	PURCHASE_ROUTES,
 	BAYI_ROUTES,
 	STOCK_ROUTES,
 } from '../app/constants/routes.constant';
 import { fakeJwt, jsonResponse, mockFetch as baseMockFetch } from './helpers';
-import { orderDraftKey } from '../app/helpers/orderDraft.helper';
+import { purchaseDraftKey } from '../app/helpers/purchaseDraft.helper';
 import { ThemeContext } from '../app/hooks/useTheme';
 import { toast } from 'sonner';
 import {
-	orderMonthRange,
-	orderPresetRange,
-} from '../app/helpers/orderPeriod.helper';
+	purchaseMonthRange,
+	purchasePresetRange,
+} from '../app/helpers/purchasePeriod.helper';
 
 vi.mock('../app/component/InventoryDataGrid', () => ({
 	InventoryDataGrid: () =>
 		createElement('div', { 'data-testid': 'order-grid' }),
 }));
-vi.mock('../app/component/admin/CreatedOrderPdfModal', () => ({
-	CreatedOrderPdfModal: ({
+vi.mock('../app/component/admin/CreatedPurchasePdfModal', () => ({
+	CreatedPurchasePdfModal: ({
 		order,
 		onClose,
 	}: {
@@ -70,7 +72,11 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 	vi.clearAllMocks();
 });
-async function mount(openHistory = true) {
+async function mount(
+	openHistory = true,
+	analysis = false,
+	sourcePurchaseId?: string,
+) {
 	container = document.createElement('div');
 	document.body.append(container);
 	client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -83,7 +89,20 @@ async function mount(openHistory = true) {
 				createElement(
 					ThemeContext.Provider,
 					{ value: { theme: 'dark' } },
-					createElement(MemoryRouter, {}, createElement(OrdersPage)),
+					createElement(
+						MemoryRouter,
+						{
+							initialEntries: analysis
+								? [
+										'?preset=purchases' +
+											(sourcePurchaseId
+												? '&purchaseId=' + sourcePurchaseId
+												: ''),
+									]
+								: ['/'],
+						},
+						createElement(analysis ? AnalysisPage : PurchasesPage),
+					),
 				),
 			),
 		);
@@ -106,14 +125,8 @@ async function mount(openHistory = true) {
 	await act(async () => {
 		await new Promise((resolve) => setTimeout(resolve, 25));
 	});
-	const bayi = container.querySelector<HTMLSelectElement>(
-		'select[aria-label="Bayi seçin"]',
-	);
-	if (bayi)
-		act(() => {
-			bayi.value = TEST_BAYI._id;
-			bayi.dispatchEvent(new Event('change', { bubbles: true }));
-		});
+	if (!analysis && container.querySelector('button[aria-label="Bayi seçin"]'))
+		chooseBayiOption('Bayi seçin', TEST_BAYI.name);
 }
 function button(text: string) {
 	const found = [...container.querySelectorAll('button')].find(
@@ -134,9 +147,9 @@ const emptyHistory = {
 describe('orders page', () => {
 	it('shows entered quantities in missing-sale warnings and sends the selected lookback during purchase save', async () => {
 		const fetchMock = mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
-			[ORDER_ROUTES.LIST]: () =>
+			[PURCHASE_ROUTES.LIST]: () =>
 				jsonResponse(201, { order: { _id: 'saved', name: 'Bayi' } }),
 			[STOCK_ROUTES.WARNINGS]: (init) => {
 				const body = JSON.parse(init.body as string);
@@ -171,16 +184,17 @@ describe('orders page', () => {
 		await act(async () => button('Alışı kaydet').click());
 		const save = fetchMock.mock.calls.find(
 			([url, init]) =>
-				new URL(url).pathname === ORDER_ROUTES.LIST && init?.method === 'POST',
+				new URL(url).pathname === PURCHASE_ROUTES.LIST &&
+				init?.method === 'POST',
 		)!;
 		expect(JSON.parse(save[1]!.body as string).comparisonDays).toBe(7);
 	});
 	it('restores timestamped purchase drafts across remounts and clears them after reset or save', async () => {
 		localStorage.setItem('accessToken', fakeJwt(900000));
 		mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
-			[ORDER_ROUTES.LIST]: () =>
+			[PURCHASE_ROUTES.LIST]: () =>
 				jsonResponse(201, { order: { _id: 'saved', name: 'Bayi' } }),
 		});
 		await mount(false);
@@ -192,7 +206,7 @@ describe('orders page', () => {
 			)!.set!.call(node, '7');
 			node.dispatchEvent(new Event('input', { bubbles: true }));
 		});
-		const key = orderDraftKey('purchase')!,
+		const key = purchaseDraftKey('purchase')!,
 			saved = JSON.parse(localStorage.getItem(key)!);
 		expect(saved.data.lines[0].quantity).toBe(7);
 		act(() => root!.unmount());
@@ -231,7 +245,7 @@ describe('orders page', () => {
 	});
 	it('adds unused products and excludes other rows from each product dropdown', async () => {
 		mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 }, EMMC: { 8: 40 } } }),
 		});
 		await mount(false);
@@ -251,9 +265,9 @@ describe('orders page', () => {
 	});
 	it('links unit and total prices, saves exact totals, and keeps the add button on the last row', async () => {
 		const fetchMock = mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
-			[ORDER_ROUTES.LIST]: () =>
+			[PURCHASE_ROUTES.LIST]: () =>
 				jsonResponse(201, { order: { _id: 'saved', name: 'Bayi' } }),
 		});
 		await mount(false);
@@ -284,7 +298,8 @@ describe('orders page', () => {
 		await act(async () => button('Alışı kaydet').click());
 		const save = fetchMock.mock.calls.find(
 			([url, init]) =>
-				new URL(url).pathname === ORDER_ROUTES.LIST && init?.method === 'POST',
+				new URL(url).pathname === PURCHASE_ROUTES.LIST &&
+				init?.method === 'POST',
 		)!;
 		expect(JSON.parse(save[1]!.body as string).lines[0]).toMatchObject({
 			quantity: 3,
@@ -299,7 +314,7 @@ describe('orders page', () => {
 	});
 	it('shows a persisted price risk inline without repeating an already-triggered toast', async () => {
 		mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
 			[STOCK_ROUTES.WARNINGS]: () =>
 				jsonResponse(200, {
@@ -334,14 +349,16 @@ describe('orders page', () => {
 		});
 		expect(originalWarning.isConnected).toBe(true);
 	});
-	it('shows units only for weighted products and resets weight when switching to memory chips', async () => {
+	it('offers pricing units for memory products and restores the catalog basis on product changes', async () => {
 		mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
 		});
 		await mount(false);
 		const product = container.querySelector<HTMLSelectElement>('#type-0')!;
-		expect(container.querySelector('#unit-0')).toBeNull();
+		expect(container.querySelector<HTMLSelectElement>('#unit-0')?.value).toBe(
+			'piece',
+		);
 		act(() => {
 			product.value = 'IPHONE';
 			product.dispatchEvent(new Event('change', { bubbles: true }));
@@ -363,38 +380,34 @@ describe('orders page', () => {
 			product.value = 'EMCP:8';
 			product.dispatchEvent(new Event('change', { bubbles: true }));
 		});
-		expect(container.querySelector('#unit-0')).toBeNull();
+		expect(container.querySelector<HTMLSelectElement>('#unit-0')!.value).toBe(
+			'piece',
+		);
 		expect(quantity.value).toBe('1');
 		expect(
 			container.querySelector('[aria-live=polite]')?.textContent,
 		).toContain('55,00');
 	});
-	it('sends the dealer name filter to the history API', async () => {
+	it('sends selected permanent dealer IDs to the history API', async () => {
 		const fetchMock = mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
-			[ORDER_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
+			[PURCHASE_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
 		});
-		await mount();
-		const select = container.querySelector<HTMLSelectElement>(
-			'form[aria-label="Alış ve PDF filtreleri"] select[id$="-bayi"]',
-		)!;
-		act(() => {
-			select.value = TEST_BAYI.name;
-			select.dispatchEvent(new Event('change', { bubbles: true }));
-		});
+		await mount(true, true);
+		chooseBayiOption('Rapor bayi filtresi', TEST_BAYI.name);
 		await act(async () => button('Filtreleri uygula').click());
 		expect(
 			fetchMock.mock.calls.some(
-				([url]) => new URL(url).searchParams.get('bayiName') === TEST_BAYI.name,
+				([url]) => new URL(url).searchParams.get('bayiIds') === TEST_BAYI._id,
 			),
 		).toBe(true);
 	});
 	it('allows a unit price without a list price and shows the asterisk without a reset button', async () => {
 		const fetchMock = mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 }, IPHONE: {} } }),
-			[ORDER_ROUTES.LIST]: (init) =>
+			[PURCHASE_ROUTES.LIST]: (init) =>
 				init.method === 'POST'
 					? jsonResponse(201, { order: { _id: 'saved' } })
 					: jsonResponse(200, emptyHistory),
@@ -416,7 +429,7 @@ describe('orders page', () => {
 		await act(async () => button('Alışı kaydet').click());
 		const post = fetchMock.mock.calls.find(
 			([url, init]) =>
-				new URL(url).pathname === ORDER_ROUTES.CREATE &&
+				new URL(url).pathname === PURCHASE_ROUTES.CREATE &&
 				init?.method === 'POST',
 		);
 		expect(JSON.parse(post![1]!.body as string)).toEqual({
@@ -433,33 +446,40 @@ describe('orders page', () => {
 			],
 		});
 	});
-	it('numbers rows, displays their quantity, and preserves values while collapsed', async () => {
+	it('keeps one shared field heading and preserves quantity when rows are added and removed', async () => {
 		mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
-				jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
-			[ORDER_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
+			[PURCHASE_ROUTES.PRICING]: () =>
+				jsonResponse(200, { prices: { EMCP: { 8: 55 }, EMMC: { 8: 40 } } }),
 		});
 		await mount(false);
-		const toggle = container.querySelector<HTMLButtonElement>(
-			'button[aria-controls="order-row-0"]',
-		)!;
-		expect(toggle.textContent).toContain('1. satır');
 		act(() => button('+5').click());
-		expect(toggle.textContent).toContain('6 adet');
-		act(() => toggle.click());
-		expect(
-			container.querySelector('#order-row-0')!.classList.contains('hidden'),
-		).toBe(true);
-		act(() => toggle.click());
+		act(() => button('+ Satır ekle').click());
 		expect(container.querySelector<HTMLInputElement>('#count-0')!.value).toBe(
 			'6',
 		);
+		expect(
+			[...container.querySelectorAll('label')].filter(
+				(label) =>
+					label.textContent === 'Ürün' && !label.className.includes('sr-only'),
+			),
+		).toHaveLength(1);
+		const remove = container.querySelector<HTMLButtonElement>(
+			'[aria-label="2. satırı sil"]',
+		)!;
+		expect(remove.querySelector('svg')).not.toBeNull();
+		act(() => remove.click());
+		expect(container.querySelector<HTMLInputElement>('#count-0')!.value).toBe(
+			'6',
+		);
+		expect(
+			container.querySelectorAll('select[aria-label$="ürün ve bellek"]'),
+		).toHaveLength(1);
 	});
 	it('adds rows without a default-type selector and sends the selected bayi', async () => {
 		const fetchMock = mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 }, EMMC: { 8: 40 } } }),
-			[ORDER_ROUTES.LIST]: (init) =>
+			[PURCHASE_ROUTES.LIST]: (init) =>
 				init.method === 'POST'
 					? jsonResponse(201, { order: { _id: 'saved', name: 'Kasım' } })
 					: jsonResponse(200, emptyHistory),
@@ -482,7 +502,7 @@ describe('orders page', () => {
 		});
 		const post = fetchMock.mock.calls.find(
 			([url, init]) =>
-				new URL(url).pathname === ORDER_ROUTES.CREATE &&
+				new URL(url).pathname === PURCHASE_ROUTES.CREATE &&
 				init?.method === 'POST',
 		);
 		expect(JSON.parse(post![1]!.body as string)).toEqual({
@@ -505,11 +525,18 @@ describe('orders page', () => {
 	});
 	it('filters by month names and report presets while retaining the applied price range', async () => {
 		const fetchMock = mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
-			[ORDER_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
+			[PURCHASE_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
 		});
-		await mount();
+		await mount(true, true);
+		act(() => {
+			const scope = container.querySelector<HTMLSelectElement>(
+				'[aria-label="1. koşul ürünü"]',
+			)!;
+			scope.value = 'operation';
+			scope.dispatchEvent(new Event('change', { bubbles: true }));
+		});
 		const minimum = container.querySelector<HTMLInputElement>(
 			'input[id$="-min-0"]',
 		)!;
@@ -534,11 +561,15 @@ describe('orders page', () => {
 		});
 		let url = new URL(
 			fetchMock.mock.calls
-				.filter(([url]) => new URL(url).pathname === ORDER_ROUTES.LIST)
+				.filter(([url]) => new URL(url).pathname === PURCHASE_ROUTES.LIST)
 				.at(-1)![0],
 		);
-		expect(url.searchParams.get('from')).toBe(orderMonthRange(year, 10).from);
-		expect(url.searchParams.get('until')).toBe(orderMonthRange(year, 10).until);
+		expect(url.searchParams.get('from')).toBe(
+			purchaseMonthRange(year, 10).from,
+		);
+		expect(url.searchParams.get('until')).toBe(
+			purchaseMonthRange(year, 10).until,
+		);
 		expect(url.searchParams.get('minTotal')).toBe('100');
 		expect(url.searchParams.get('maxTotal')).toBe('1000');
 		const sharedFilters = container.querySelector(
@@ -557,24 +588,31 @@ describe('orders page', () => {
 		});
 		url = new URL(
 			fetchMock.mock.calls
-				.filter(([url]) => new URL(url).pathname === ORDER_ROUTES.LIST)
+				.filter(([url]) => new URL(url).pathname === PURCHASE_ROUTES.LIST)
 				.at(-1)![0],
 		);
 		expect(url.searchParams.get('from')).toBe(
-			orderPresetRange('yesterday').from,
+			purchasePresetRange('yesterday').from,
 		);
 		expect(url.searchParams.get('until')).toBe(
-			orderPresetRange('yesterday').until,
+			purchasePresetRange('yesterday').until,
 		);
 		expect(url.searchParams.get('minTotal')).toBe('100');
 	});
 	it('uses compact price steppers and sends their values as history filters', async () => {
 		const fetchMock = mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
-			[ORDER_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
+			[PURCHASE_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
 		});
-		await mount();
+		await mount(true, true);
+		act(() => {
+			const scope = container.querySelector<HTMLSelectElement>(
+				'[aria-label="1. koşul ürünü"]',
+			)!;
+			scope.value = 'operation';
+			scope.dispatchEvent(new Event('change', { bubbles: true }));
+		});
 		const minimum = container.querySelector<HTMLInputElement>(
 			'input[id$="-min-0"]',
 		)!;
@@ -593,22 +631,36 @@ describe('orders page', () => {
 		});
 		const url = new URL(
 			fetchMock.mock.calls
-				.filter(([url]) => new URL(url).pathname === ORDER_ROUTES.LIST)
+				.filter(([url]) => new URL(url).pathname === PURCHASE_ROUTES.LIST)
 				.at(-1)![0],
 		);
 		expect(url.searchParams.get('minTotal')).toBe('100');
 		expect(url.searchParams.get('maxTotal')).toBe('1000');
 		await act(async () => button('Temizle').click());
-		expect(minimum.value).toBe('');
-		expect(maximum.value).toBe('');
+		expect(container.querySelector('input[id$="-min-0"]')).toBeNull();
+		expect(container.querySelector('input[id$="-max-0"]')).toBeNull();
+		const cleared = new URL(
+			fetchMock.mock.calls
+				.filter(([url]) => new URL(url).pathname === PURCHASE_ROUTES.LIST)
+				.at(-1)![0],
+		);
+		expect(cleared.searchParams.has('minTotal')).toBe(false);
+		expect(cleared.searchParams.has('maxTotal')).toBe(false);
 	});
 	it('blocks an inverted price range with schema validation and a Sonner error', async () => {
 		const fetchMock = mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
-			[ORDER_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
+			[PURCHASE_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
 		});
-		await mount();
+		await mount(true, true);
+		act(() => {
+			const scope = container.querySelector<HTMLSelectElement>(
+				'[aria-label="1. koşul ürünü"]',
+			)!;
+			scope.value = 'operation';
+			scope.dispatchEvent(new Event('change', { bubbles: true }));
+		});
 		const minimum = container.querySelector<HTMLInputElement>(
 			'input[id$="-min-0"]',
 		)!;
@@ -630,7 +682,7 @@ describe('orders page', () => {
 	});
 	it('reuses quantity/storage steppers, totals every row, and blocks placeholder prices', async () => {
 		mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, {
 					prices: {
 						EMCP: { 8: 55, 16: 100 },
@@ -639,7 +691,7 @@ describe('orders page', () => {
 						TABLET: {},
 					},
 				}),
-			[ORDER_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
+			[PURCHASE_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
 		});
 		await mount();
 		expect(
@@ -691,7 +743,7 @@ describe('orders page', () => {
 	});
 	it('does not render the order form when session verification fails', async () => {
 		mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(401, { message: 'Unauthorized' }),
 			[AUTH_ROUTES.REFRESH]: () => jsonResponse(401, {}),
 		});
@@ -699,16 +751,17 @@ describe('orders page', () => {
 		expect(container.textContent).toContain('Devam etmek için giriş yapın.');
 		expect(container.querySelector('table')).toBeNull();
 	});
-	it('saves only the three row values and refreshes order history through React Query', async () => {
+	it('saves only the three row values and invalidates cached purchase history', async () => {
 		const fetchMock = mockFetch({
-			[ORDER_ROUTES.PRICING]: () =>
+			[PURCHASE_ROUTES.PRICING]: () =>
 				jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
-			[ORDER_ROUTES.LIST]: (init) =>
+			[PURCHASE_ROUTES.LIST]: (init) =>
 				init.method === 'POST'
 					? jsonResponse(201, { order: { _id: 'saved' } })
 					: jsonResponse(200, emptyHistory),
 		});
 		await mount();
+		client.setQueryData(['orders', 'test'], emptyHistory);
 		await act(async () => {
 			button('Alışı kaydet').click();
 		});
@@ -717,7 +770,7 @@ describe('orders page', () => {
 		});
 		const post = fetchMock.mock.calls.find(
 			([url, init]) =>
-				new URL(url).pathname === ORDER_ROUTES.CREATE &&
+				new URL(url).pathname === PURCHASE_ROUTES.CREATE &&
 				init?.method === 'POST',
 		);
 		expect(JSON.parse(post![1]!.body as string)).toEqual({
@@ -727,11 +780,63 @@ describe('orders page', () => {
 				{ type: 'EMCP', quantity: 1, memoryGb: 8, quantityUnit: 'piece' },
 			],
 		});
-		expect(
-			fetchMock.mock.calls.filter(
-				([url, init]) =>
-					new URL(url).pathname === ORDER_ROUTES.LIST && init?.method === 'GET',
-			).length,
-		).toBeGreaterThan(1);
+		expect(client.getQueryState(['orders', 'test'])?.isInvalidated).toBe(true);
 	});
+});
+
+it('adds all unused memory sizes as purchase rows without changing existing values', async () => {
+	mockFetch({
+		[PURCHASE_ROUTES.PRICING]: () =>
+			jsonResponse(200, { prices: { EMCP: { 8: 55 } } }),
+	});
+	await mount(false);
+	const select = container.querySelector<HTMLSelectElement>(
+		'select[id="type-0"]',
+	)!;
+	act(() => {
+		select.value = 'all:EMCP';
+		select.dispatchEvent(new Event('change', { bubbles: true }));
+	});
+	const selected = () =>
+		[
+			...container.querySelectorAll<HTMLSelectElement>('select[id^="type-"]'),
+		].map((node) => node.value);
+	expect(selected()).toEqual(
+		[8, 16, 32, 64, 128, 256, 512, 1024].map((size) => 'EMCP:' + size),
+	);
+	expect(container.querySelector<HTMLInputElement>('#count-0')!.value).toBe(
+		'1',
+	);
+	expect(
+		[...select.options].find((option) => option.value === 'all:EMCP')!.disabled,
+	).toBe(true);
+	act(() => {
+		select.value = 'all:EMMC';
+		select.dispatchEvent(new Event('change', { bubbles: true }));
+	});
+	expect(selected()).toEqual(
+		['EMCP', 'EMMC'].flatMap((type) =>
+			[8, 16, 32, 64, 128, 256, 512, 1024].map((size) => type + ':' + size),
+		),
+	);
+	expect(new Set(selected()).size).toBe(16);
+});
+
+it('opens a source purchase by its permanent ID without applying the default date period', async () => {
+	const source = '000000000000000000000081';
+	const fetchMock = mockFetch({
+		[PURCHASE_ROUTES.LIST]: () => jsonResponse(200, emptyHistory),
+	});
+	await mount(true, true, source);
+	const calls = fetchMock.mock.calls.filter(
+		([url]) => new URL(url).pathname === PURCHASE_ROUTES.LIST,
+	);
+	expect(calls.length).toBeGreaterThan(0);
+	const params = new URL(calls.at(-1)![0]).searchParams;
+	expect(params.get('purchaseId')).toBe(source);
+	expect(params.has('from')).toBe(false);
+	expect(params.has('until')).toBe(false);
+	expect(container.querySelector('[role=status]')!.textContent).toContain(
+		'Alış kaydı: #000081',
+	);
 });

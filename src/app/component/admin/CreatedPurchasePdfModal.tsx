@@ -2,38 +2,49 @@ import { ModalCloseButton } from '../ModalCloseButton';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import type { Order } from '../../hooks/api/endpoints/useOrders';
+import type { Purchase } from '../../hooks/api/endpoints/usePurchases';
 import {
-	singleOrderDocument,
-	singleOrderFilename,
-} from '../../helpers/singleOrderReport.helper';
+	singlePurchaseDocument,
+	singlePurchaseFilename,
+} from '../../helpers/singlePurchaseReport.helper';
 import { createPdfFile, downloadPdfFile } from '../../helpers/pdf.helper';
-import { formatOrderMoney } from '../../constants/orderReports.constant';
+import { formatPurchaseMoney } from '../../constants/purchaseReports.constant';
 import {
-	formatOrderProduct,
-	formatOrderQuantity,
-	formatOrderUnitTotals,
-} from '../../helpers/orderProduct.helper';
-import { OrderChartTable } from './OrderChartTable';
+	formatPurchaseProduct,
+	formatPurchaseQuantity,
+	formatPurchaseUnitTotals,
+} from '../../helpers/purchaseProduct.helper';
+import { PurchaseChartTable } from './PurchaseChartTable';
 
-export function CreatedOrderPdfModal({
+export function CreatedPurchasePdfModal({
 	order,
 	onClose,
 	mode = 'created',
 }: {
-	order: Order;
+	order: Purchase;
 	onClose: () => void;
 	mode?: 'created' | 'existing';
 }) {
 	const dialogRef = useRef<HTMLDialogElement>(null);
 	const dismiss = useModalDismiss(onClose);
-	const [prepared, setPrepared] = useState<{ order: Order; file: File } | null>(
-		null,
-	);
-	const [error, setError] = useState('');
+	const [prepared, setPrepared] = useState<{
+		order: Purchase;
+		retry: number;
+		file: File;
+	} | null>(null);
+	const [failure, setFailure] = useState<{
+		order: Purchase;
+		retry: number;
+		message: string;
+	} | null>(null);
 	const [retry, setRetry] = useState(0);
 	const [sharing, setSharing] = useState(false);
-	const file = prepared?.order === order ? prepared.file : null;
+	const file =
+		prepared?.order === order && prepared.retry === retry
+			? prepared.file
+			: null;
+	const error =
+		failure?.order === order && failure.retry === retry ? failure.message : '';
 	useEffect(() => {
 		const dialog = dialogRef.current;
 		dialog?.showModal();
@@ -41,20 +52,18 @@ export function CreatedOrderPdfModal({
 	}, []);
 	useEffect(() => {
 		let cancelled = false;
-		setError('');
-		setPrepared(null);
 		void createPdfFile(
-			singleOrderDocument(order, []),
-			singleOrderFilename(order),
+			singlePurchaseDocument(order, []),
+			singlePurchaseFilename(order),
 		)
 			.then((pdf) => {
-				if (!cancelled) setPrepared({ order, file: pdf });
+				if (!cancelled) setPrepared({ order, retry, file: pdf });
 			})
 			.catch((failure: unknown) => {
 				if (cancelled) return;
 				const message =
 					failure instanceof Error ? failure.message : 'PDF hazırlanamadı.';
-				setError(message);
+				setFailure({ order, retry, message });
 				toast.error('PDF hazırlanamadı', { description: message });
 			});
 		return () => {
@@ -110,19 +119,19 @@ export function CreatedOrderPdfModal({
 				</div>
 				<ModalCloseButton onClick={onClose} />
 			</div>
-			<OrderChartTable
+			<PurchaseChartTable
 				title='Alış özeti'
 				headers={['Ürün', 'Miktar', 'Birim fiyat', 'Tutar']}
 				rows={order.lines.map((line) => [
-					formatOrderProduct(line),
-					formatOrderQuantity(line.quantity, line.quantityUnit),
-					formatOrderMoney(line.unitPrice),
-					formatOrderMoney(line.total),
+					formatPurchaseProduct(line),
+					formatPurchaseQuantity(line.quantity, line.quantityUnit),
+					formatPurchaseMoney(line.unitPrice),
+					formatPurchaseMoney(line.total),
 				])}
 			/>
 			<div className='my-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-button-bg/40 p-3'>
-				<span className='text-sm'>{formatOrderUnitTotals(order)}</span>
-				<strong>Genel toplam: {formatOrderMoney(order.total)}</strong>
+				<span className='text-sm'>{formatPurchaseUnitTotals(order)}</span>
+				<strong>Genel toplam: {formatPurchaseMoney(order.total)}</strong>
 			</div>
 			{!error && (
 				<p role='status' className='mb-3 text-xs opacity-70'>

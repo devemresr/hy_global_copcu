@@ -33,6 +33,10 @@ export const saleDraftSchema = z.object({
 			z.object({
 				id: z.number().int().min(0),
 				key: z.string().min(1).max(100),
+				bayiId: z
+					.string()
+					.regex(/^[a-f\d]{24}$/i)
+					.optional(),
 				unit: z.enum(['piece', 'kg', 'g']),
 				quantity: input,
 				revenue: input,
@@ -43,7 +47,7 @@ export const saleDraftSchema = z.object({
 		.max(200),
 });
 export type SaleDraft = z.infer<typeof saleDraftSchema>;
-export function orderDraftKey(kind: 'purchase' | 'sale'): string | null {
+export function purchaseDraftKey(kind: 'purchase' | 'sale'): string | null {
 	try {
 		const token = getAccessToken();
 		if (!token) return null;
@@ -56,7 +60,7 @@ export function orderDraftKey(kind: 'purchase' | 'sale'): string | null {
 		return null;
 	}
 }
-export function readOrderDraft<T>(
+export function readPurchaseDraft<T>(
 	key: string | null,
 	schema: z.ZodType<T, z.ZodTypeDef, unknown>,
 ): { data: T; savedAt: string } | null {

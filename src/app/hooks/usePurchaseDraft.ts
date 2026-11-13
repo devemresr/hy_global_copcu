@@ -7,9 +7,9 @@ import {
 } from 'react';
 import type { z } from 'zod';
 import { toast } from 'sonner';
-import { readOrderDraft } from '../helpers/orderDraft.helper';
+import { readPurchaseDraft } from '../helpers/purchaseDraft.helper';
 
-export function useOrderDraft<T>(
+export function usePurchaseDraft<T>(
 	key: string | null,
 	schema: z.ZodType<T, z.ZodTypeDef, unknown>,
 	initial: () => T,
@@ -17,7 +17,7 @@ export function useOrderDraft<T>(
 	enabled = true,
 ) {
 	const load = () => {
-		const stored = readOrderDraft(key, schema);
+		const stored = readPurchaseDraft(key, schema);
 		return {
 			key,
 			value: stored?.data ?? initial(),

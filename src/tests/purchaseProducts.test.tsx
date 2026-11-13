@@ -2,16 +2,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import {
-	OrderProductSelect,
-	type OrderProductChoice,
-} from '../app/component/admin/OrderProductSelect';
+	PurchaseProductSelect,
+	type PurchaseProductChoice,
+} from '../app/component/admin/PurchaseProductSelect';
 import { NumberInputWithSteppers } from '../app/component/NumberInputWithSteppers';
-import { orderLineSchema } from '../app/schemas/order.schema';
+import { purchaseLineSchema } from '../app/schemas/purchase.schema';
 import {
-	formatOrderProduct,
-	formatOrderUnitTotals,
-	sumOrderUnits,
-} from '../app/helpers/orderProduct.helper';
+	formatPurchaseProduct,
+	formatPurchaseUnitTotals,
+	sumPurchaseUnits,
+} from '../app/helpers/purchaseProduct.helper';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: Root | undefined;
@@ -27,7 +27,7 @@ describe('order products and units', () => {
 		root = createRoot(container);
 		act(() =>
 			root!.render(
-				<OrderProductSelect
+				<PurchaseProductSelect
 					value={{ type: 'EMCP', memoryGb: 8, requiresMemorySize: true }}
 					onChange={() => {}}
 					disabled={false}
@@ -87,13 +87,13 @@ describe('order products and units', () => {
 	);
 	it('combines capacity and type, and offers iPhone and tablet without capacity', () => {
 		function Controlled() {
-			const [value, setValue] = useState<OrderProductChoice>({
+			const [value, setValue] = useState<PurchaseProductChoice>({
 				type: 'EMCP',
 				memoryGb: 8,
 				requiresMemorySize: true,
 			});
 			return (
-				<OrderProductSelect
+				<PurchaseProductSelect
 					rowNumber={1}
 					value={value}
 					onChange={setValue}
@@ -133,21 +133,27 @@ describe('order products and units', () => {
 			unitPriceOverride: 20,
 		};
 		expect(
-			orderLineSchema.safeParse({ ...base, quantityUnit: 'kg' }).success,
+			purchaseLineSchema.safeParse({ ...base, quantityUnit: 'kg' }).success,
 		).toBe(true);
 		expect(
-			orderLineSchema.safeParse({ ...base, quantityUnit: 'piece' }).success,
+			purchaseLineSchema.safeParse({ ...base, quantityUnit: 'piece' }).success,
 		).toBe(false);
 		expect(
-			orderLineSchema.safeParse({ ...base, type: 'EMMC', quantityUnit: 'kg' })
-				.success,
+			purchaseLineSchema.safeParse({
+				...base,
+				type: 'EMMC',
+				quantityUnit: 'kg',
+			}).success,
 		).toBe(false);
 		expect(
-			orderLineSchema.safeParse({ ...base, memoryGb: 64, quantityUnit: 'kg' })
-				.success,
+			purchaseLineSchema.safeParse({
+				...base,
+				memoryGb: 64,
+				quantityUnit: 'kg',
+			}).success,
 		).toBe(false);
 		expect(
-			orderLineSchema.safeParse({
+			purchaseLineSchema.safeParse({
 				...base,
 				quantity: 0.0001,
 				quantityUnit: 'g',
@@ -187,15 +193,17 @@ describe('order products and units', () => {
 		expect(input.value).toBe('1,35');
 	});
 	it('keeps piece, kg, and gram totals separate and hides legacy phone memory', () => {
-		const unitTotals = sumOrderUnits([
+		const unitTotals = sumPurchaseUnits([
 			{ quantity: 2 },
 			{ quantity: 1.25, quantityUnit: 'kg' },
 			{ quantity: 250.5, quantityUnit: 'g' },
 		]);
 		expect(unitTotals).toEqual({ piece: 2, kg: 1.25, g: 250.5 });
-		expect(formatOrderUnitTotals({ quantity: 2, unitTotals })).toBe(
+		expect(formatPurchaseUnitTotals({ quantity: 2, unitTotals })).toBe(
 			'2 adet · 1,25 kg · 250,5 g',
 		);
-		expect(formatOrderProduct({ type: 'IPHONE', memoryGb: 64 })).toBe('iPhone');
+		expect(formatPurchaseProduct({ type: 'IPHONE', memoryGb: 64 })).toBe(
+			'iPhone',
+		);
 	});
 });

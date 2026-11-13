@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { CreatedOrderPdfModal } from '../app/component/admin/CreatedOrderPdfModal';
-import type { Order } from '../app/hooks/api/endpoints/useOrders';
+import { CreatedPurchasePdfModal } from '../app/component/admin/CreatedPurchasePdfModal';
+import type { Purchase } from '../app/hooks/api/endpoints/usePurchases';
 
 const { prepare, download, share } = vi.hoisted(() => ({
 	prepare: vi.fn(),
@@ -39,7 +39,7 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 	vi.clearAllMocks();
 });
-const order: Order = {
+const order: Purchase = {
 	_id: 'saved',
 	name: 'Saved order',
 	createdAt: '2026-11-04T12:00:00Z',
@@ -66,7 +66,9 @@ describe('single-order PDF modal', () => {
 		document.body.append(container);
 		root = createRoot(container);
 		await act(async () =>
-			root!.render(<CreatedOrderPdfModal order={order} onClose={() => {}} />),
+			root!.render(
+				<CreatedPurchasePdfModal order={order} onClose={() => {}} />,
+			),
 		);
 		expect(prepare).toHaveBeenCalledOnce();
 		expect(container.querySelectorAll('[role=switch], canvas')).toHaveLength(0);

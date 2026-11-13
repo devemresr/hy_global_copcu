@@ -39,7 +39,10 @@ vi.mock('../app/assets/icons/icons8-whatsapp.svg?react', () => ({
 	default: () => null,
 }));
 vi.mock('../app/assets/photos/photos', () => ({ LOGO: { url: 'logo.svg' } }));
-vi.mock('react-router-dom', () => ({ useLocation: () => ({ pathname: '/' }) }));
+vi.mock('react-router', async (importOriginal) => ({
+	...(await importOriginal<typeof import('react-router')>()),
+	useLocation: () => ({ pathname: '/' }),
+}));
 
 let root: Root;
 let container: HTMLDivElement;

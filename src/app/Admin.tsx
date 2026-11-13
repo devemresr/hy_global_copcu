@@ -1,3 +1,4 @@
+import { AdminPageHeading } from './component/admin/AdminPageHeading';
 import { useMemo, useState, type ComponentType } from 'react';
 import { PromotionSection } from './component/admin/PromotionSection';
 import type { HighlightCellProps } from './component/HighlightCellRenderer';
@@ -21,9 +22,6 @@ import { ItemRulesPanel } from './component/admin/ItemRulesPanel';
 import { useItemRules } from './hooks/useItemRules';
 import { useBulkRuleApproval } from './hooks/useBulkRuleApproval';
 import { findBulkRuleConflicts } from './helpers/adminPageHelpers/itemRules.helper';
-import { useLogout } from './hooks/api/endpoints/useAuth';
-import { Link } from 'react-router';
-import { PAGE_PATHS } from './constants/pagePaths.constant';
 import { LogEventsSection } from './component/admin/LogEventsSection';
 import { MaintenanceSection } from './component/admin/MaintenanceSection';
 import { InventoryBrowser } from './component/InventoryBrowser';
@@ -54,6 +52,7 @@ const EMPTY_ITEM: EditableInventoryItem = {
 	// ram: null,
 	fiyat: null,
 	paraBirimi: CURRENCY_OPTIONS[0].value,
+	fiyatBirimi: 'piece',
 };
 
 function toEditable(record: ItemDto): EditableInventoryItem {
@@ -65,6 +64,7 @@ function toEditable(record: ItemDto): EditableInventoryItem {
 		// ram,
 		fiyat,
 		paraBirimi,
+		fiyatBirimi,
 	} = record;
 	return {
 		model,
@@ -74,6 +74,7 @@ function toEditable(record: ItemDto): EditableInventoryItem {
 		// ram,
 		fiyat,
 		paraBirimi,
+		fiyatBirimi: fiyatBirimi ?? 'piece',
 	};
 }
 
@@ -151,7 +152,6 @@ function AdminPage() {
 		importLegacyRules,
 	} = useItemRules();
 	const queryClient = useQueryClient();
-	const logout = useLogout();
 
 	const editingRecord = items.find((item) => item._id === editingId) ?? null;
 	const editingItem = editingRecord ? toEditable(editingRecord) : null;
@@ -199,7 +199,7 @@ function AdminPage() {
 		return Promise.all([
 			queryClient.invalidateQueries({ queryKey: ['items'] }),
 			queryClient.invalidateQueries({ queryKey: ['stock'] }),
-			queryClient.invalidateQueries({ queryKey: ['orderPricing'] }),
+			queryClient.invalidateQueries({ queryKey: ['purchasePricing'] }),
 			queryClient.invalidateQueries({ queryKey: ['logEvents'] }),
 		]);
 	}
@@ -447,40 +447,7 @@ function AdminPage() {
 				<p className='text-sm text-red-500'>Ürünler yüklenemedi</p>
 			)} */}
 
-			<div className='mb-3 flex flex-wrap justify-end gap-2'>
-				<Link
-					to={PAGE_PATHS.SALES}
-					className='rounded-xl border-2 border-border px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
-				>
-					Satış
-				</Link>
-				<Link
-					to={PAGE_PATHS.BALANCE}
-					className='rounded-xl border-2 border-border px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
-				>
-					Bakiye
-				</Link>
-				<Link
-					to={PAGE_PATHS.STOCK}
-					className='rounded-xl border-2 border-border px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
-				>
-					Stok
-				</Link>
-				<Link
-					to={PAGE_PATHS.ORDERS}
-					className='mr-3 rounded-xl border-2 border-border px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg'
-				>
-					Alışlar
-				</Link>
-				<button
-					type='button'
-					onClick={() => logout.mutate()}
-					disabled={logout.isPending}
-					className='rounded-xl border-2 border-border px-3 py-1.5 text-sm font-medium hover:bg-button-hover-bg disabled:opacity-50'
-				>
-					{logout.isPending ? 'Çıkış yapılıyor...' : 'Çıkış yap'}
-				</button>
-			</div>
+			<AdminPageHeading title='Yönetim' />
 
 			<MaintenanceSection />
 			<PromotionSection />
