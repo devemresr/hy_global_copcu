@@ -1,11 +1,12 @@
+import { BayiPicker } from './BayiPicker';
 import { TradeRows, type TradeRow } from './TradeRows';
-import { useOrderDraft } from '../../hooks/useOrderDraft';
+import { usePurchaseDraft } from '../../hooks/usePurchaseDraft';
 import {
-	orderDraftKey,
+	purchaseDraftKey,
 	saleDraftSchema,
 	type SaleDraft,
-} from '../../helpers/orderDraft.helper';
-import { compareProductChoices } from '../../helpers/orderChoices.helper';
+} from '../../helpers/purchaseDraft.helper';
+import { compareProductChoices } from '../../helpers/purchaseChoices.helper';
 
 import {
 	STOCK_CONTROL,
@@ -18,11 +19,11 @@ import {
 	useRecordStockSale,
 	type StockPosition,
 } from '../../hooks/api/endpoints/useStock';
-import { formatOrderProduct } from '../../helpers/orderProduct.helper';
+import { formatPurchaseProduct } from '../../helpers/purchaseProduct.helper';
 import {
-	ORDER_PRODUCT_TYPES,
-	ORDER_QUANTITY_UNIT_LABELS,
-} from '../../constants/orderProducts.constant';
+	PURCHASE_PRODUCT_TYPES,
+	PURCHASE_QUANTITY_UNIT_LABELS,
+} from '../../constants/purchaseProducts.constant';
 
 const control = STOCK_CONTROL;
 const button = STOCK_BUTTON;
@@ -40,7 +41,6 @@ export function StockSaleForm({
 }) {
 	const submitting = useRef(false);
 	const save = useRecordStockSale();
-	const [collapsed, setCollapsed] = useState<Set<number>>(() => new Set());
 	const available = positions
 		.filter((p) => p.quantity > 0)
 		.sort(
@@ -64,8 +64,8 @@ export function StockSaleForm({
 		nextId: 1,
 		requestId: crypto.randomUUID(),
 	});
-	const draft = useOrderDraft(
-		orderDraftKey('sale'),
+	const draft = usePurchaseDraft(
+		purchaseDraftKey('sale'),
 		saleDraftSchema,
 		initialDraft,
 		'satış',
@@ -94,13 +94,21 @@ export function StockSaleForm({
 		edited();
 	}
 
+	const supplierOptions = (row: Row) =>
+		(
+			positions.find((position) => position.key === row.key)?.suppliers ?? []
+		).filter((supplier) => supplier.bayiId && supplier.quantity > 0);
+	const availableQuantity = (row: Row) => {
+		const position = positions.find((position) => position.key === row.key);
+		return row.bayiId
+			? (position?.suppliers?.find((supplier) => supplier.bayiId === row.bayiId)
+					?.quantity ?? 0)
+			: (position?.quantity ?? 0);
+	};
 	const saleQuantity = (row: Row) =>
 		mode === 'complete'
 			? Number(
-					(
-						(positions.find((p) => p.key === row.key)?.quantity ?? 0) *
-						(row.unit === 'g' ? 1000 : 1)
-					).toFixed(6),
+					(availableQuantity(row) * (row.unit === 'g' ? 1000 : 1)).toFixed(6),
 				)
 			: Number(row.quantity);
 	const saleRevenue = (row: Row): number | '' =>
@@ -120,11 +128,12 @@ export function StockSaleForm({
 					type: position?.type,
 					memoryGb: position?.memoryGb,
 					quantityUnit: row.unit,
+					...(row.bayiId ? { bayiId: row.bayiId } : {}),
 					quantity:
 						mode === 'complete'
 							? Number(
 									(
-										(position?.quantity ?? 0) * (row.unit === 'g' ? 1000 : 1)
+										availableQuantity(row) * (row.unit === 'g' ? 1000 : 1)
 									).toFixed(6),
 								)
 							: row.quantity === ''
@@ -162,7 +171,7 @@ export function StockSaleForm({
 			type: p?.type ?? 'EMMC',
 			memoryGb: p?.memoryGb ?? null,
 			requiresMemorySize: p
-				? ORDER_PRODUCT_TYPES[p.type].requiresMemorySize
+				? PURCHASE_PRODUCT_TYPES[p.type].requiresMemorySize
 				: true,
 			quantityUnit: row.unit,
 			quantity: mode === 'complete' ? saleQuantity(row) : row.quantity,
@@ -174,6 +183,53 @@ export function StockSaleForm({
 			totalPriceOverride: row.unitPrice === undefined ? row.revenue : null,
 		};
 	});
+	function sellFromAnotherBayi(source: Row, targetId: string) {
+		const suppliers = supplierOptions(source);
+		if (suppliers.length < 2) return;
+		const used = new Set(
+			rows.filter((row) => row.key === source.key).map((row) => row.bayiId),
+		);
+		const first =
+			source.bayiId ??
+			suppliers.find(
+				(supplier) =>
+					supplier.bayiId !== targetId && !used.has(supplier.bayiId!),
+			)?.bayiId;
+		if (!first) return;
+		const next = suppliers.find(
+			(supplier) =>
+				supplier.bayiId === targetId &&
+				supplier.bayiId !== first &&
+				!used.has(supplier.bayiId!),
+		);
+		if (!next) return;
+		const unitPrice =
+			source.unitPrice ??
+			(source.revenue !== '' && saleQuantity(source) > 0
+				? source.revenue / saleQuantity(source)
+				: '');
+		const copied = {
+			...source,
+			id: nextId,
+			bayiId: next.bayiId!,
+			quantity:
+				mode === 'complete'
+					? next.quantity * (source.unit === 'g' ? 1000 : 1)
+					: 0,
+			unitPrice,
+			revenue: source.revenue,
+		};
+		setRows((current) => {
+			const index = current.findIndex((row) => row.id === source.id);
+			const updated = current.map((row) =>
+				row.id === source.id ? { ...row, bayiId: first, unitPrice } : row,
+			);
+			updated.splice(index + 1, 0, copied);
+			return updated;
+		});
+		setNextId(nextId + 1);
+		edited();
+	}
 	const addRow = () => {
 		const p = available.find((p) => !rows.some((r) => r.key === p.key));
 		if (p) {
@@ -200,8 +256,8 @@ export function StockSaleForm({
 				Yeni satış
 			</h2>
 			<p className='mb-3 text-xs text-text/70'>
-				Miktar ürünün toplam stoğundan düşülür. Tüm stok satışı seçildiğinde
-				seçili ürünün kalan miktarının tamamı satılır.
+				Bayi seçerek satılacak stoğun kaynağını belirleyin. Tüm stok satışı,
+				seçili bayi veya tüm bayilerdeki kullanılabilir miktarın tamamını satar.
 			</p>
 			{draft.restoredAt && (
 				<p
@@ -254,15 +310,6 @@ export function StockSaleForm({
 						kind='sale'
 						disabled={save.isPending}
 						quantityLocked={mode === 'complete'}
-						collapsedRows={collapsed}
-						onToggle={(id) =>
-							setCollapsed((current) => {
-								const next = new Set(current);
-								if (next.has(id)) next.delete(id);
-								else next.add(id);
-								return next;
-							})
-						}
 						onRemove={(id) => {
 							setRows((current) => current.filter((r) => r.id !== id));
 							edited();
@@ -313,6 +360,76 @@ export function StockSaleForm({
 							}
 							update(id, { quantity: patch.quantity ?? row.quantity });
 						}}
+						rowFields={(line, index, showHeaders) => {
+							const row = rows.find((row) => row.id === line.id)!;
+							const others = rows.filter(
+								(other) => other.key === row.key && other.id !== row.id,
+							);
+							const suppliers = supplierOptions(row);
+							const label = (supplier: (typeof suppliers)[number]) =>
+								(supplier.currentBayiName || supplier.bayiName) +
+								' (' +
+								number(supplier.quantity * (row.unit === 'g' ? 1000 : 1)) +
+								' ' +
+								PURCHASE_QUANTITY_UNIT_LABELS[row.unit] +
+								')';
+							const choices = suppliers.filter(
+								(supplier) =>
+									supplier.bayiId === row.bayiId ||
+									!others.some(
+										(other) =>
+											!other.bayiId || other.bayiId === supplier.bayiId,
+									),
+							);
+							const extra = suppliers.filter(
+								(supplier) =>
+									supplier.bayiId !== row.bayiId &&
+									!others.some((other) => other.bayiId === supplier.bayiId),
+							);
+							return (
+								<div className='col-span-2 flex min-w-0 flex-col gap-1 text-[11px] md:col-span-1 md:w-52'>
+									<label
+										htmlFor={'sale-bayi-' + line.id}
+										className={showHeaders ? '' : 'sr-only'}
+									>
+										Bayi
+									</label>
+									<BayiPicker
+										compact
+										id={'sale-bayi-' + line.id}
+										label={index + 1 + '. satır stok kaynağı'}
+										value={row.bayiId ?? ''}
+										options={choices.map((supplier) => ({
+											id: supplier.bayiId!,
+											label: label(supplier),
+										}))}
+										addOptions={extra.map((supplier) => ({
+											id: supplier.bayiId!,
+											label: label(supplier),
+										}))}
+										disabled={save.isPending}
+										canAdd={
+											rows.length < 200 &&
+											extra.length > 0 &&
+											(Boolean(row.bayiId) ||
+												(mode === 'complete' && suppliers.length > 1))
+										}
+										onChange={(id) =>
+											update(row.id, {
+												bayiId: id || undefined,
+												quantity: mode === 'complete' ? row.quantity : 0,
+											})
+										}
+										onAdd={(id) => sellFromAnotherBayi(row, id)}
+									/>
+									{mode === 'complete' && !row.bayiId && (
+										<p className='text-[10px] text-text/70'>
+											Bayi seçilmezse ürünün tüm stoğu satılır.
+										</p>
+									)}
+								</div>
+							);
+						}}
 						productInput={(line, index) => {
 							const row = rows.find((r) => r.id === line.id)!;
 							return (
@@ -326,6 +443,7 @@ export function StockSaleForm({
 										if (p)
 											update(row.id, {
 												key: p.key,
+												bayiId: undefined,
 												unit: p.quantityUnit,
 												quantity: Math.min(1, p.quantity),
 												unitPrice: undefined,
@@ -345,23 +463,22 @@ export function StockSaleForm({
 										)
 										.map((p) => (
 											<option key={p.key} value={p.key}>
-												{formatOrderProduct(p)}
-												{ORDER_PRODUCT_TYPES[p.type].requiresMemorySize
-													? ''
-													: ' · ' + ORDER_QUANTITY_UNIT_LABELS[p.quantityUnit]}
+												{formatPurchaseProduct(p)}
+												{' (' +
+													number(
+														p.quantity *
+															(p.key === row.key && row.unit === 'g'
+																? 1000
+																: 1),
+													) +
+													' ' +
+													PURCHASE_QUANTITY_UNIT_LABELS[
+														p.key === row.key ? row.unit : p.quantityUnit
+													] +
+													')'}
 											</option>
 										))}
 								</select>
-							);
-						}}
-						rowNote={(line) => {
-							const row = rows.find((r) => r.id === line.id)!;
-							const p = positions.find((p) => p.key === row.key);
-							return (
-								'Mevcut stok: ' +
-								number((p?.quantity ?? 0) * (row.unit === 'g' ? 1000 : 1)) +
-								' ' +
-								ORDER_QUANTITY_UNIT_LABELS[row.unit]
 							);
 						}}
 					/>
@@ -393,7 +510,6 @@ export function StockSaleForm({
 						disabled={save.isPending}
 						onClick={() => {
 							draft.clear();
-							setCollapsed(new Set());
 							setError('');
 						}}
 					>

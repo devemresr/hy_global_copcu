@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ORDER_PRODUCT_TYPES } from '../constants/orderProducts.constant';
+import { PURCHASE_PRODUCT_TYPES } from '../constants/purchaseProducts.constant';
 
 const product = {
 	type: z.enum(['EMCP', 'EMMC', 'IPHONE', 'TABLET']),
@@ -15,14 +15,14 @@ const product = {
 };
 function validateProduct(
 	value: {
-		type: keyof typeof ORDER_PRODUCT_TYPES;
+		type: keyof typeof PURCHASE_PRODUCT_TYPES;
 		memoryGb: number | null;
 		quantityUnit: string;
 	},
 	context: z.RefinementCtx,
 ) {
 	if (
-		ORDER_PRODUCT_TYPES[value.type].requiresMemorySize !==
+		PURCHASE_PRODUCT_TYPES[value.type].requiresMemorySize !==
 		(value.memoryGb !== null)
 	)
 		context.addIssue({
@@ -30,19 +30,14 @@ function validateProduct(
 			path: ['memoryGb'],
 			message: 'Ürüne uygun bellek boyutunu seçin.',
 		});
-	if (
-		ORDER_PRODUCT_TYPES[value.type].requiresMemorySize &&
-		value.quantityUnit !== 'piece'
-	)
-		context.addIssue({
-			code: 'custom',
-			path: ['quantityUnit'],
-			message: 'Bellek ürünleri adet ile takip edilir.',
-		});
 }
 const restockLineSchema = z
 	.object({
 		...product,
+		bayiId: z
+			.string()
+			.regex(/^[a-f\d]{24}$/i)
+			.optional(),
 		quantity: z.number().finite().positive().max(1_000_000).multipleOf(0.001),
 		revenue: z.number().finite().min(0).max(1e12).multipleOf(0.01),
 	})
@@ -67,17 +62,32 @@ export const stockSaleSchema = z
 	})
 	.strict()
 	.superRefine((value, context) => {
-		const keys = value.lines.map(
-			(line) =>
-				`${line.type}:${line.memoryGb ?? '-'}:${line.quantityUnit === 'piece' ? 'piece' : 'kg'}`,
-		);
-		if (new Set(keys).size !== keys.length)
-			context.addIssue({
-				code: 'custom',
-				path: ['lines'],
-				message:
-					'Aynı ürünü bir kez ekleyin; miktarını aynı satırda düzenleyin.',
-			});
+		const seen = new Map<string, Set<string>>();
+		value.lines.forEach((line, index) => {
+			const key =
+				line.type +
+				':' +
+				(line.memoryGb ?? '-') +
+				':' +
+				(line.quantityUnit === 'piece' ? 'piece' : 'kg');
+			const ids = seen.get(key) ?? new Set<string>();
+			const id = line.bayiId ?? '*';
+			if (ids.has(id) || (ids.size > 0 && (id === '*' || ids.has('*'))))
+				context.addIssue({
+					code: 'custom',
+					path: ['lines', index, 'bayiId'],
+					message:
+						'Aynı ürün ve bayi bir kez seçilebilir. Tüm bayiler seçimini başka bayi satırıyla birleştirmeyin.',
+				});
+			ids.add(id);
+			seen.set(key, ids);
+			if (value.mode === 'partial' && !line.bayiId)
+				context.addIssue({
+					code: 'custom',
+					path: ['lines', index, 'bayiId'],
+					message: 'Kısmi satış için bir bayi seçin.',
+				});
+		});
 	});
 export const purchaseWarningSchema = z
 	.object({

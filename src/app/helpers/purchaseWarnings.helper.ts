@@ -1,4 +1,4 @@
-import { ORDER_PRODUCT_TYPES } from '../constants/orderProducts.constant';
+import { PURCHASE_PRODUCT_TYPES } from '../constants/purchaseProducts.constant';
 import type { PurchaseWarningInput } from '../hooks/api/endpoints/useStock';
 
 export type PurchaseInspection = {
@@ -15,7 +15,7 @@ export type WarningCache = Record<
 >;
 type Line = PurchaseWarningInput['lines'][number];
 function productKey(line: Line) {
-	return `${line.type}:${ORDER_PRODUCT_TYPES[line.type].requiresMemorySize ? line.memoryGb : '-'}:${line.quantityUnit === 'piece' ? 'piece' : 'kg'}`;
+	return `${line.type}:${PURCHASE_PRODUCT_TYPES[line.type].requiresMemorySize ? line.memoryGb : '-'}:${line.quantityUnit === 'piece' ? 'piece' : 'kg'}`;
 }
 export function warningInputKey(
 	bayiId: string,
@@ -31,7 +31,7 @@ export function mergePurchaseInspection(
 ): WarningCache {
 	const next = { ...cache };
 	for (const line of input.lines) {
-		const label = `${ORDER_PRODUCT_TYPES[line.type].label}${ORDER_PRODUCT_TYPES[line.type].requiresMemorySize ? ` ${line.memoryGb} GB` : ''} (${(line.quantity ?? 1).toLocaleString('tr-TR')} ${line.quantityUnit === 'piece' ? 'adet' : line.quantityUnit})`;
+		const label = `${PURCHASE_PRODUCT_TYPES[line.type].label}${PURCHASE_PRODUCT_TYPES[line.type].requiresMemorySize ? ` ${line.memoryGb} GB` : ''} (${(line.quantity ?? 1).toLocaleString('tr-TR')} ${line.quantityUnit === 'piece' ? 'adet' : line.quantityUnit})`;
 		next[warningInputKey(input.bayiId, line, input.comparisonDays)] = {
 			risk: (response.risks ?? response.warnings).find(
 				(risk) => risk.productKey === productKey(line),
