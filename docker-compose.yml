@@ -14,4 +14,9 @@ services:
         VITE_STAFF_PATH_PREFIX: ${VITE_STAFF_PATH_PREFIX:?set VITE_STAFF_PATH_PREFIX in .env}
     ports:
       - '127.0.0.1:${HOST_PORT:?run via deploy/deploy.sh}:80'
+    volumes:
+      - inventory-snapshots:/var/cache/inventory-snapshots:ro
     restart: always
+volumes:
+  inventory-snapshots:
+    name: hyglobalcopcu_inventory_snapshots

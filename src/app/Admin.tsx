@@ -2,6 +2,7 @@ import { AdminPageHeading } from './component/admin/AdminPageHeading';
 import { TestEmailSection } from './component/admin/TestEmailSection';
 import { ReportSchedulesSection } from './component/admin/ReportSchedulesSection';
 import { AutomaticEmailPreferences } from './component/admin/AutomaticEmailPreferences';
+import { InventorySnapshotSection } from './component/admin/InventorySnapshotSection';
 import { useMemo, useState, type ComponentType } from 'react';
 import { PromotionSection } from './component/admin/PromotionSection';
 import type { HighlightCellProps } from './component/HighlightCellRenderer';
@@ -457,6 +458,7 @@ function AdminPage() {
 			<TestEmailSection />
 			<AutomaticEmailPreferences />
 			<ReportSchedulesSection />
+			<InventorySnapshotSection />
 
 			<BulkEditPanel
 				rules={itemRules}

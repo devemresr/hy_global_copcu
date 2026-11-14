@@ -22,7 +22,7 @@ const cacheTimestamp = (timestamp: number | undefined) =>
 // always have one.
 export type ItemDto = InventoryItemRecord & { _id: string; version: number };
 
-// Written by server/local/exportItemsSnapshot.ts into public/.
+// Refreshed by the server snapshot scheduler and served independently by Nginx.
 export type ItemsSnapshot = {
 	exportedAt: string;
 	items: InventoryItemRecord[];
@@ -220,7 +220,9 @@ export function useItemsSnapshot(enabled: boolean) {
 				{ source: 'static-snapshot', url: ITEMS_SNAPSHOT_URL },
 				'Loading snapshot fallback after live item request failure',
 			);
-			const response = await fetchResponse(ITEMS_SNAPSHOT_URL);
+			const response = await fetchResponse(ITEMS_SNAPSHOT_URL, {
+				cache: 'no-store',
+			});
 			if (!response.ok) {
 				throw new Error('Ürün listesi yüklenemedi. Lütfen tekrar deneyin.', {
 					cause: new Error(
@@ -241,7 +243,8 @@ export function useItemsSnapshot(enabled: boolean) {
 			return snapshot;
 		},
 		enabled,
-		staleTime: Infinity,
+		staleTime: 60_000,
+		refetchInterval: enabled ? 60_000 : false,
 	});
 	useEffect(() => {
 		if (enabled && query.data)
