@@ -23,7 +23,7 @@ export function readFileAsArrayBuffer(
 	reader.onerror = () => {
 		if (!active) return;
 		active = false;
-		onError('Failed to read file');
+		onError('Dosya okunamadı. Lütfen dosyayı kontrol edip tekrar deneyin.');
 	};
 	reader.readAsArrayBuffer(file);
 	return () => {
@@ -47,8 +47,8 @@ export function parseInline(
 			try {
 				const wb = parseWorkbookFromBuffer(buffer);
 				onParsed(wb);
-			} catch (err) {
-				onError(err instanceof Error ? err.message : 'Failed to parse file');
+			} catch {
+				onError('Dosya işlenemedi. Lütfen geçerli bir Excel dosyası seçin.');
 			}
 		},
 		onError,
@@ -93,10 +93,10 @@ export function parseWithWorker(
 				}
 			};
 
-			worker.onerror = (err: ErrorEvent) => {
+			worker.onerror = () => {
 				if (cancelled) return;
 				stopWorker();
-				onError(err.message || 'Worker error');
+				onError('Dosya işlenirken bir hata oluştu. Lütfen tekrar deneyin.');
 			};
 
 			worker.postMessage({ arrayBuffer }, [arrayBuffer]);

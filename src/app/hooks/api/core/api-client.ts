@@ -7,6 +7,7 @@ import {
 import env from '../../../config/env';
 import logger from '../../../util/logger';
 import { AUTH_ROUTES } from '../../../constants/routes.constant';
+import { fetchResponse, readJson } from '../../../util/http';
 
 export type ApiClientConfig = {
 	// Runs when the server rejects a refresh, i.e. the session is gone.
@@ -68,7 +69,10 @@ export async function apiFetch<TData>(
 	const serverUrl = options.serverUrl ?? env.VITE_GATEWAY_URL;
 
 	if (!serverUrl) {
-		throw new Error('serverUrl is not defined');
+		logger.error('API serverUrl is not defined');
+		throw new Error(
+			'İşlem şu anda tamamlanamıyor. Lütfen daha sonra tekrar deneyin.',
+		);
 	}
 
 	const init: RequestInit = {
@@ -83,7 +87,10 @@ export async function apiFetch<TData>(
 		init.body = JSON.stringify(options.body);
 	}
 
-	const response = await fetch(`${serverUrl}${url}${queryString}`, init);
+	const response = await fetchResponse(
+		`${serverUrl}${url}${queryString}`,
+		init,
+	);
 
 	if (!response.ok) {
 		// A 401 from login means wrong credentials, not an expired session.
@@ -107,7 +114,7 @@ export async function apiFetch<TData>(
 			message:
 				body?.error ||
 				body?.message ||
-				`HTTP error! status: ${response.status}`,
+				'İşlem tamamlanamadı. Lütfen tekrar deneyin.',
 			status: response.status,
 			statusText: response.statusText,
 		};
@@ -120,7 +127,9 @@ export async function apiFetch<TData>(
 		return {} as TData;
 	}
 
-	const body = await response.json();
+	const body = await readJson<
+		{ accessToken?: string } & Record<string, unknown>
+	>(response);
 
 	// A response carrying a new access token (e.g. login) - persist it, which
 	// also (re)starts the proactive refresh timer.

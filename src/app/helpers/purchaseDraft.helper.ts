@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from '../util/zodTurkish';
 import { getAccessToken } from '../hooks/api/core/tokenManager';
 
 const input = z.union([z.number().finite().min(0).max(1e12), z.literal('')]);

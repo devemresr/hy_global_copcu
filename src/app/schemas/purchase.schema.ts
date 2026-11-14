@@ -1,5 +1,5 @@
 import { numericFilterSchema } from '../helpers/numericFilters.helper';
-import { z } from 'zod';
+import { z } from '../util/zodTurkish';
 import { PURCHASE_PRODUCT_TYPES } from '../constants/purchaseProducts.constant';
 
 export const purchaseLineSchema = z

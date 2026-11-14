@@ -59,10 +59,9 @@ export function CreatedPurchasePdfModal({
 			.then((pdf) => {
 				if (!cancelled) setPrepared({ order, retry, file: pdf });
 			})
-			.catch((failure: unknown) => {
+			.catch(() => {
 				if (cancelled) return;
-				const message =
-					failure instanceof Error ? failure.message : 'PDF hazırlanamadı.';
+				const message = 'PDF hazırlanamadı. Lütfen tekrar deneyin.';
 				setFailure({ order, retry, message });
 				toast.error('PDF hazırlanamadı', { description: message });
 			});

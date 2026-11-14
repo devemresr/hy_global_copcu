@@ -11,6 +11,7 @@ import type {
 import { useSiteStatus } from './useSiteStatus';
 import logger from '../../../util/logger';
 import env from '../../../config/env';
+import { fetchResponse, readJson } from '../../../util/http';
 
 const log = logger.child({ hook: 'useItems' });
 const cacheTimestamp = (timestamp: number | undefined) =>
@@ -219,11 +220,15 @@ export function useItemsSnapshot(enabled: boolean) {
 				{ source: 'static-snapshot', url: ITEMS_SNAPSHOT_URL },
 				'Loading snapshot fallback after live item request failure',
 			);
-			const response = await fetch(ITEMS_SNAPSHOT_URL);
+			const response = await fetchResponse(ITEMS_SNAPSHOT_URL);
 			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
+				throw new Error('Ürün listesi yüklenemedi. Lütfen tekrar deneyin.', {
+					cause: new Error(
+						`Snapshot request failed with HTTP ${response.status}`,
+					),
+				});
 			}
-			const snapshot = (await response.json()) as ItemsSnapshot;
+			const snapshot = await readJson<ItemsSnapshot>(response);
 			log.info(
 				{
 					source: 'static-snapshot',

@@ -13,13 +13,13 @@ const SIDEBAR_ANIMATION_TARGET_DURATION = 0.9;
 
 import { ThemeContext, type Theme } from '../hooks/useTheme';
 import { RouteErrorBoundary } from './RouteErrorBoundary';
-import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
+import { ErrorBoundary } from 'react-error-boundary';
 
-function SmallFallback({ error }: FallbackProps) {
-	const message = error instanceof Error ? error.message : String(error);
-
+function SmallFallback() {
 	return (
-		<div className='p-2 text-xs text-text'>Bir hata oluştu. {message}</div>
+		<div className='p-2 text-xs text-text'>
+			Bir hata oluştu. Lütfen sayfayı yenileyin.
+		</div>
 	);
 }
 

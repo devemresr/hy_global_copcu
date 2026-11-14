@@ -1,6 +1,7 @@
 import { AUTH_ROUTES } from '../../../constants/routes.constant';
 import env from '../../../config/env';
 import logger from '../../../util/logger';
+import { fetchResponse, readJson } from '../../../util/http';
 
 const log = logger.child({ method: 'tokenManager' });
 
@@ -143,7 +144,7 @@ export const refreshAccessToken = (): Promise<string> => {
 	const url = `${env.VITE_GATEWAY_URL}${AUTH_ROUTES.REFRESH}`;
 	log.debug('refresh request sent');
 
-	inFlightRefresh = fetch(url, {
+	inFlightRefresh = fetchResponse(url, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		credentials: 'include',
@@ -156,9 +157,11 @@ export const refreshAccessToken = (): Promise<string> => {
 					'refresh rejected, clearing token',
 				);
 				clearAccessToken();
-				throw new RefreshRejectedError('Failed to refresh access token');
+				throw new RefreshRejectedError(
+					'Oturum yenilenemedi. Lütfen yeniden giriş yapın.',
+				);
 			}
-			const body = await response.json();
+			const body = await readJson<{ accessToken: string }>(response);
 			log.debug('refresh succeeded');
 			setAccessToken(body.accessToken);
 			return body.accessToken as string;

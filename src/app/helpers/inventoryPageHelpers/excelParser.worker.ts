@@ -10,10 +10,10 @@ self.onmessage = (event: MessageEvent<{ arrayBuffer: ArrayBuffer }>) => {
 			sheets: wb.Sheets,
 		};
 		self.postMessage(response);
-	} catch (err) {
+	} catch {
 		const response: WorkerResponse = {
 			status: 'error',
-			message: err instanceof Error ? err.message : 'Failed to parse file',
+			message: 'Dosya işlenemedi. Lütfen geçerli bir Excel dosyası seçin.',
 		};
 		self.postMessage(response);
 	}

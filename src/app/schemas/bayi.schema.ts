@@ -1,5 +1,5 @@
 import { normalizeBayiPhone } from '../helpers/bayiPhone.helper';
-import { z } from 'zod';
+import { z } from '../util/zodTurkish';
 
 export const bayiInputSchema = z
 	.object({

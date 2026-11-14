@@ -110,11 +110,16 @@ export function CustomerPriceEditor({
 			const prices = includePrices
 				? collectPrices(groups.map((group) => group.id))
 				: {};
-			await downloadInventory(
-				applyCustomerPrices(eligibleItems, prices),
-				includePrices,
-				format,
-			);
+			try {
+				await downloadInventory(
+					applyCustomerPrices(eligibleItems, prices),
+					includePrices,
+					format,
+				);
+			} catch {
+				// Export libraries can include file contents or internal details in errors.
+				setError('Dosya oluşturulamadı. Lütfen tekrar deneyin.');
+			}
 		} catch (error) {
 			setError(
 				error instanceof Error

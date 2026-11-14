@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import env from '../../../config/env';
+import { fetchResponse, readJson } from '../../../util/http';
 import { apiFetch } from '../core/api-client';
 import type { ApiError } from '../core/api-client';
 import { SITE_ROUTES } from '../../../constants/routes.constant';
@@ -101,13 +102,20 @@ export function useScheduleClock(
 }
 
 async function fetchSiteStatus(signal: AbortSignal): Promise<SiteStatus> {
-	const response = await fetch(`${env.VITE_GATEWAY_URL}${SITE_ROUTES.STATUS}`, {
-		signal,
-	});
+	const response = await fetchResponse(
+		`${env.VITE_GATEWAY_URL}${SITE_ROUTES.STATUS}`,
+		{
+			signal,
+		},
+	);
 	if (!response.ok) {
-		throw new Error(`HTTP error! status: ${response.status}`);
+		throw new Error('Site bilgileri yüklenemedi. Lütfen tekrar deneyin.', {
+			cause: new Error(
+				`Site status request failed with HTTP ${response.status}`,
+			),
+		});
 	}
-	return response.json();
+	return readJson<SiteStatus>(response);
 }
 
 export function useSiteStatus() {

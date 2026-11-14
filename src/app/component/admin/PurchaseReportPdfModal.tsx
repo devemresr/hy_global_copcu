@@ -74,14 +74,13 @@ export function PurchaseReportPdfModal({
 			.then((file) => {
 				if (!cancelled) setPrepared({ data, filters, retry, file });
 			})
-			.catch((error: unknown) => {
+			.catch(() => {
 				if (!cancelled)
 					setFailure({
 						data,
 						filters,
 						retry,
-						message:
-							error instanceof Error ? error.message : 'PDF hazırlanamadı.',
+						message: 'PDF hazırlanamadı. Lütfen tekrar deneyin.',
 					});
 			});
 		return () => {

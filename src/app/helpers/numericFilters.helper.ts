@@ -1,5 +1,5 @@
 import type { ReportKind } from '../constants/reportKinds.constant';
-import { z } from 'zod';
+import { z } from '../util/zodTurkish';
 
 export const NUMERIC_FIELDS = {
 	total: 'İşlem toplamı (TL)',

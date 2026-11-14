@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from '../../util/zodTurkish';
 import type { EditableField, EditableInventoryItem } from '../../types';
 import { EDITABLE_FIELD_KEYS } from '../../constants/fieldRegistry.constant';
 import { buildBulkFields, type BulkAction } from './bulkEdit.helper';

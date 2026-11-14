@@ -107,12 +107,8 @@ export function SelectableStockReport({
 								...filters,
 								excludeSaleIds: relevant,
 							});
-						} catch (error) {
-							toast.error(
-								error instanceof Error
-									? error.message
-									: 'Rapor oluşturulamadı.',
-							);
+						} catch {
+							toast.error('Rapor oluşturulamadı. Lütfen tekrar deneyin.');
 						} finally {
 							setExporting(false);
 						}

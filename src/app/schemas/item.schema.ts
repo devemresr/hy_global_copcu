@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from '../util/zodTurkish';
 
 export const CURRENCY_VALUES = ['TRY', 'USD'] as const;
 export const currencySchema = z.enum(CURRENCY_VALUES);

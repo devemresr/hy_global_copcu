@@ -379,11 +379,8 @@ export function PurchaseCharts({
 				await downloadSinglePurchasePdf(exportPurchase, images);
 			else await downloadPurchaseReport(data, filters, images);
 			toast.success('PDF raporu indirildi');
-		} catch (error) {
-			const message =
-				error instanceof Error
-					? error.message
-					: 'PDF indirilemedi. Tekrar deneyin.';
+		} catch {
+			const message = 'PDF indirilemedi. Tekrar deneyin.';
 			setExportError(message);
 			toast.error('PDF indirilemedi', { description: message });
 		} finally {
