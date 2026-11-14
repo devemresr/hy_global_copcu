@@ -1,5 +1,5 @@
 import { productDistribution } from './productDistribution.helper';
-import { numericFilterLabel } from './numericFilters.helper';
+import { reportFilterSummary } from './reportFilterSummary.helper';
 import {
 	PURCHASE_PDF_PAGE,
 	purchasePdfTable,
@@ -14,10 +14,7 @@ import type {
 } from '../hooks/api/endpoints/usePurchases';
 import { formatPurchaseMoney } from '../constants/purchaseReports.constant';
 import { downloadPdf } from './pdf.helper';
-import {
-	purchaseReportFilename,
-	purchaseReportRange,
-} from './purchasePeriod.helper';
+import { purchaseReportFilename } from './purchasePeriod.helper';
 import {
 	formatPurchaseProduct,
 	formatPurchaseQuantity,
@@ -37,7 +34,6 @@ export function purchaseReportDocument(
 	filters: PurchaseFilters,
 	_charts: PurchaseChartImage[],
 ): TDocumentDefinitions {
-	const range = purchaseReportRange(data, filters);
 	const table = (
 		title: string,
 		headers: string[],
@@ -74,22 +70,14 @@ export function purchaseReportDocument(
 				bold: true,
 				margin: [0, 0, 0, 10],
 			},
-			{
-				text: `Tarih: ${range.from} – ${range.until} (İstanbul)`,
-				margin: [0, 0, 0, 4],
-			},
-			...(filters.bayiIds?.length || filters.bayiId || filters.bayiName
-				? [
-						{
-							text: `Bayi: ${data.bayiFilterName ?? filters.bayiName ?? filters.bayiId}`,
-							margin: [0, 0, 0, 4] as [number, number, number, number],
-						},
-					]
-				: []),
-			{
-				text: `Alış tutarı: ${filters.minTotal === undefined ? 'Alt sınır yok' : formatPurchaseMoney(filters.minTotal)} – ${filters.maxTotal === undefined ? 'Üst sınır yok' : formatPurchaseMoney(filters.maxTotal)}`,
-				margin: [0, 0, 0, 12],
-			},
+			{ text: 'Etkin filtreler', bold: true, margin: [0, 0, 0, 4] },
+			...reportFilterSummary(filters, { bayiName: data.bayiFilterName }).map(
+				(text) => ({
+					text,
+					fontSize: 9,
+					margin: [0, 0, 0, 4] as [number, number, number, number],
+				}),
+			),
 			{
 				text: `${data.summary.count} alış · ${formatPurchaseUnitTotals(data.summary)} · ${formatPurchaseMoney(data.summary.total)}`,
 				bold: true,
@@ -112,10 +100,6 @@ export function purchaseReportDocument(
 					]
 				: []),
 */
-			...(filters.numericFilters ?? []).map((filter) => ({
-				text: numericFilterLabel(filter),
-				margin: [0, 0, 0, 4] as [number, number, number, number],
-			})),
 			/* Graphs and date visualizations temporarily disabled.
 			...pdfChartsSection(charts),
 			...charts

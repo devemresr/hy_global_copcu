@@ -14,7 +14,7 @@ import {
 	formatPurchaseQuantity,
 } from './purchaseProduct.helper';
 import { formatPurchaseMoney } from '../constants/purchaseReports.constant';
-import { numericFilterLabel } from './numericFilters.helper';
+import { reportFilterSummary } from './reportFilterSummary.helper';
 import { downloadPdf } from './pdf.helper';
 import { istanbulToday } from './purchasePeriod.helper';
 
@@ -116,44 +116,16 @@ export function stockSaleReportDocument(
 		info: { title, author: 'HY Global' },
 		content: [
 			{ text: title, fontSize: 20, bold: true, margin: [0, 0, 0, 10] },
+			{ text: 'Etkin filtreler', bold: true, margin: [0, 0, 0, 4] },
+			...reportFilterSummary(filters, { bayiName: data.bayiFilterName }).map(
+				(text) => ({
+					text,
+					fontSize: 9,
+					margin: [0, 0, 0, 4] as [number, number, number, number],
+				}),
+			),
 			{
-				text: `Dönem: ${filters.from ?? 'Başlangıç sınırı yok'} – ${filters.until ?? 'Bitiş sınırı yok'} (İstanbul)`,
-			},
-			{
-				text: `Hareket: ${{ 'all-movements': 'Tüm hareketler', 'purchase-entries': 'Alışlar', 'all-sales': 'Tüm satışlar', 'full-stock-sales': 'Tam satışlar', 'partial-sales': 'Kısmi satışlar' }[filters.movementType ?? 'all-movements']}`,
-			},
-			...(filters.productType
-				? [
-						{
-							text: `Ürün: ${formatPurchaseProduct({ type: filters.productType, memoryGb: filters.memoryGb })}`,
-						},
-					]
-				: filters.memoryGb
-					? [{ text: `Bellek: ${filters.memoryGb} GB` }]
-					: []),
-			...(filters.bayiIds?.length || filters.bayiId || filters.bayiName
-				? [
-						{
-							text: `Bayi: ${data.bayiFilterName ?? filters.bayiName ?? filters.bayiId}`,
-						},
-					]
-				: []),
-			...(filters.numericFilters ?? []).map((filter) => ({
-				text: numericFilterLabel(filter),
-			})),
-			...(filters.minTotal !== undefined || filters.maxTotal !== undefined
-				? [
-						{
-							text: numericFilterLabel({
-								field: 'total',
-								min: filters.minTotal,
-								max: filters.maxTotal,
-							}),
-						},
-					]
-				: []),
-			{
-				text: `Seçili filtrelere ve satış seçimine uyan ${data.selectedSaleCount ?? data.operations.length} satış dahildir. Ekran sayfalaması raporu sınırlamaz.${includesPurchases ? ' Filtrelenen alışlar da rapora dahildir.' : ''}`,
+				text: `Seçili filtrelere ve satış seçimine uyan ${data.selectedSaleCount ?? data.operations.length} satış dahildir. Ekran sayfalaması (pagination) raporu sınırlamaz.${includesPurchases ? ' Filtrelenen alışlar da rapora dahildir.' : ''}`,
 				color: '#555555',
 				margin: [0, 8, 0, 12],
 			},

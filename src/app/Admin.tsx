@@ -1,4 +1,7 @@
 import { AdminPageHeading } from './component/admin/AdminPageHeading';
+import { TestEmailSection } from './component/admin/TestEmailSection';
+import { ReportSchedulesSection } from './component/admin/ReportSchedulesSection';
+import { AutomaticEmailPreferences } from './component/admin/AutomaticEmailPreferences';
 import { useMemo, useState, type ComponentType } from 'react';
 import { PromotionSection } from './component/admin/PromotionSection';
 import type { HighlightCellProps } from './component/HighlightCellRenderer';
@@ -451,6 +454,9 @@ function AdminPage() {
 
 			<MaintenanceSection />
 			<PromotionSection />
+			<TestEmailSection />
+			<AutomaticEmailPreferences />
+			<ReportSchedulesSection />
 
 			<BulkEditPanel
 				rules={itemRules}
