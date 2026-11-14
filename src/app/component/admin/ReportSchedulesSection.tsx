@@ -15,6 +15,8 @@ import { PURCHASE_PERIOD_PRESETS } from '../../constants/purchaseReports.constan
 import { PAGE_PATHS } from '../../constants/pagePaths.constant';
 import { AdminSummary } from './AdminCollapseHeading';
 import { Switch } from './Switch';
+import { ReportEmailPreview, type EmailPreview } from './ReportEmailPreview';
+import { Eye } from 'lucide-react';
 
 type ScheduleInput = {
 	source: 'analysis' | 'umami';
@@ -134,6 +136,13 @@ export function ReportSchedulesSection() {
 			),
 		onError: (error) => toast.error(error.message),
 	});
+	const preview = useMutation<EmailPreview, ApiError, string>({
+		mutationFn: (id) =>
+			apiFetch('/admins/report-schedules/' + id + '/preview', {
+				method: 'POST',
+			}),
+		onError: (error) => toast.error(error.message),
+	});
 	function reset() {
 		setDraft(initial);
 		setEditingId(null);
@@ -161,7 +170,11 @@ export function ReportSchedulesSection() {
 		}
 		setDraft({ ...draft, analysisUrl, relativePeriod });
 	}
-	const busy = save.isPending || remove.isPending || sendNow.isPending;
+	const busy =
+		save.isPending ||
+		remove.isPending ||
+		sendNow.isPending ||
+		preview.isPending;
 	const urlValidation = analysisReportUrlSchema.safeParse(draft.analysisUrl);
 	const urlError =
 		draft.analysisUrl && !urlValidation.success
@@ -169,6 +182,18 @@ export function ReportSchedulesSection() {
 			: null;
 	return (
 		<details className='mb-3 min-w-0 rounded-xl bg-button-bg p-3 text-sm text-text'>
+			{import.meta.env.DEV &&
+				env.VITE_ENV === 'development' &&
+				preview.data && (
+					<ReportEmailPreview
+						preview={preview.data}
+						onClose={() => preview.reset()}
+						sending={sendNow.isPending}
+						onSend={() => {
+							if (preview.variables) sendNow.mutate(preview.variables);
+						}}
+					/>
+				)}
 			<AdminSummary index={4}>
 				<Clock size={16} aria-hidden />
 				Zamanlanmış raporlar
@@ -312,9 +337,9 @@ export function ReportSchedulesSection() {
 							{!list.data?.umamiConfigured && (
 								<p role='status'>
 									Umami bağlantısı henüz yapılandırılmadı. Sunucuda
-									UMAMI_BASE_URL, UMAMI_WEBSITE_ID ve UMAMI_API_TOKEN veya
-									UMAMI_USERNAME / UMAMI_PASSWORD ayarlarını yapın. Görevi
-									duraklatılmış olarak kaydedebilirsiniz.
+									UMAMI_BASE_URL, UMAMI_WEBSITE_ID veya UMAMI_USERNAME /
+									UMAMI_PASSWORD ayarlarını yapın. Görevi duraklatılmış olarak
+									kaydedebilirsiniz.
 								</p>
 							)}
 						</div>
@@ -528,18 +553,35 @@ export function ReportSchedulesSection() {
 									<Pencil size={15} aria-hidden />
 								</button>
 								{import.meta.env.DEV && env.VITE_ENV === 'development' && (
-									<button
-										type='button'
-										disabled={busy}
-										className={STOCK_BUTTON + ' inline-flex items-center gap-2'}
-										aria-label={row.name + ' raporunu şimdi gönder'}
-										onClick={() => sendNow.mutate(row._id)}
-									>
-										<Send size={15} aria-hidden />
-										{sendNow.isPending && sendNow.variables === row._id
-											? 'Gönderiliyor...'
-											: 'Şimdi gönder'}
-									</button>
+									<>
+										{row.source === 'umami' && (
+											<button
+												type='button'
+												disabled={busy}
+												className={STOCK_BUTTON + ' gap-2'}
+												onClick={() => preview.mutate(row._id)}
+											>
+												<Eye size={15} aria-hidden />
+												{preview.isPending && preview.variables === row._id
+													? 'Hazırlanıyor…'
+													: 'Raporu önizle'}
+											</button>
+										)}
+										<button
+											type='button'
+											disabled={busy}
+											className={
+												STOCK_BUTTON + ' inline-flex items-center gap-2'
+											}
+											aria-label={row.name + ' raporunu şimdi gönder'}
+											onClick={() => sendNow.mutate(row._id)}
+										>
+											<Send size={15} aria-hidden />
+											{sendNow.isPending && sendNow.variables === row._id
+												? 'Gönderiliyor...'
+												: 'Şimdi gönder'}
+										</button>
+									</>
 								)}
 								<button
 									type='button'
