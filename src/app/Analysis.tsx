@@ -1,3 +1,8 @@
+import {
+	analysisSearch,
+	readAnalysisFilters,
+	hasAnalysisFilters,
+} from './helpers/analysisUrl.helper';
 import { AnalysisOptions } from './component/admin/AnalysisOptions';
 import {
 	readAnalysisDefaultPeriod,
@@ -117,8 +122,19 @@ function presetFilters(
 		minTotal: previous.minTotal,
 		maxTotal: previous.maxTotal,
 		numericFilters: numericFilters?.length ? numericFilters : undefined,
-		bayiId: previous.bayiId,
-		bayiIds: previous.bayiIds,
+		bayiId:
+			'direction' in preset && preset.direction === 'income'
+				? undefined
+				: previous.bayiId,
+		bayiIds:
+			'direction' in preset && preset.direction === 'income'
+				? undefined
+				: previous.bayiIds,
+		investorId:
+			preset.kind === 'balance' &&
+			!('direction' in preset && preset.direction === 'expense')
+				? previous.investorId
+				: undefined,
 		...('movementType' in preset
 			? {
 					movementType: preset.movementType,
@@ -143,70 +159,110 @@ export default function AnalysisPage() {
 		/^[a-f\d]{24}$/i.test(search.get('purchaseId') ?? '')
 			? search.get('purchaseId')!
 			: undefined;
-	const [previousPurchaseId, setPreviousPurchaseId] =
-		useState(sourcePurchaseId);
 	const [defaultPeriod, setDefaultPeriod] = useState(readAnalysisDefaultPeriod);
-	const [filters, setFilters] = useState<AnalysisFilters>(() =>
+	const savedFilters = readAnalysisFilters(search);
+	const invalidFilters = hasAnalysisFilters(search) && !savedFilters;
+	const filters: AnalysisFilters =
+		savedFilters ??
 		presetFilters(
-			preset.kind === 'purchase' &&
-				/^[a-f\d]{24}$/i.test(search.get('purchaseId') ?? '')
-				? { purchaseId: search.get('purchaseId')! }
-				: analysisDefaultRange(defaultPeriod),
-			preset,
-		),
-	);
-	const [previousPreset, setPreviousPreset] = useState(preset.id);
-	const [page, setPage] = useState(1),
-		[pageSize, setPageSize] = useState(20);
-	const [view, setView] = useState<'movements' | 'profits' | 'bayi'>(
-		preset.id === 'bayis' ? 'bayi' : 'movements',
-	);
-	const [groupBy, setGroupBy] = useState<'product' | 'memory'>('product');
-	if (previousPreset !== preset.id || previousPurchaseId !== sourcePurchaseId) {
-		setPreviousPurchaseId(sourcePurchaseId);
-		setPreviousPreset(preset.id);
-		setFilters(
 			sourcePurchaseId
 				? { purchaseId: sourcePurchaseId }
-				: { ...presetFilters(filters, preset), purchaseId: undefined },
+				: analysisDefaultRange(defaultPeriod),
+			preset,
 		);
+	const [page, setPage] = useState(1),
+		[pageSize, setPageSize] = useState(20);
+	const [previousSearch, setPreviousSearch] = useState(search.toString());
+	if (previousSearch !== search.toString()) {
+		setPreviousSearch(search.toString());
 		setPage(1);
-		setView(preset.id === 'bayis' ? 'bayi' : 'movements');
 	}
-	const stock = useStock(filters, page, pageSize, preset.kind === 'stock');
+	const view = (
+		['movements', 'profits', 'bayi'].includes(search.get('view') ?? '')
+			? search.get('view')
+			: preset.id === 'bayis'
+				? 'bayi'
+				: 'movements'
+	) as 'movements' | 'profits' | 'bayi';
+	const groupBy = search.get('groupBy') === 'memory' ? 'memory' : 'product';
+	function setView(next: 'movements' | 'profits' | 'bayi') {
+		setSearch(analysisSearch(preset.id, filters, next, groupBy), {
+			replace: true,
+		});
+	}
+	function setGroupBy(next: 'product' | 'memory') {
+		setSearch(analysisSearch(preset.id, filters, view, next), {
+			replace: true,
+		});
+	}
+	const stock = useStock(
+		filters,
+		page,
+		pageSize,
+		preset.kind === 'stock' && !invalidFilters,
+	);
 	const finance = useFinance(
 		filters,
 		page,
 		pageSize,
-		preset.kind === 'balance',
+		preset.kind === 'balance' && !invalidFilters,
 	);
 	function changeDefaultPeriod(period: AnalysisDefaultPeriod) {
 		setDefaultPeriod(period);
 		if (!saveAnalysisDefaultPeriod(period))
 			toast.error('Varsayılan dönem bu tarayıcıda kaydedilemedi.');
 		const range = analysisDefaultRange(period);
-		setFilters((current) => ({
-			...current,
-			from: range.from,
-			until: range.until,
-		}));
+		changeFilters({ ...filters, from: range.from, until: range.until });
 		setPage(1);
 	}
 	function changeFilters(next: AnalysisFilters) {
-		setFilters(next);
+		setSearch(analysisSearch(preset.id, next, view, groupBy), {
+			replace: true,
+		});
 		setPage(1);
 	}
 	function selectPreset(next: Preset) {
-		setSearch({ preset: next.id });
-		setFilters(presetFilters(filters, next));
+		setSearch(
+			analysisSearch(
+				next.id,
+				presetFilters(filters, next),
+				next.id === 'bayis' ? 'bayi' : 'movements',
+				groupBy,
+			),
+		);
 		setPage(1);
-		setView(next.id === 'bayis' ? 'bayi' : 'movements');
 	}
 	const query = preset.kind === 'balance' ? finance : stock;
 	return (
 		<main className='mx-auto w-full min-w-0 max-w-7xl space-y-4 px-3 py-4 text-text sm:px-6 sm:py-6'>
 			<div className='flex flex-wrap items-center justify-between gap-3'>
 				<AdminPageHeading title='Analiz' />
+				<button
+					type='button'
+					className={STOCK_BUTTON}
+					onClick={async () => {
+						try {
+							const url = new URL(window.location.href);
+							url.search = analysisSearch(
+								preset.id,
+								filters,
+								view,
+								groupBy,
+							).toString();
+							setSearch(analysisSearch(preset.id, filters, view, groupBy), {
+								replace: true,
+							});
+							await navigator.clipboard.writeText(url.toString());
+							toast.success('Filtreli rapor bağlantısı kopyalandı');
+						} catch {
+							toast.error(
+								'Bağlantı kopyalanamadı. Adres çubuğundaki URL’yi kopyalayabilirsiniz.',
+							);
+						}
+					}}
+				>
+					Rapor bağlantısını kopyala
+				</button>
 				<div className='flex gap-2'>
 					<Link className={STOCK_BUTTON} to={PAGE_PATHS.PURCHASES}>
 						Alış
@@ -276,6 +332,10 @@ export default function AnalysisPage() {
 				reportKind={preset.kind}
 				defaultPeriod={defaultPeriod}
 				onChange={changeFilters}
+				categoryGroup={
+					finance.data?.categories.find((c) => c._id === filters.categoryId)
+						?.group
+				}
 				categoryName={
 					finance.data?.categories.find((c) => c._id === filters.categoryId)
 						?.name
@@ -289,7 +349,11 @@ export default function AnalysisPage() {
 					/>
 				)}
 			</ReportFilters>
-			{preset.kind === 'purchase' ? (
+			{invalidFilters ? (
+				<p role='alert' className='text-sm text-red-500'>
+					Bağlantıdaki filtreler geçersiz. Filtreleri yeniden seçip uygulayın.
+				</p>
+			) : preset.kind === 'purchase' ? (
 				<PurchaseAnalysisReport
 					key={JSON.stringify(filters)}
 					filters={filters}

@@ -20,6 +20,25 @@ export function FinanceReportFields({
 	categories: FinanceCategory[];
 	onChange: (filters: FinanceFilters) => void;
 }) {
+	function change(next: FinanceFilters) {
+		const group =
+			next.group ??
+			categories.find((category) => category._id === next.categoryId)?.group;
+		const direction =
+			next.direction ??
+			(group
+				? ['purchase', 'other'].includes(group)
+					? 'expense'
+					: 'income'
+				: undefined);
+		onChange({
+			...next,
+			...(direction === 'expense' ? { investorId: undefined } : {}),
+			...(direction === 'income'
+				? { bayiId: undefined, bayiIds: undefined, bayiName: undefined }
+				: {}),
+		});
+	}
 	return (
 		<div className='flex flex-wrap items-end gap-3'>
 			<label className='space-y-1 text-xs'>
@@ -29,7 +48,7 @@ export function FinanceReportFields({
 					className={`${STOCK_CONTROL} w-auto!`}
 					value={filters.direction ?? ''}
 					onChange={(event) =>
-						onChange({
+						change({
 							...filters,
 							direction:
 								(event.target.value as FinanceFilters['direction']) ||
@@ -51,7 +70,7 @@ export function FinanceReportFields({
 					className={`${STOCK_CONTROL} w-auto!`}
 					value={filters.group ?? ''}
 					onChange={(event) =>
-						onChange({
+						change({
 							...filters,
 							group: (event.target.value as FinanceGroup) || undefined,
 							categoryId: undefined,
@@ -81,7 +100,7 @@ export function FinanceReportFields({
 					className={`${STOCK_CONTROL} w-auto! max-w-56`}
 					value={filters.categoryId ?? ''}
 					onChange={(event) =>
-						onChange({
+						change({
 							...filters,
 							categoryId: event.target.value || undefined,
 						})

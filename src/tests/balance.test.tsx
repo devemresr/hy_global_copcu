@@ -402,5 +402,5 @@ it('shows full-day net totals across pages and running balances in both layouts,
 				'[aria-label="1. koşul ürünü"] option',
 			),
 		].map((option) => option.value),
-	).toEqual(['bayi', 'investor', 'operation']);
+	).toEqual(['bayi', 'operation']);
 });

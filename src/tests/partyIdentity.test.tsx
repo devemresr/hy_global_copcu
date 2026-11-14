@@ -133,4 +133,23 @@ it('submits permanent IDs, keeps the selection after a rename and removes identi
 	);
 	expect(changed.mock.lastCall![0].investorId).toBe(parties.investors[0]._id);
 	expect(changed.mock.lastCall![0].bayiName).toBeUndefined();
+	act(() =>
+		[...container.querySelectorAll<HTMLButtonElement>('button')]
+			.find((button) => button.textContent === 'Koşul ekle')!
+			.click(),
+	);
+	choose('select[aria-label="2. koşul ürünü"]', 'bayi');
+	chooseBayiOption('Rapor bayi filtresi', parties.bayiler[0].name);
+	chooseBayiOption('Rapor yatırımcı filtresi', parties.investors[0].name);
+	act(() =>
+		container
+			.querySelector('form')!
+			.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })),
+	);
+	expect(changed).toHaveBeenLastCalledWith(
+		expect.objectContaining({
+			bayiIds: [parties.bayiler[0]._id],
+			investorId: parties.investors[0]._id,
+		}),
+	);
 });

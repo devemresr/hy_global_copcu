@@ -47,9 +47,35 @@ const recordFields = [
 ];
 const control =
 	'h-9 min-w-0 max-w-full rounded-lg border border-border bg-button-bg px-2 text-sm text-text';
+type PartyFilters = PurchaseFilters & {
+	investorId?: string;
+	direction?: string;
+	group?: string;
+};
+function partyOptions(
+	value: PartyFilters,
+	kind: ReportKind,
+	categoryGroup?: string,
+) {
+	const group = value.group ?? categoryGroup;
+	const direction =
+		value.direction ??
+		(group
+			? ['purchase', 'other'].includes(group)
+				? 'expense'
+				: 'income'
+			: undefined);
+	return {
+		showBayi: kind !== 'balance' || direction !== 'income',
+		showInvestor: kind === 'balance' && direction !== 'expense',
+	};
+}
 function numericRows(
-	value: PurchaseFilters & { investorId?: string },
+	value: PartyFilters,
+	kind: ReportKind,
+	categoryGroup?: string,
 ): Draft[] {
+	const { showBayi, showInvestor } = partyOptions(value, kind, categoryGroup);
 	const rows: Draft[] = (value.numericFilters ?? []).map((f) => ({
 		field: f.field,
 		productType: f.productType,
@@ -63,13 +89,20 @@ function numericRows(
 			min: value.minTotal ?? '',
 			max: value.maxTotal ?? '',
 		});
-	if (value.bayiIds?.length || value.bayiId)
+	if (showBayi && (value.bayiIds?.length || value.bayiId))
 		rows.unshift({ kind: 'bayi', field: 'total', min: '', max: '' });
-	if (value.investorId)
+	if (showInvestor && value.investorId)
 		rows.unshift({ kind: 'investor', field: 'total', min: '', max: '' });
 	return rows.length
 		? rows
-		: [{ kind: 'bayi', field: 'total', min: '', max: '' }];
+		: [
+				{
+					kind: showBayi ? 'bayi' : 'investor',
+					field: 'total',
+					min: '',
+					max: '',
+				},
+			];
 }
 export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 	value,
@@ -77,6 +110,7 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 	reportKind = 'purchase',
 	children,
 	categoryName,
+	categoryGroup,
 	defaultPeriod,
 }: {
 	value: T;
@@ -84,8 +118,14 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 	reportKind?: ReportKind;
 	children?: ReactNode;
 	categoryName?: string;
+	categoryGroup?: string;
 	defaultPeriod?: AnalysisDefaultPeriod;
 }) {
+	const { showBayi, showInvestor } = partyOptions(
+		value,
+		reportKind,
+		categoryGroup,
+	);
 	const id = useId();
 	const panel = useRef<HTMLDetailsElement>(null);
 	const bayiler = useBayiler();
@@ -95,32 +135,41 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 	);
 	const investorId = (value as T & { investorId?: string }).investorId;
 	const [draftInvestorId, setDraftInvestorId] = useState(investorId ?? '');
-	const [rows, setRows] = useState<Draft[]>(() => numericRows(value));
+	const [rows, setRows] = useState<Draft[]>(() =>
+		numericRows(value, reportKind, categoryGroup),
+	);
 	const selectedIds = (filters: PurchaseFilters) =>
 		filters.bayiIds ?? (filters.bayiId ? [filters.bayiId] : []);
 	const [bayiIds, setBayiIds] = useState(() => selectedIds(value));
 	const [synced, setSynced] = useState(value);
+	const [syncedCategoryGroup, setSyncedCategoryGroup] = useState(categoryGroup);
 	const [error, setError] = useState('');
 	if (
+		syncedCategoryGroup !== categoryGroup ||
 		JSON.stringify([
 			(synced as T & { investorId?: string }).investorId,
+			(synced as PartyFilters).direction,
+			(synced as PartyFilters).group,
 			synced.bayiIds,
 			synced.bayiId,
 			synced.numericFilters,
 			synced.minTotal,
 			synced.maxTotal,
 		]) !==
-		JSON.stringify([
-			investorId,
-			value.bayiIds,
-			value.bayiId,
-			value.numericFilters,
-			value.minTotal,
-			value.maxTotal,
-		])
+			JSON.stringify([
+				investorId,
+				(value as PartyFilters).direction,
+				(value as PartyFilters).group,
+				value.bayiIds,
+				value.bayiId,
+				value.numericFilters,
+				value.minTotal,
+				value.maxTotal,
+			])
 	) {
 		setSynced(value);
-		setRows(numericRows(value));
+		setSyncedCategoryGroup(categoryGroup);
+		setRows(numericRows(value, reportKind));
 		setBayiIds(selectedIds(value));
 		setDraftInvestorId(investorId ?? '');
 	}
@@ -134,7 +183,7 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 			),
 		) !==
 			JSON.stringify(
-				numericRows(value).filter(
+				numericRows(value, reportKind).filter(
 					(r) => r.field === 'productMatch' || r.min !== '' || r.max !== '',
 				),
 			);
@@ -307,7 +356,7 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 		: 'Tüm filtreleri kaldır';
 	function clearFilters() {
 		const next = (preserveDefault ? defaultRange : {}) as T;
-		setRows(numericRows(next));
+		setRows(numericRows(next, reportKind, categoryGroup));
 		setBayiIds([]);
 		setDraftInvestorId('');
 		setError('');
@@ -378,9 +427,11 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 							Filtre koşulları
 						</legend>
 						<p className='text-xs opacity-70'>
-							Bayi seçenekleri birlikte uygulanır. Koşullar sunucuda
-							filtrelenir; seçimlerinizi tamamladıktan sonra Filtreleri uygula
-							düğmesini kullanın.
+							{reportKind === 'balance'
+								? 'Bayi ve yatırımcı seçiliyse, bu seçimlerden birine uyan hareketler birlikte gösterilir.'
+								: 'Bayi seçenekleri birlikte uygulanır.'}{' '}
+							Koşullar sunucuda filtrelenir; seçimlerinizi tamamladıktan sonra
+							Filtreleri uygula düğmesini kullanın.
 						</p>
 						<p className='text-xs opacity-70'>
 							{reportKind === 'balance'
@@ -439,15 +490,17 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 											});
 										}}
 									>
-										<option
-											value='bayi'
-											disabled={rows.some(
-												(other, i) => i !== index && other.kind === 'bayi',
-											)}
-										>
-											Bayi
-										</option>
-										{reportKind === 'balance' && (
+										{showBayi && (
+											<option
+												value='bayi'
+												disabled={rows.some(
+													(other, i) => i !== index && other.kind === 'bayi',
+												)}
+											>
+												Bayi
+											</option>
+										)}
+										{showInvestor && (
 											<option
 												value='investor'
 												disabled={rows.some(
@@ -488,7 +541,6 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 											value={bayiIds}
 											onChange={(ids) => {
 												setBayiIds(ids);
-												if (ids.length) setDraftInvestorId('');
 											}}
 											label='Rapor bayi filtresi'
 										/>
@@ -503,7 +555,6 @@ export function ReportFilters<T extends PurchaseFilters = PurchaseFilters>({
 											label='Rapor yatırımcı filtresi'
 											onChange={(id) => {
 												setDraftInvestorId(id);
-												if (id) setBayiIds([]);
 											}}
 										/>
 									</div>
