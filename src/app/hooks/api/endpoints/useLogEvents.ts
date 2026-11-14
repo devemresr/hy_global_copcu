@@ -20,7 +20,8 @@ export type LogEntityType =
 	| 'site_promotion'
 	| 'stock_restock'
 	| 'stock_price'
-	| 'stock_purchase';
+	| 'stock_purchase'
+	| 'stock_conversion';
 
 // Items and site settings write to the same log_events collection server
 // side (see the server's LogEvent model), so field names here aren't limited

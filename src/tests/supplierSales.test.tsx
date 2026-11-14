@@ -4,6 +4,7 @@ vi.mock('../app/hooks/api/endpoints/useBayiler', () => ({
 import { afterEach, it, expect, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { MemoryRouter } from 'react-router';
 import { StockSaleForm } from '../app/component/admin/StockSaleForm';
 import type { StockPosition } from '../app/hooks/api/endpoints/useStock';
 const save = vi.hoisted(() => vi.fn().mockResolvedValue({}));
@@ -45,7 +46,11 @@ function mount() {
 	document.body.append(container);
 	root = createRoot(container);
 	act(() =>
-		root.render(<StockSaleForm positions={positions} onSaved={() => {}} />),
+		root.render(
+			<MemoryRouter>
+				<StockSaleForm positions={positions} onSaved={() => {}} />
+			</MemoryRouter>,
+		),
 	);
 }
 function input(label: string, value: string) {

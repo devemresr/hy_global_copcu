@@ -29,6 +29,7 @@ import { Pagination } from './Pagination';
 // LogEvent model comment), so this covers both action sets rather than
 // assuming every entry is an item edit.
 const ACTION_LABELS: Record<string, string> = {
+	'stock:conversion_create': 'Stok birimi dönüştürüldü',
 	'bayi:create': 'Bayi eklendi',
 	'bayi:update': 'Bayi güncellendi',
 	'finance:investor_create': 'Yatırımcı eklendi',
@@ -57,6 +58,7 @@ const ACTION_LABELS: Record<string, string> = {
 type ActionKind = 'create' | 'update' | 'delete' | 'maintenance' | 'notice';
 
 const ACTION_KIND: Record<string, ActionKind> = {
+	'stock:conversion_create': 'update',
 	'bayi:create': 'create',
 	'bayi:update': 'update',
 	'finance:investor_create': 'create',
@@ -188,7 +190,12 @@ const LOG_FILTERS: { types: LogEntityType[]; label: string }[] = [
 		label: 'Bakiye işlemleri',
 	},
 	{
-		types: ['stock_restock', 'stock_price', 'stock_purchase'],
+		types: [
+			'stock_restock',
+			'stock_price',
+			'stock_purchase',
+			'stock_conversion',
+		],
 		label: 'Stok işlemleri',
 	},
 	{ types: ['item_rule'], label: 'Kurallar' },
@@ -230,7 +237,8 @@ function fieldLabel(field: string, entityType?: LogEntityType): string {
 	if (
 		entityType === 'stock_restock' ||
 		entityType === 'stock_price' ||
-		entityType === 'stock_purchase'
+		entityType === 'stock_purchase' ||
+		entityType === 'stock_conversion'
 	)
 		return (
 			(

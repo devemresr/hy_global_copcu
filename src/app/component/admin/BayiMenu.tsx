@@ -23,6 +23,7 @@ export function BayiMenu({
 	allLabel,
 	disabled,
 	canAdd = false,
+	addLabel = 'Başka bayiden sat',
 	onChange,
 	onAdd,
 	selectedIds,
@@ -41,6 +42,7 @@ export function BayiMenu({
 	allLabel: string;
 	disabled: boolean;
 	canAdd?: boolean;
+	addLabel?: string;
 	onChange: (id: string) => void;
 	onAdd?: (id: string) => void;
 	selectedIds?: string[];
@@ -375,7 +377,7 @@ export function BayiMenu({
 										className={itemClass}
 										onClick={() => setExpanded((current) => !current)}
 									>
-										<span className='flex-1'>Başka bayiden sat</span>
+										<span className='flex-1'>{addLabel}</span>
 										<ChevronRight
 											size={15}
 											className={position.mobile && expanded ? 'rotate-90' : ''}

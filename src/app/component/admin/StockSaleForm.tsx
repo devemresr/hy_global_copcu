@@ -1,4 +1,5 @@
 import { BayiPicker } from './BayiPicker';
+import { StockConversionLink } from './StockConversionLink';
 import { TradeRows, type TradeRow } from './TradeRows';
 import { usePurchaseDraft } from '../../hooks/usePurchaseDraft';
 import {
@@ -259,6 +260,7 @@ export function StockSaleForm({
 				Bayi seçerek satılacak stoğun kaynağını belirleyin. Tüm stok satışı,
 				seçili bayi veya tüm bayilerdeki kullanılabilir miktarın tamamını satar.
 			</p>
+			<StockConversionLink />
 			{draft.restoredAt && (
 				<p
 					role='status'

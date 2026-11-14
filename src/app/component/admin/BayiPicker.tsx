@@ -83,6 +83,7 @@ type BayiPickerProps = BayiSelection & {
 	options?: BayiMenuOption[];
 	addOptions?: BayiMenuOption[];
 	canAdd?: boolean;
+	addLabel?: string;
 	allowCreate?: boolean;
 	onAdd?: (id: string) => void;
 };
@@ -144,6 +145,7 @@ export function BayiPicker(props: BayiPickerProps) {
 				</label>
 			)}
 			<BayiMenu
+				addLabel={props.addLabel}
 				id={id}
 				label={label}
 				value={props.multiple ? '' : props.value}

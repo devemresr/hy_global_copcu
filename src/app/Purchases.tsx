@@ -1,3 +1,4 @@
+import { StockConversionLink } from './component/admin/StockConversionLink';
 import { AdminPageHeading } from './component/admin/AdminPageHeading';
 import { TradeRows } from './component/admin/TradeRows';
 import { usePurchaseDraft } from './hooks/usePurchaseDraft';
@@ -355,6 +356,7 @@ export default function PurchasesPage() {
 				<h2 id='new-order' className='mb-4 text-lg font-semibold'>
 					Yeni alış
 				</h2>
+				<StockConversionLink />
 				<BayiPicker
 					allowCreate
 					value={bayiId}
