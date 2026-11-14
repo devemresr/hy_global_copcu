@@ -2,6 +2,7 @@ import { act } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Header } from '../app/component/Header';
 import { ThemeContext } from '../app/hooks/useTheme';
 import { PAGE_PATHS } from '../app/constants/pagePaths.constant';
@@ -22,10 +23,12 @@ vi.stubGlobal('cancelAnimationFrame', vi.fn());
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: Root;
 let container: HTMLDivElement;
+let client: QueryClient;
 afterEach(() => {
 	act(() => root?.unmount());
 	container?.remove();
 	logout.mockClear();
+	client?.clear();
 });
 
 it.each([
@@ -38,22 +41,29 @@ it.each([
 ])(
 	'keeps the same admin navigation order and one icon logout control on %s',
 	(pathname) => {
+		client = new QueryClient({
+			defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+		});
+		// Navigation renders the real balance control without making API requests.
+		client.setQueryData(['finance', {}, 1, 1], { balance: 0 });
 		container = document.createElement('div');
 		document.body.append(container);
 		root = createRoot(container);
 		act(() =>
 			root.render(
-				<MemoryRouter initialEntries={[pathname]}>
-					<ThemeContext.Provider value={{ theme: 'light' }}>
-						<Header
-							isOpen={false}
-							onToggle={() => {}}
-							setTheme={() => {}}
-							sidebarAnimationRef={{ current: null }}
-							sidebarAnimationSrc={{}}
-						/>
-					</ThemeContext.Provider>
-				</MemoryRouter>,
+				<QueryClientProvider client={client}>
+					<MemoryRouter initialEntries={[pathname]}>
+						<ThemeContext.Provider value={{ theme: 'light' }}>
+							<Header
+								isOpen={false}
+								onToggle={() => {}}
+								setTheme={() => {}}
+								sidebarAnimationRef={{ current: null }}
+								sidebarAnimationSrc={{}}
+							/>
+						</ThemeContext.Provider>
+					</MemoryRouter>
+				</QueryClientProvider>,
 			),
 		);
 		expect(

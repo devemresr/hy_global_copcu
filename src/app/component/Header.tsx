@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router';
 import { LogOut } from 'lucide-react';
 import { useLogout } from '../hooks/api/endpoints/useAuth';
+import { AdminHeaderBalance } from './admin/AdminHeaderBalance';
 import { Lottie } from 'lottie-react';
 import toggleThemeAnimation from '../assets/icons/DarkLightInteractiveToggle.json';
 import {
@@ -203,7 +204,7 @@ export function Header({
 				className={`${isAdminPage ? 'min-h-15 py-2 lg:min-h-20' : 'h-15 lg:h-20'} top-0 px-4 sm:px-6 lg:px-8 bg-header-bg flex items-center justify-between gap-2 w-full border-b-2 border-border`}
 			>
 				<div
-					className={`flex min-w-0 items-center gap-3 lg:gap-4 xl:gap-6 ${isAdminPage ? 'flex-1' : ''}`}
+					className={`flex min-w-0 items-center gap-3 lg:gap-4 xl:gap-6 ${isAdminPage ? 'flex-1 flex-wrap' : ''}`}
 				>
 					<button
 						onClick={onToggle}
@@ -271,6 +272,11 @@ export function Header({
 									</a>
 								))}
 					</nav>
+					{isAdminPage && (
+						<div className='flex w-full min-w-0 justify-end xl:w-auto'>
+							<AdminHeaderBalance />
+						</div>
+					)}
 				</div>
 				<div className='flex min-w-0 items-center gap-1 md:gap-2'>
 					<button
